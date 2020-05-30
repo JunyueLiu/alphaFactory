@@ -1,0 +1,225 @@
+{% extends "index.html" %}
+{% block body -%}
+{% block navbar %}
+
+<nav class="navbar navbar-inverse navbar-static-top">
+    <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar"
+                    aria-expanded="false" aria-controls="navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="#">Alpha Factory</a>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+            <ul class="nav navbar-nav">
+                <li><a href="/">Home</a></li>
+                <li><a href="about">About</a></li>
+                <li><a href="contact">Contact</a></li>
+                <li class="active"><a href="progress">Progress</a></li>
+                <li><a href="document">Document</a></li>
+                <li><a href="example">Example</a></li>
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button"
+                       aria-haspopup="true" aria-expanded="false">Dropdown <span class="caret"></span></a>
+                    <ul class="dropdown-menu">
+                        <li><a href="#">Action</a></li>
+                        <li><a href="#">Another action</a></li>
+                        <li><a href="#">Something else here</a></li>
+                        <li role="separator" class="divider"></li>
+                        <li class="dropdown-header">Nav header</li>
+                        <li><a href="#">Separated link</a></li>
+                        <li><a href="#">One more separated link</a></li>
+                    </ul>
+                </li>
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+                <li id="nav-github"><a href="" target="_blank"><img
+                        src="https://echarts.cdn.apache.org/zh/images/github.png" width="18"></a></li>
+            </ul>
+
+        </div><!--/.nav-collapse -->
+    </div>
+</nav>
+
+
+{%- endblock navbar %}
+{%- block container%}
+<div class="page-header">
+    <h1 style="text-align: center">Progress bars</h1>
+</div>
+
+<div style="text-align: center">
+    <div class="row clearfix" style="width: 90%;display: inline-block">
+        <div class="col-md-12 column">
+            <table class="table">
+                <thead>
+                <tr>
+                    <th>
+                        Module
+                    </th>
+                    <th>
+                        Tasks
+                    </th>
+                    <th>
+                        Estimated completion time
+                    </th>
+                    <th>
+                        Progress
+                    </th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr class="success">
+                    <td>
+                        Underlying infrastructure
+                    </td>
+                    <td>
+                        Database API
+                    </td>
+                    <td>
+                        2020/05/20
+                    </td>
+                    <td>
+                        100%
+                    </td>
+                </tr>
+                <tr class="success">
+                    <td>
+                        Underlying infrastructure
+                    </td>
+                    <td>
+                        Statistics API
+                    </td>
+                    <td>
+                        2020/05/20
+                    </td>
+                    <td>
+                        100%
+                    </td>
+                </tr>
+                <tr class="success">
+                    <td>
+                        Financial data analysis infrastructure
+                    </td>
+                    <td>
+
+                    </td>
+                    <td>
+                        2020/05/30
+                    </td>
+                    <td>
+                        100%
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        Single asset alpha research platform
+                    </td>
+                    <td>
+
+                    </td>
+                    <td>
+                        2020/06/10
+                    </td>
+                    <td>
+                        0%
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        Multi asset alpha research platform
+                    </td>
+                    <td>
+
+                    </td>
+                    <td>
+                        2020/06/15
+                    </td>
+                    <td>
+                        0%
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        Alpha management system
+                    </td>
+                    <td>
+
+                    </td>
+                    <td>
+                        2020/06/20
+                    </td>
+                    <td>
+                        0%
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        Vectorization backtesting platform
+                    </td>
+                    <td>
+
+                    </td>
+                    <td>
+                        2020/06/30
+                    </td>
+                    <td>
+                        0%
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        Event-driven backtesting platform
+                    </td>
+                    <td>
+
+                    </td>
+                    <td>
+                        2020/07/10
+                    </td>
+                    <td>
+                        0%
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        Financial machine learning related function
+                    </td>
+                    <td>
+
+                    </td>
+                    <td>
+                        2020/07/20
+                    </td>
+                    <td>
+                        0%
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        Real-time execution and algorithmic trading component
+                    </td>
+                    <td>
+
+                    </td>
+                    <td>
+                        2020/07/30
+                    </td>
+                    <td>
+                        0%
+                    </td>
+                </tr>
+
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+
+{%- endblock container %}
+{% endblock body -%}

@@ -1,0 +1,206 @@
+{% extends "bootstrap/base.html" %}
+{%- block head %}
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- 上述3个meta标签*必须*放在最前面，任何其他内容都*必须*跟随其后！ -->
+<meta name="description" content="">
+<meta name="author" content="">
+<!--<link rel="icon" href="../../favicon.ico">-->
+
+<title>Alpha Factory</title>
+
+<!-- Bootstrap core CSS -->
+<link href="https://cdn.bootcss.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+
+<!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
+<link href="../../assets/css/ie10-viewport-bug-workaround.css" rel="stylesheet">
+
+<!-- Just for debugging purposes. Don't actually copy these 2 lines! -->
+<!--[if lt IE 9]>
+<script src="../../assets/js/ie8-responsive-file-warning.js"></script><![endif]-->
+<script src="../../assets/js/ie-emulation-modes-warning.js"></script>
+
+<!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+<!--[if lt IE 9]>
+<script src="https://cdn.bootcss.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+<script src="https://cdn.bootcss.com/respond.js/1.4.2/respond.min.js"></script>
+<script src="https://cdn.bootcss.com/jquery/1.12.4/jquery.min.js"></script>
+<![endif]-->
+<script src="//code.jquery.com/jquery.min.js"></script>
+<link href="//netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.min.css" rel="stylesheet"
+      type="text/css"/>
+<script src="//netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/js/bootstrap.min.js"></script>
+
+<!-- Custom styles for this template -->
+<link href="carousel.css" rel="stylesheet">
+{%- endblock head %}
+{% block body -%}
+{% block navbar %}
+
+<nav class="navbar navbar-inverse navbar-static-top">
+    <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar"
+                    aria-expanded="false" aria-controls="navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="">Alpha Factory</a>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+            <ul class="nav navbar-nav">
+                <li class="active"><a href="">Home</a></li>
+                <li><a href="about">About</a></li>
+                <li><a href="contact">Contact</a></li>
+                <li><a href="progress">Progress</a></li>
+                <li><a href="document">Document</a></li>
+                <li><a href="example">Example</a></li>
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button"
+                       aria-haspopup="true" aria-expanded="false">Dropdown <span class="caret"></span></a>
+                    <ul class="dropdown-menu">
+                        <li><a href="#">Action</a></li>
+                        <li><a href="#">Another action</a></li>
+                        <li><a href="#">Something else here</a></li>
+                        <li role="separator" class="divider"></li>
+                        <li class="dropdown-header">Nav header</li>
+                        <li><a href="#">Separated link</a></li>
+                        <li><a href="#">One more separated link</a></li>
+                    </ul>
+                </li>
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+                <li id="nav-github"><a href="" target="_blank"><img
+                        src="https://echarts.cdn.apache.org/zh/images/github.png" width="18"></a></li>
+            </ul>
+
+        </div><!--/.nav-collapse -->
+    </div>
+</nav>
+
+
+{%- endblock navbar %}
+{%- block container%}
+<div class="container">
+
+    <div class="page-header">
+        <h1>Alpha Factory: A Quantitative Research Platform </h1>
+        <p class="lead">A full-stack solution for quantitative finance research</p>
+    </div>
+
+    <div class="container marketing">
+
+        <!-- Three columns of text below the carousel -->
+        <div class="row">
+            <div class="col-lg-4">
+                <img class="img-circle"
+                     src="static/Idea.jpg"
+                     alt="Generic placeholder image" width="140" height="140">
+                <h2>Idea</h2>
+                <p>Get intuition from the financial market and the past data. Thinking about pattern inside.
+                    Come up with an idea to make use of the pattern. Understand why and how this pattern evolve.
+                    Tell story about the idea. </p>
+                <p><a class="btn btn-default" href="hsiIntraday" role="button">View details »</a></p>
+            </div><!-- /.col-lg-4 -->
+            <div class="col-lg-4">
+                <img class="img-circle"
+                     src="static/Alpha.jpg"
+                     alt="Generic placeholder image" width="140" height="140">
+                <h2>Alpha</h2>
+                <p>From idea to a way to describe the pattern in a mathematical expression.
+                    Test and evaluate the usefulness and robustness of your alpha. What is your alpha time scale? How to
+                    combine the existed alpha? </p>
+                <p><a class="btn btn-default" href="comingsoon" role="button">View details »</a></p>
+            </div><!-- /.col-lg-4 -->
+            <div class="col-lg-4">
+                <img class="img-circle"
+                     src="static/profit.png"
+                     alt="Generic placeholder image" width="140" height="140">
+                <h2>Profit</h2>
+                <p>From alpha to generate trading signal. Live trading your strategy and evaluate the real time
+                    performance. What is the edge of the strategy? How to improve it? Can you make it to larger scale
+                    for larger profit? </p>
+                <p><a class="btn btn-default" href="coming.html" role="button">View details »</a></p>
+            </div><!-- /.col-lg-4 -->
+        </div><!-- /.row -->
+
+
+        <!-- START THE FEATURETTES -->
+
+        <hr class="featurette-divider">
+
+        <div class="row featurette">
+            <div class="col-md-7">
+                <h2 class="featurette-heading">Financial data exploration. <span
+                        class="text-muted">Find the pattern.</span></h2>
+                <p class="lead">"Patterns of price movement are not random. However, they're close enough to random so
+                    that getting some excess, some edge out of it, is not easy and not so obvious-thank God. God
+                    probably doesn't care. Thank whoever."<br>
+                    - Jim Simons, mathematician, hedge fund manager, and philanthropist </p>
+            </div>
+            <div class="col-md-5">
+                <img class="featurette-image img-responsive center-block"
+                     alt="500x500"
+                     src="static/chart.jpg"
+                />
+            </div>
+        </div>
+
+        <hr class="featurette-divider">
+
+        <div class="row featurette">
+            <div class="col-md-7 col-md-push-5">
+                <h2 class="featurette-heading">Alpha Research. <span
+                        class="text-muted">Design, evaluate & iterate.</span></h2>
+                <p class="lead">An alpha is a combination of mathematical expressions, computer source code, and
+                    configuration parameters that can be used, in combination with historical data, to make predictions
+                    about future movements of various financial instruments.</p>
+            </div>
+            <div class="col-md-5 col-md-pull-7">
+                <img class="featurette-image img-responsive center-block" data-src="holder.js/500x500/auto"
+                     alt="500x500"
+                     src="static/distribution.png"
+                     data-holder-rendered="true">
+            </div>
+        </div>
+
+        <hr class="featurette-divider">
+
+        <div class="row featurette">
+            <div class="col-md-7">
+                <h2 class="featurette-heading">Backtesting. <span class="text-muted">Efficiency versus Accuracy.</span>
+                </h2>
+                <p class="lead">
+                    “Past performance is the best predictor of success.” – Jim Simons
+                </p>
+            </div>
+            <div class="col-md-5">
+                <img class="featurette-image img-responsive center-block" data-src="holder.js/500x500/auto"
+                     alt="500x500"
+                     src="static/dmac_heatmap.png"
+                     data-holder-rendered="true">
+            </div>
+        </div>
+
+        <hr class="featurette-divider">
+
+        <!-- /END THE FEATURETTES -->
+
+
+        <!-- FOOTER -->
+        <footer>
+            <p class="pull-right"><a href="#">Back to top</a></p>
+            <!--            <p>© 2016 Company, Inc. · <a href="#">Privacy</a> · <a href="#">Terms</a></p>-->
+
+        </footer>
+    </div>
+
+
+</div>
+<!--<script src="../../assets/js/ie10-viewport-bug-workaround.js"></script>-->
+{% endblock container%}
+{% endblock body -%}
