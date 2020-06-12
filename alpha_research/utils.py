@@ -2,43 +2,72 @@ import pandas as pd
 from scipy import stats
 import numpy as np
 
-
 from alpha_research.performance_metrics import calculate_information_coefficient, factor_ols_regression
 
 
-def calculate_returns(data: pd.DataFrame, periods: list, price_key='close') -> pd.DataFrame:
+def forward_returns(data: pd.DataFrame, periods: list, price_key='close') -> pd.DataFrame:
     # 取了两个周期 periods=[1,2] shift 1天和2天
     returns = pd.DataFrame(index=data.index)
     for period in periods:
         returns[str(period) + '_period_return'] = df[price_key].pct_change(periods=period).shift(-period)
     return returns
 
-#here
-def factor_returns(returns: pd.DataFrame, factor:pd.DataFrame, periods: list, price_key='close')-> pd.DataFrame:
+
+def cumulate_returns(returns, starting_value=0, out=None):
+    if len(returns) < 1:
+        return returns.copy()
+
+    nanmask = np.isnan(returns)
+    if np.any(nanmask):
+        returns = returns.copy()
+        returns[nanmask] = 0
+
+    allocated_output = out is None
+    if allocated_output:
+        out = np.empty_like(returns)
+
+    np.add(returns, 1, out=out)
+    out.cumprod(axis=0, out=out)
+
+    if starting_value == 0:
+        np.subtract(out, 1, out=out)
+    else:
+        np.multiply(out, starting_value, out=out)
+
+    if allocated_output:
+        if returns.ndim == 1 and isinstance(returns, pd.Series):
+            out = pd.Series(out, index=returns.index)
+        elif isinstance(returns, pd.DataFrame):
+            out = pd.DataFrame(
+                out, index=returns.index, columns=returns.columns,
+            )
+
+    return out
+
+
+# here
+def factor_returns(returns: pd.DataFrame, factor: pd.DataFrame, periods: list, price_key='close') -> pd.DataFrame:
     factorReturns = pd.DataFrame(index=returns.index)
     for period in periods:
-        factorReturns[str(period) + '_period_return']=factor
-        i = 1
+        factorReturns[str(period) + '_period_factor'] = factor.copy()
+        print(factorReturns)
+        factorReturns[str(period) + '_period_factor'].fillna(value=0, inplace=True)
+        i = 0
         while i < len(factor):
-            if(i%period != 0):
-                factorReturns[str(period) + '_period_return'][i]=0
+            if (i  % period != 0):
+                factorReturns[str(period) + '_period_factor'][i] = np.nan
             i += 1
-        print(factorReturns[str(period) + '_period_return'])
+        #        print(factorReturns[str(period) + '_period_return'])
 
+        factorReturns[str(period) + '_period_factor'].fillna(method='ffill', inplace=True)
 
-        factorReturns[str(period) + '_period_return']\
-            *= returns[str(period) + '_period_return']*10000
+        factorReturns[str(period) + '_period_factor'] *= df[price_key].pct_change()
 
     return factorReturns
 
 
-
-
-
-def get_returns_columns()->list:
+def get_returns_columns() -> list:
     pass
-
-
 
 
 def infer_factor_time_frame(data: pd.DatetimeIndex):
@@ -62,21 +91,29 @@ def infer_factor_time_frame(data: pd.DatetimeIndex):
 
 
 if __name__ == '__main__':
-    #打印不省略部分列
+    # 打印不省略部分列
     pd.set_option('display.max_rows', None)
 
-    period=[1,5]
-    df = pd.read_csv('/Users/silviaysy/Desktop/project/alphaFactory/HK.999010_2019-06-01 00:00:00_2020-05-30 03:00:00_K_1M_qfq.csv')
+    period = [1, 2]
+    df = pd.read_csv(
+        '/Users/silviaysy/Desktop/project/alphaFactory/HK.999010_2019-06-01 00:00:00_2020-05-30 03:00:00_K_1M_qfq.csv')
     df.set_index('time_key', inplace=True)
     df.index = pd.to_datetime(df.index)
     df = df[-100:]
-    returns = calculate_returns(df, period)
+
+    returns = forward_returns(df, period)
+
     infer_factor_time_frame(df)
+
+    # 目前造的factor是根据两天的收盘价 这个可以变
     factor = 1 / (1 + np.exp(-df['close'] + df['close'].shift(1)))
-    factorreturns = factor_returns(returns,factor,period)
+
+    factorreturns = factor_returns(df, factor, period)
     print(factorreturns)
 
-    # #Information Coefficient
-    # ic = calculate_information_coefficient(factor, returns)
-    # results = factor_ols_regression(factor, returns)
+    cumulatereturns = cumulate_returns(factorreturns)
+#   print(cumulatereturns)
 
+# #Information Coefficient
+# ic = calculate_information_coefficient(factor, returns)
+# results = factor_ols_regression(factor, returns)
