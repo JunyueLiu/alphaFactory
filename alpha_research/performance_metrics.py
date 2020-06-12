@@ -5,14 +5,15 @@ import statsmodels.api as sm
 from statsmodels.regression.linear_model import RegressionResults
 
 
+
 def calculate_information_coefficient(factor, returns, suffix='ic') -> pd.Series:
     """
-
     :param factor:
     :param returns:
     :param suffix:
     :return:
     """
+
     _ic = returns \
         .apply(lambda x: stats.spearmanr(x, factor, nan_policy='omit')[0])
 
@@ -20,7 +21,8 @@ def calculate_information_coefficient(factor, returns, suffix='ic') -> pd.Series
 
 
 def factor_ols_regression(factors, returns: pd.DataFrame) -> [RegressionResults]:
-    # todo make the RegressionResult to pd.DataFrame
+    #to do make the RegressionResult to pd.DataFrame
+
     result_list = []
     for col in returns.columns:
         X = sm.add_constant(factors.values) # constant is not added by default
