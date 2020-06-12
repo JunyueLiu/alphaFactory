@@ -1,0 +1,34 @@
+{
+  "lookback_period": {
+    "HK.800000": {
+      "K_1M": 100
+    }
+  },
+  "subscribe": {
+    "HK.800000": [
+      "K_1M",
+      "TICKER",
+      "ORDER_BOOK"
+    ]
+  },
+  "ta_parameters": {
+    "HK.800000": {
+      "K_1M": {
+        "MA1": {
+          "indicator": "MA",
+          "period": 5
+        },
+        "MA2": {
+          "indicator": "MA",
+          "period": 10,
+          "matype": "MA_Type.SMA",
+          "price_type": "'close'"
+        }
+
+
+      },
+      "K_3M": {
+      }
+    }
+  }
+}
