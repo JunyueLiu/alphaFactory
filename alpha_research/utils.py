@@ -1,7 +1,6 @@
 import pandas as pd
 from scipy import stats
 import numpy as np
-
 from alpha_research.performance_metrics import calculate_information_coefficient, factor_ols_regression
 
 
@@ -9,11 +8,11 @@ def forward_returns(data: pd.DataFrame, periods: list, price_key='close') -> pd.
     # 取了两个周期 periods=[1,2] shift 1天和2天
     returns = pd.DataFrame(index=data.index)
     for period in periods:
-        returns[str(period) + '_period_return'] = df[price_key].pct_change(periods=period).shift(-period)
+        returns[str(period) + '_period_return'] = data[price_key].pct_change(periods=period).shift(-period)
     return returns
 
 
-def cumulate_returns(returns, starting_value=0, out=None):
+def cumulative_returns(returns, starting_value=0, out=None):
     if len(returns) < 1:
         return returns.copy()
 
@@ -46,8 +45,8 @@ def cumulate_returns(returns, starting_value=0, out=None):
 
 
 # here
-def factor_returns(returns: pd.DataFrame, factor: pd.DataFrame, periods: list, price_key='close') -> pd.DataFrame:
-    factorReturns = pd.DataFrame(index=returns.index)
+def factor_returns(data: pd.DataFrame, factor: pd.DataFrame, periods: list, price_key='close') -> pd.DataFrame:
+    factorReturns = pd.DataFrame(index=data.index)
     for period in periods:
         factorReturns[str(period) + '_period_factor'] = factor.copy()
 
@@ -58,7 +57,7 @@ def factor_returns(returns: pd.DataFrame, factor: pd.DataFrame, periods: list, p
         #         factorReturns[str(period) + '_period_factor'][i] = np.nan
         #     i += 1
         if period > 1:
-            # find the first non nan value to identify the
+            # find the first non nan value to identify where the multi step factor starts
             i = np.argwhere(np.isnan(factor.values) == False)[0][0]
             factorReturns['a'] = 0
             factorReturns.iloc[i:]['a'] = 1
@@ -70,7 +69,7 @@ def factor_returns(returns: pd.DataFrame, factor: pd.DataFrame, periods: list, p
             factorReturns[str(period) + '_period_factor'].fillna(method='ffill', inplace=True)
             del factorReturns['a']
         factorReturns[str(period) + '_period_factor'] = factorReturns[str(period) + '_period_factor'].shift(1)
-        ret = df[price_key].pct_change()
+        ret = data[price_key].pct_change()
         factorReturns[str(period) + '_period_factor'] *= ret
     return factorReturns
 
@@ -104,7 +103,7 @@ if __name__ == '__main__':
     # pd.set_option('display.max_rows', None)
 
     period = [1, 2]
-    df = pd.read_csv()
+    df = pd.read_csv('/Users/liujunyue/PycharmProjects/alphaFactory/HK.999010_2019-06-01 00:00:00_2020-05-30 03:00:00_K_1M_qfq.csv')
     df.set_index('time_key', inplace=True)
     df.index = pd.to_datetime(df.index)
     df = df[-100:]
@@ -119,7 +118,7 @@ if __name__ == '__main__':
     factorreturns = factor_returns(df, factor, period)
     # print(factorreturns)
 
-    cumulatereturns = cumulate_returns(factorreturns, 1)
+    cumulatereturns = cumulative_returns(factorreturns, 1)
 #   print(cumulatereturns)
 
 # #Information Coefficient
