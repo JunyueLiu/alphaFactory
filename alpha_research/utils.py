@@ -50,19 +50,28 @@ def factor_returns(returns: pd.DataFrame, factor: pd.DataFrame, periods: list, p
     factorReturns = pd.DataFrame(index=returns.index)
     for period in periods:
         factorReturns[str(period) + '_period_factor'] = factor.copy()
-        print(factorReturns)
-        factorReturns[str(period) + '_period_factor'].fillna(value=0, inplace=True)
-        i = 0
-        while i < len(factor):
-            if (i  % period != 0):
-                factorReturns[str(period) + '_period_factor'][i] = np.nan
-            i += 1
-        #        print(factorReturns[str(period) + '_period_return'])
 
-        factorReturns[str(period) + '_period_factor'].fillna(method='ffill', inplace=True)
-
-        factorReturns[str(period) + '_period_factor'] *= df[price_key].pct_change()
-
+        # factorReturns[str(period) + '_period_factor'].fillna(value=0, inplace=True)
+        # i = 0
+        # while i < len(factor):
+        #     if (i  % period != 0):
+        #         factorReturns[str(period) + '_period_factor'][i] = np.nan
+        #     i += 1
+        if period > 1:
+            # find the first non nan value to identify the
+            i = np.argwhere(np.isnan(factor.values) == False)[0][0]
+            factorReturns['a'] = 0
+            factorReturns.iloc[i:]['a'] = 1
+            factorReturns.iloc[i:]['a'] = (factorReturns['a'].iloc[i:].cumsum() - 1).mod(period)
+            # for factor trying to predict multi steps, the factor position will be fixed until time period end
+            factorReturns[str(period) + '_period_factor'] = np.where(factorReturns['a'] == 0,
+                                                                     factorReturns[str(period) + '_period_factor'],
+                                                                     np.nan)
+            factorReturns[str(period) + '_period_factor'].fillna(method='ffill', inplace=True)
+            del factorReturns['a']
+        factorReturns[str(period) + '_period_factor'] = factorReturns[str(period) + '_period_factor'].shift(1)
+        ret = df[price_key].pct_change()
+        factorReturns[str(period) + '_period_factor'] *= ret
     return factorReturns
 
 
@@ -92,11 +101,10 @@ def infer_factor_time_frame(data: pd.DatetimeIndex):
 
 if __name__ == '__main__':
     # 打印不省略部分列
-    pd.set_option('display.max_rows', None)
+    # pd.set_option('display.max_rows', None)
 
     period = [1, 2]
-    df = pd.read_csv(
-        '/Users/silviaysy/Desktop/project/alphaFactory/HK.999010_2019-06-01 00:00:00_2020-05-30 03:00:00_K_1M_qfq.csv')
+    df = pd.read_csv()
     df.set_index('time_key', inplace=True)
     df.index = pd.to_datetime(df.index)
     df = df[-100:]
@@ -109,9 +117,9 @@ if __name__ == '__main__':
     factor = 1 / (1 + np.exp(-df['close'] + df['close'].shift(1)))
 
     factorreturns = factor_returns(df, factor, period)
-    print(factorreturns)
+    # print(factorreturns)
 
-    cumulatereturns = cumulate_returns(factorreturns)
+    cumulatereturns = cumulate_returns(factorreturns, 1)
 #   print(cumulatereturns)
 
 # #Information Coefficient
