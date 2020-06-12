@@ -1,20 +1,38 @@
 import numpy as np
 from graph.factor_component import *
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 
-def plot_returns():
+
+def price_factor_plot(data:pd.DataFrame, factor, price_key = 'close', price_name = 'close', factor_name = 'factor'):
+    # Create figure with secondary y-axis
+    fig = make_subplots(specs=[[{"secondary_y": True}]])
+    fig.add_trace(line(data[price_key], price_name), secondary_y=False)
+    fig.add_trace(line(factor, factor_name), secondary_y=True)
+    fig.update_layout(
+        title_text=""
+    )
+
+    # Set x-axis title
+    fig.update_xaxes(title_text="time")
+
+    # Set y-axes titles
+    fig.update_yaxes(title_text=price_name, secondary_y=False)
+    fig.update_yaxes(title_text=factor_name, secondary_y=True)
+    return fig
+
+
+def returns_plot(factor_returns, factor_name = None):
+    fig = go.Figure()
+    fig.add_trace(line(factor_returns, factor_name))
+    return fig
+
+def cumulative_return(factor):
     pass
 
-def plot_factor_distribution():
-    pass
+def factor_distribution_plot(factor):
+    fig = go.Figure()
+    fig.add_trace(histogram(factor))
+    return fig
 
-if __name__ == '__main__':
-    period = [1, 5]
-    df = pd.read_csv(
-        '/Users/liujunyue/PycharmProjects/ljquant/hkex_data/HK.999010_2019-06-01 00:00:00_2020-05-30 03:00:00_K_1M_qfq.csv')
-    df.set_index('time_key', inplace=True)
-    df.index = pd.to_datetime(df.index)
-    df = df[-100:]
-    # returns = calculate_returns(df, period)
-    # infer_factor_time_frame(df)
-    factor = 1 / (1 + np.exp(-df['close'] + df['close'].shift(1)))
