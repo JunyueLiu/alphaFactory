@@ -4,7 +4,7 @@ import numpy as np
 from alpha_research.performance_metrics import calculate_information_coefficient, factor_ols_regression
 
 
-def forward_returns(data: pd.DataFrame, periods: list, price_key='close') -> pd.DataFrame:
+def calculate_forward_returns(data: pd.DataFrame, periods: list, price_key='close') -> pd.DataFrame:
     # 取了两个周期 periods=[1,2] shift 1天和2天
     returns = pd.DataFrame(index=data.index)
     for period in periods:
@@ -12,7 +12,7 @@ def forward_returns(data: pd.DataFrame, periods: list, price_key='close') -> pd.
     return returns
 
 
-def cumulative_returns(returns, starting_value=0, out=None):
+def calculate_cumulative_returns(returns, starting_value=0, out=None):
     if len(returns) < 1:
         return returns.copy()
 
@@ -45,7 +45,7 @@ def cumulative_returns(returns, starting_value=0, out=None):
 
 
 # here
-def factor_returns(data: pd.DataFrame, factor: pd.DataFrame, periods: list, price_key='close') -> pd.DataFrame:
+def calculate_factor_returns(data: pd.DataFrame, factor: pd.DataFrame, periods: list, price_key='close') -> pd.DataFrame:
     factorReturns = pd.DataFrame(index=data.index)
     for period in periods:
         factorReturns[str(period) + '_period_factor'] = factor.copy()
@@ -79,7 +79,7 @@ def get_returns_columns() -> list:
 
 
 def infer_factor_time_frame(data: pd.DatetimeIndex):
-    time_delta = data.index[1:] - data.index[:-1]
+    time_delta = data.values[1:] - data.values[:-1]
     # get mode using scipy
     td = stats.mode(time_delta)[0][0]
     td = td.astype('timedelta64[m]')
@@ -87,7 +87,7 @@ def infer_factor_time_frame(data: pd.DatetimeIndex):
     minutes = td / np.timedelta64('1', 'm')
 
     if minutes < 60:
-        return str(int(minutes)) + 'm'
+        return str(int(minutes)) + 'min'
     elif minutes < 1440:
         return str(int(minutes / 60)) + 'H'
     elif minutes < 7200:
@@ -96,6 +96,10 @@ def infer_factor_time_frame(data: pd.DatetimeIndex):
         return str(int(minutes / 7200)) + 'W'
     else:
         return str(int(minutes / 28800)) + 'M'
+
+def infer_break(data:pd.DataFrame):
+    dt_range = pd.date_range(data.index[0], data.index[-1], freq=infer_factor_time_frame(data.index))
+    return [dt for dt in dt_range if dt not in data.index]
 
 
 if __name__ == '__main__':
@@ -108,17 +112,17 @@ if __name__ == '__main__':
     df.index = pd.to_datetime(df.index)
     df = df[-100:]
 
-    returns = forward_returns(df, period)
+    returns = calculate_forward_returns(df, period)
 
     infer_factor_time_frame(df)
 
     # 目前造的factor是根据两天的收盘价 这个可以变
     factor = 1 / (1 + np.exp(-df['close'] + df['close'].shift(1)))
 
-    factorreturns = factor_returns(df, factor, period)
+    factorreturns = calculate_factor_returns(df, factor, period)
     # print(factorreturns)
 
-    cumulatereturns = cumulative_returns(factorreturns, 1)
+    cumulatereturns = calculate_cumulative_returns(factorreturns, 1)
 #   print(cumulatereturns)
 
 # #Information Coefficient
