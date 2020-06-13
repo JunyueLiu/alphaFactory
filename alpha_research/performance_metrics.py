@@ -46,15 +46,23 @@ def calculate_information_coefficient(factor, returns, suffix='ic') -> pd.Series
     return _ic.rename(index={idx: idx + '_' + suffix for idx in _ic.index})
 
 
-def factor_ols_regression(factors, returns: pd.DataFrame) -> [RegressionResults]:
-    #to do make the RegressionResult to pd.DataFrame
+def factor_ols_regression(factor, returns: pd.DataFrame) -> pd.DataFrame:
+    """
 
-    result_list = []
+    :param factor:
+    :param returns:
+    :return:
+    """
+    result_dic = {}
     for col in returns.columns:
-        X = sm.add_constant(factors.values) # constant is not added by default
+        X = sm.add_constant(factor.values) # constant is not added by default
         model = sm.OLS(returns[col].values, X, missing='drop')
         result = model.fit()
-        result_list.append(result)
-    return result_list
+        d = {}
+        d['beta'] = result.params[1]
+        d['t value'] = result.tvalues[1]
+        d['p value'] = result.pvalues[1]
+        result_dic[col] = d
+    return pd.DataFrame(result_dic)
 
 

@@ -1,4 +1,5 @@
 import numpy as np
+from scipy import stats
 from graph.factor_component import *
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -34,11 +35,11 @@ def returns_plot(factor_returns, factor_name='factor'):
     return fig
 
 
-def cumulative_return_plot(cumulative_factor_returns, benchmark=None, factor_name='factor', benchmark_name=None):
+def cumulative_return_plot(cumulative_factor_returns, benchmark=None, factor_name='factor', benchmark_name='benchmark'):
     fig = go.Figure()
     for col in cumulative_factor_returns.columns:
         fig.add_trace(line(cumulative_factor_returns[col], name=factor_name + '_' + col))
-    if benchmark:
+    if benchmark is not None:
         fig.add_trace(line(benchmark, name=benchmark_name, color='#008000'))
     return fig
 
@@ -60,3 +61,29 @@ def entry_and_exit_plot(data: pd.DataFrame, factor, price_key='close'):
 
     fig.update_layout(yaxis_tickformat='g')
     return fig
+
+def qq_plot(factor:pd.DataFrame):
+    # stats.probplot()
+    factor = factor.dropna()
+    qq = stats.probplot(factor, dist='norm', sparams=(1, ))
+    x = np.array([qq[0][0][0], qq[0][0][-1]])
+    fig = go.Figure()
+    pts = go.Scatter(x=qq[0][0],
+                     y=qq[0][1],
+                     mode='markers',
+                     showlegend=False
+                     )
+    line = go.Scatter(x=x,
+                      y=qq[1][1] + qq[1][0] * x,
+                      showlegend=False,
+                      mode='lines'
+                      )
+    fig.add_trace(pts)
+    fig.add_trace(line)
+    fig.update_xaxes(title_text="Normal Distribution Quantile")
+    fig.update_yaxes(title_text="Factor Observed Quantile")
+    return fig
+
+
+def report_plot():
+    pass
