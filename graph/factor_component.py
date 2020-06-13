@@ -9,7 +9,7 @@ def line(factor: pd.DataFrame, name = None):
 
 
 def histogram(factor: pd.DataFrame):
-    return go.Histogram(x=factor)
+    return go.Histogram(x=factor, histnorm='probability')
 
 
 def heatmap(x, y, z):

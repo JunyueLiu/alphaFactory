@@ -28,8 +28,12 @@ def returns_plot(factor_returns, factor_name = None):
     fig.add_trace(line(factor_returns, factor_name))
     return fig
 
-def cumulative_return(factor):
-    pass
+def cumulative_return(cumulative_factor_returns, benchmark = None, factor_name = 'factor', benchmark_name=None):
+    fig = go.Figure()
+    fig.add_trace(line(cumulative_factor_returns, factor_name))
+    if benchmark:
+        fig.add_trace(line(benchmark, benchmark_name))
+    return fig
 
 def factor_distribution_plot(factor):
     fig = go.Figure()
