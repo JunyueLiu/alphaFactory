@@ -102,8 +102,8 @@ if __name__ == '__main__':
     # 打印不省略部分列
     # pd.set_option('display.max_rows', None)
 
-    period = [1, 2]
-    df = pd.read_csv('/Users/liujunyue/PycharmProjects/alphaFactory/HK.999010_2019-06-01 00:00:00_2020-05-30 03:00:00_K_1M_qfq.csv')
+    period = [1]
+    df = pd.read_csv('/Users/silviaysy/Desktop/project/alphaFactory/HK.999010_2019-06-01 00:00:00_2020-05-30 03:00:00_K_1M_qfq.csv')
     df.set_index('time_key', inplace=True)
     df.index = pd.to_datetime(df.index)
     df = df[-100:]
@@ -122,5 +122,6 @@ if __name__ == '__main__':
 #   print(cumulatereturns)
 
 # #Information Coefficient
-# ic = calculate_information_coefficient(factor, returns)
+    ic = calculate_information_coefficient(factor, returns)
+    print(ic)
 # results = factor_ols_regression(factor, returns)
