@@ -6,7 +6,7 @@ def normalize_factor(factor: pd.DataFrame, mean=None, std=None) -> pd.DataFrame:
     if mean is None:
         mean = factor.mean()
     if std is None:
-        mean = factor.std()
+        std = factor.std()
     return (factor - mean) / std
 
 

@@ -14,7 +14,7 @@ def line(data: pd.DataFrame or pd.Series, timestamp=None, name=None, mode='lines
                       name=name)
 
 
-def histogram(factor: pd.DataFrame):
+def histogram(factor: pd.DataFrame or pd.Series):
     return go.Histogram(x=factor, histnorm='probability')
 
 
