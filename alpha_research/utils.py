@@ -49,13 +49,8 @@ def calculate_factor_returns(data: pd.DataFrame, factor: pd.DataFrame, periods: 
     factorReturns = pd.DataFrame(index=data.index)
     for period in periods:
         factorReturns[str(period) + '_period_factor'] = factor.copy()
+        factorReturns[str(period) + '_period_factor'] = np.clip(factorReturns[str(period) + '_period_factor'], -1, 1)
 
-        # factorReturns[str(period) + '_period_factor'].fillna(value=0, inplace=True)
-        # i = 0
-        # while i < len(factor):
-        #     if (i  % period != 0):
-        #         factorReturns[str(period) + '_period_factor'][i] = np.nan
-        #     i += 1
         if period > 1:
             # find the first non nan value to identify where the multi step factor starts
             i = np.argwhere(np.isnan(factor.values) == False)[0][0]
@@ -100,6 +95,13 @@ def infer_factor_time_frame(data: pd.DatetimeIndex):
 def infer_break(data:pd.DataFrame):
     dt_range = pd.date_range(data.index[0], data.index[-1], freq=infer_factor_time_frame(data.index))
     return [dt for dt in dt_range if dt not in data.index]
+
+def generate_strftime_format(index):
+    tf = infer_factor_time_frame(index)
+    if 'min' in tf:
+        return '%Y/%m/%d %H:%M:%S'
+    else:
+        return '%Y/%m/%d'
 
 
 if __name__ == '__main__':

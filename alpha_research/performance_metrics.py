@@ -2,10 +2,9 @@ import pandas as pd
 import numpy as np
 from scipy import stats
 import statsmodels.api as sm
-from statsmodels.regression.linear_model import RegressionResults
 
 
-def factor_summary(factor:pd.DataFrame):
+def factor_summary(factor: pd.DataFrame):
     """
 
     :param factor:
@@ -19,7 +18,7 @@ def factor_summary(factor:pd.DataFrame):
     summary['t test stat'] = stat
     summary['t test p value'] = pvalue
     # normality test
-    stat, pvalue =stats.normaltest(factor.values, nan_policy='omit')
+    stat, pvalue = stats.normaltest(factor.values, nan_policy='omit')
     summary['normality test stat'] = stat
     summary['normality test p value'] = pvalue
 
@@ -29,7 +28,6 @@ def factor_summary(factor:pd.DataFrame):
     summary['Augmented Dickey-Fuller test stat'] = adf[0]
     summary['Augmented Dickey-Fuller test p value'] = adf[1]
     return summary
-
 
 
 def calculate_information_coefficient(factor, returns, suffix='ic') -> pd.Series:
@@ -55,7 +53,7 @@ def factor_ols_regression(factor, returns: pd.DataFrame) -> pd.DataFrame:
     """
     result_dic = {}
     for col in returns.columns:
-        X = sm.add_constant(factor.values) # constant is not added by default
+        X = sm.add_constant(factor.values)  # constant is not added by default
         model = sm.OLS(returns[col].values, X, missing='drop')
         result = model.fit()
         d = {}
@@ -66,3 +64,5 @@ def factor_ols_regression(factor, returns: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(result_dic)
 
 
+def in_out_sample_factor_t_test(insample_factor: pd.Series, out_of_sample_factor: pd.Series):
+    return stats.ttest_ind(insample_factor.values, out_of_sample_factor.values, nan_policy='omit')
