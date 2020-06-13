@@ -79,7 +79,7 @@ def get_returns_columns() -> list:
 
 
 def infer_factor_time_frame(data: pd.DatetimeIndex):
-    time_delta = data.index[1:] - data.index[:-1]
+    time_delta = data.values[1:] - data.values[:-1]
     # get mode using scipy
     td = stats.mode(time_delta)[0][0]
     td = td.astype('timedelta64[m]')
@@ -87,7 +87,7 @@ def infer_factor_time_frame(data: pd.DatetimeIndex):
     minutes = td / np.timedelta64('1', 'm')
 
     if minutes < 60:
-        return str(int(minutes)) + 'm'
+        return str(int(minutes)) + 'min'
     elif minutes < 1440:
         return str(int(minutes / 60)) + 'H'
     elif minutes < 7200:
@@ -96,6 +96,10 @@ def infer_factor_time_frame(data: pd.DatetimeIndex):
         return str(int(minutes / 7200)) + 'W'
     else:
         return str(int(minutes / 28800)) + 'M'
+
+def infer_break(data:pd.DataFrame):
+    dt_range = pd.date_range(data.index[0], data.index[-1], freq=infer_factor_time_frame(data.index))
+    return [dt for dt in dt_range if dt not in data.index]
 
 
 if __name__ == '__main__':
