@@ -98,22 +98,27 @@ def overlaid_factor_distribution_plot(in_sample_factor: pd.Series, out_sample_fa
     fig.add_trace(histogram(out_sample_factor))
     return fig
 
+
 def observed_qq_plot(in_sample_factor: pd.Series, out_sample_factor: pd.Series):
     x = in_sample_factor.values.sort()
     y = out_sample_factor.values.sort()
 
-
+    fig = go.Figure()
     pts = go.Scatter(x=x,
                      y=y,
                      mode='markers',
                      showlegend=False
                      )
     line = go.Scatter(x=x,
-                      y=qq[1][1] + qq[1][0] * x,
+                      y=x,
                       showlegend=False,
                       mode='lines'
                       )
-
+    fig.add_trace(pts)
+    fig.add_trace(line)
+    fig.update_xaxes(title_text="In the sample Observed Quantile")
+    fig.update_yaxes(title_text="Out of the sample Observed Quantile")
+    return fig
 
 
 def report_plot():

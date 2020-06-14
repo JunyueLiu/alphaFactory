@@ -4,10 +4,11 @@ from scipy import stats
 import statsmodels.api as sm
 
 
-def factor_summary(factor: pd.DataFrame):
+def factor_summary(factor: pd.DataFrame, name='factor'):
     """
 
     :param factor:
+    :param name:
     :return:
     """
     summary = factor.describe()
@@ -27,6 +28,8 @@ def factor_summary(factor: pd.DataFrame):
     adf = sm.tsa.adfuller(f.values, 1)
     summary['Augmented Dickey-Fuller test stat'] = adf[0]
     summary['Augmented Dickey-Fuller test p value'] = adf[1]
+    summary = pd.DataFrame(summary)
+    summary.columns = [name]
     return summary
 
 
