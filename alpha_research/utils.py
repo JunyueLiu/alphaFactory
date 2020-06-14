@@ -98,7 +98,7 @@ def infer_break(data:pd.DataFrame):
 
 def generate_strftime_format(index):
     tf = infer_factor_time_frame(index)
-    if 'min' in tf:
+    if 'min' in tf or 'H' in tf:
         return '%Y/%m/%d %H:%M:%S'
     else:
         return '%Y/%m/%d'
