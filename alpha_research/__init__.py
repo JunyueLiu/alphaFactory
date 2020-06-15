@@ -4,7 +4,7 @@ class AlphaResearch:
     def __init__(self):
         pass
 
-    def calculate_factor(self, func, parameter):
+    def calculate_factor(self, func, **kwargs):
         pass
 
     def evaluate_alpha(self):

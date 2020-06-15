@@ -8,7 +8,13 @@ def calculate_forward_returns(data: pd.DataFrame, periods: list, price_key='clos
     # 取了两个周期 periods=[1,2] shift 1天和2天
     returns = pd.DataFrame(index=data.index)
     for period in periods:
-        returns[str(period) + '_period_return'] = data[price_key].pct_change(periods=period).shift(-period)
+        if type(data.index) == pd.MultiIndex:
+            def multi_index_forward_returns(df:pd.DataFrame):
+                return df[price_key].pct_change(periods=period).shift(-period)
+            tmp = data.groupby(level=1).apply(multi_index_forward_returns).droplevel(0)
+            returns[str(period) + '_period_return'] = tmp
+        else:
+            returns[str(period) + '_period_return'] = data[price_key].pct_change(periods=period).shift(-period)
     return returns
 
 
@@ -74,7 +80,9 @@ def get_returns_columns() -> list:
 
 
 def infer_factor_time_frame(data: pd.DatetimeIndex):
-    time_delta = data.values[1:] - data.values[:-1]
+    unique_index = np.unique(data.values)
+    unique_index.sort()
+    time_delta = unique_index[1:] - unique_index[:-1]
     # get mode using scipy
     td = stats.mode(time_delta)[0][0]
     td = td.astype('timedelta64[m]')

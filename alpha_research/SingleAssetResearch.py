@@ -43,7 +43,7 @@ class SingleAssetResearch(AlphaResearch):
         self.factor = None
         self.out_of_sample_factor = None
         self.factor_timeframe = infer_factor_time_frame(self.in_sample.index)
-        self.factor_name = 'factor'
+        self.factor_name = 'Time Series Factor'
         self.factor_percentile_entry = 0.8
         self.alpha_func = None
         self.alpha_func_paras = None
@@ -162,10 +162,15 @@ class SingleAssetResearch(AlphaResearch):
                 )
 
             ]),
-            html.Div([dcc.Graph(id='distribution')], style={'width': '49%', 'display': 'inline-block'}),
-            html.Div([dcc.Graph(id='qqplot')], style={'width': '49%', 'display': 'inline-block'}),
-            html.Div([dcc.Graph(id='price_factor')], style={'width': '100%','display': 'inline-block'}),
-            html.Div([dcc.Graph(id='factor-returns')], style={'width': '100%','display': 'inline-block'}),
+            html.Div([html.Div(children='Price Factor '),dcc.Graph(id='distribution')], style={'width': '49%', 'display': 'inline-block'}),
+            html.Div([html.Div(children='QQ plot '), dcc.Graph(id='qqplot')],
+                     style={'width': '49%', 'display': 'inline-block'}),
+            html.Div([html.Div(children='Price Factor '),
+                      dcc.Graph(id='price_factor')],
+                     style={'width': '100%', 'display': 'inline-block'}),
+            html.Div([html.Div(children='Price Factor '),
+                      dcc.Graph(id='factor-returns')],
+                     style={'width': '100%', 'display': 'inline-block'}),
             html.Div([dcc.Graph(id='factor-backtest')], style={'width': '100%', 'display': 'inline-block'}),
         ])
 
@@ -239,10 +244,6 @@ class SingleAssetResearch(AlphaResearch):
                 return None
 
         return app
-
-
-
-
 
 
 class DemoSingleAssetFactor(SingleAssetResearch):
