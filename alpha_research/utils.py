@@ -9,8 +9,9 @@ def calculate_forward_returns(data: pd.DataFrame, periods: list, price_key='clos
     returns = pd.DataFrame(index=data.index)
     for period in periods:
         if type(data.index) == pd.MultiIndex:
-            def multi_index_forward_returns(df:pd.DataFrame):
+            def multi_index_forward_returns(df: pd.DataFrame):
                 return df[price_key].pct_change(periods=period).shift(-period)
+
             tmp = data.groupby(level=1).apply(multi_index_forward_returns).droplevel(0)
             returns[str(period) + '_period_return'] = tmp
         else:
@@ -50,29 +51,68 @@ def calculate_cumulative_returns(returns, starting_value=0, out=None):
     return out
 
 
-# here
-def calculate_factor_returns(data: pd.DataFrame, factor: pd.DataFrame, periods: list, price_key='close') -> pd.DataFrame:
-    factorReturns = pd.DataFrame(index=data.index)
-    for period in periods:
-        factorReturns[str(period) + '_period_factor'] = factor.copy()
-        factorReturns[str(period) + '_period_factor'] = np.clip(factorReturns[str(period) + '_period_factor'], -1, 1)
+def calculate_position(factor: pd.DataFrame):
+    """
+    The position of cross sectional alpha is calculated by
+    alpha / (sum(abs(alpha)))
+    The sum means the sum of alpha cross sectional, which means in the same time stamp.
+    For example,
+    Date        code
+    2010-06-15  0001.HK   2
+                0011.HK   5
+                0027.HK -10
+                1398.HK  -7
+                1928.HK  -7
+                2318.HK  -3
+    summation = |2| + |5| + |-10| + |-7| + |-7| + |-3|= 34
 
-        if period > 1:
-            # find the first non nan value to identify where the multi step factor starts
-            i = np.argwhere(np.isnan(factor.values) == False)[0][0]
-            factorReturns['a'] = 0
-            factorReturns.iloc[i:]['a'] = 1
-            factorReturns.iloc[i:]['a'] = (factorReturns['a'].iloc[i:].cumsum() - 1).mod(period)
-            # for factor trying to predict multi steps, the factor position will be fixed until time period end
-            factorReturns[str(period) + '_period_factor'] = np.where(factorReturns['a'] == 0,
-                                                                     factorReturns[str(period) + '_period_factor'],
-                                                                     np.nan)
-            factorReturns[str(period) + '_period_factor'].fillna(method='ffill', inplace=True)
-            del factorReturns['a']
-        factorReturns[str(period) + '_period_factor'] = factorReturns[str(period) + '_period_factor'].shift(1)
-        ret = data[price_key].pct_change()
-        factorReturns[str(period) + '_period_factor'] *= ret
-    return factorReturns
+    :param factor:
+    :return:
+    """
+    return factor.groupby(level=0).apply(lambda x: x / x.abs().sum())
+
+
+# here
+def calculate_factor_returns(data: pd.DataFrame, factor: pd.DataFrame, periods: list,
+                             price_key='close', factor_name='factor') -> pd.DataFrame:
+    factor_returns = pd.DataFrame(index=data.index)
+    # for cross sectional factor
+    if type(factor_returns.index) == pd.MultiIndex:
+        # todo returns with different holding period
+        position = calculate_position(factor)
+        # first shift the factor by date, because the factor can only decide future return
+        shifted_position = position.groupby(level=1).shift(1)
+        rate_of_return = data[price_key].groupby(level=1).pct_change()
+        # do multiple elementwise
+        factor_returns = pd.DataFrame(shifted_position.values[:, 0] * rate_of_return.values, index=rate_of_return.index)
+        # sum up the return in the same date.
+        factor_returns = factor_returns.groupby(level=0).sum()
+        factor_returns.rename({0: factor_name}, axis=1, inplace=True)
+    else:
+        # for time series factor
+        for period in periods:
+            factor_returns[str(period) + '_period_factor'] = factor.copy()
+            # force the factor to in the range of -1 and 1
+            factor_returns[str(period) + '_period_factor'] = np.clip(factor_returns[str(period) + '_period_factor'], -1,
+                                                                     1)
+
+            if period > 1:
+                # find the first non nan value to identify where the multi step factor starts
+                i = np.argwhere(np.isnan(factor.values) == False)[0][0]
+                factor_returns['a'] = 0
+                factor_returns.iloc[i:]['a'] = 1
+                factor_returns.iloc[i:]['a'] = (factor_returns['a'].iloc[i:].cumsum() - 1).mod(period)
+                # for factor trying to predict multi steps, the factor position will be fixed until time period end
+                factor_returns[str(period) + '_period_factor'] = np.where(factor_returns['a'] == 0,
+                                                                          factor_returns[
+                                                                              str(period) + '_period_factor'],
+                                                                          np.nan)
+                factor_returns[str(period) + '_period_factor'].fillna(method='ffill', inplace=True)
+                del factor_returns['a']
+            factor_returns[str(period) + '_period_factor'] = factor_returns[str(period) + '_period_factor'].shift(1)
+            ret = data[price_key].pct_change()
+            factor_returns[str(period) + '_period_factor'] *= ret
+    return factor_returns
 
 
 def get_returns_columns() -> list:
@@ -80,6 +120,8 @@ def get_returns_columns() -> list:
 
 
 def infer_factor_time_frame(data: pd.DatetimeIndex):
+    # fix bug
+    # This is to deal with multiIndex case, which the datetimeIndex is not unique
     unique_index = np.unique(data.values)
     unique_index.sort()
     time_delta = unique_index[1:] - unique_index[:-1]
@@ -100,9 +142,11 @@ def infer_factor_time_frame(data: pd.DatetimeIndex):
     else:
         return str(int(minutes / 28800)) + 'M'
 
-def infer_break(data:pd.DataFrame):
+
+def infer_break(data: pd.DataFrame):
     dt_range = pd.date_range(data.index[0], data.index[-1], freq=infer_factor_time_frame(data.index))
     return [dt for dt in dt_range if dt not in data.index]
+
 
 def generate_strftime_format(index):
     tf = infer_factor_time_frame(index)
@@ -117,7 +161,8 @@ if __name__ == '__main__':
     # pd.set_option('display.max_rows', None)
 
     period = [1]
-    df = pd.read_csv('/Users/silviaysy/Desktop/project/alphaFactory/HK.999010_2019-06-01 00:00:00_2020-05-30 03:00:00_K_1M_qfq.csv')
+    df = pd.read_csv(
+        '/Users/silviaysy/Desktop/project/alphaFactory/HK.999010_2019-06-01 00:00:00_2020-05-30 03:00:00_K_1M_qfq.csv')
     df.set_index('time_key', inplace=True)
     df.index = pd.to_datetime(df.index)
     df = df[-100:]
@@ -133,9 +178,9 @@ if __name__ == '__main__':
     # print(factorreturns)
 
     cumulatereturns = calculate_cumulative_returns(factorreturns, 1)
-#   print(cumulatereturns)
+    #   print(cumulatereturns)
 
-# #Information Coefficient
+    # #Information Coefficient
     ic = calculate_information_coefficient(factor, returns)
     print(ic)
 # results = factor_ols_regression(factor, returns)
