@@ -13,7 +13,7 @@ from alpha_research.utils import *
 from alpha_research.factor_zoo import *
 from IPython.display import display
 
-import plotly.io as pio
+# import plotly.io as pio
 
 
 # pio.renderers.default = "browser"
@@ -115,7 +115,7 @@ class SingleAssetResearch(AlphaResearch):
         fig = overlaid_factor_distribution_plot(self.factor, self.out_of_sample_factor)
         fig.show()
 
-    def get_evalution_dash_app(self):
+    def get_evaluation_dash_app(self):
         """
 
         :return:
@@ -266,6 +266,6 @@ if __name__ == '__main__':
     factor_study = SingleAssetResearch(df)
 
     factor_study.calculate_factor(alpha_6, time_lag=5)
-    # factor_study.evaluate_alpha()
+    factor_study.evaluate_alpha()
     # factor_study.out_of_sample_evaluation()
-    factor_study.get_evalution_dash_app().run_server(debug=True)
+    # factor_study.get_evalution_dash_app().run_server(debug=True)

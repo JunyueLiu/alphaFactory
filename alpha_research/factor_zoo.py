@@ -35,7 +35,7 @@ def alpha_21(df: pd.DataFrame):
     condition4 = df['volume'] / df['volume'].rolling(20).mean()
     factor = np.where(condition1 < condition2, -1,
                       np.where(condition2 < condition3, 1, np.where(condition4 >= 1, 1, -1)))
-    print(factor)
+    # print(factor)
     return factor
 
 
@@ -119,7 +119,7 @@ def alpha_54(df: pd.DataFrame):
 
 def alpha_84(df: pd.DataFrame):
     # SignedPower(Ts_Rank((vwap - ts_max(vwap, 15.3217)), 20.7127), delta(close, 4.96796))
-    return;
+    return
 
 
 def alpha_101(df: pd.DataFrame):

@@ -59,7 +59,7 @@ def factor_distribution_plot(factor):
 def entry_and_exit_plot(data: pd.DataFrame, factor, price_key='close'):
     strftime_format = generate_strftime_format(data.index)
     fig = go.Figure()
-    fig.add_trace(line(data[price_key], name=price_key, color='grey'))
+    fig.add_trace(line(data[price_key], name=price_key, color='grey', strftime_format=strftime_format))
     long = pd.Series(np.where(factor == 1, data[price_key], np.nan), index=data.index)
     short = pd.Series(np.where(factor == -1, data[price_key], np.nan), index=data.index)
 
