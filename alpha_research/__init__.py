@@ -7,7 +7,7 @@ class AlphaResearch:
     def calculate_factor(self, func, **kwargs):
         pass
 
-    def evaluate_alpha(self):
+    def evaluate_alpha(self, **kwargs):
         pass
 
     def out_of_sample_evaluation(self):

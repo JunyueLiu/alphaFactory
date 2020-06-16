@@ -162,16 +162,19 @@ class SingleAssetResearch(AlphaResearch):
                 )
 
             ]),
-            html.Div([html.Div(children='Price Factor '),dcc.Graph(id='distribution')], style={'width': '49%', 'display': 'inline-block'}),
-            html.Div([html.Div(children='QQ plot '), dcc.Graph(id='qqplot')],
+            html.Div([html.Div(children='Factor Distribution'), dcc.Graph(id='distribution')],
                      style={'width': '49%', 'display': 'inline-block'}),
-            html.Div([html.Div(children='Price Factor '),
+            html.Div([html.Div(children='Q-Q plot '), dcc.Graph(id='qqplot')],
+                     style={'width': '49%', 'display': 'inline-block'}),
+            html.Div([html.Div(children='Price Factor'),
                       dcc.Graph(id='price_factor')],
                      style={'width': '100%', 'display': 'inline-block'}),
-            html.Div([html.Div(children='Price Factor '),
+            html.Div([html.Div(children='Factor Return'),
                       dcc.Graph(id='factor-returns')],
                      style={'width': '100%', 'display': 'inline-block'}),
-            html.Div([dcc.Graph(id='factor-backtest')], style={'width': '100%', 'display': 'inline-block'}),
+            html.Div([html.Div(children='Factor Backtesting'),
+                      dcc.Graph(id='factor-backtest')],
+                     style={'width': '100%', 'display': 'inline-block'}),
         ])
 
         @app.callback(Output("forward-returns-period", "children"),

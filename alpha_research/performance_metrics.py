@@ -24,10 +24,12 @@ def factor_summary(factor: pd.DataFrame, name='factor'):
     summary['normality test p value'] = pvalue
 
     # Augmented Dickey-Fuller test
-    f = factor.dropna()
-    adf = sm.tsa.adfuller(f.values, 1)
-    summary['Augmented Dickey-Fuller test stat'] = adf[0]
-    summary['Augmented Dickey-Fuller test p value'] = adf[1]
+    if type(factor.index) != pd.MultiIndex:
+        # only time series factor has this test
+        f = factor.dropna()
+        adf = sm.tsa.adfuller(f.values, 1)
+        summary['Augmented Dickey-Fuller test stat'] = adf[0]
+        summary['Augmented Dickey-Fuller test p value'] = adf[1]
     summary = pd.DataFrame(summary)
     summary.columns = [name]
     return summary
