@@ -1,15 +1,17 @@
 import json
+import datetime
 import pandas as pd
 # from backtesting.Exchange import *
-from strategy.StrategyBase import Strategy
+from strategy.DoubleMA import DoubleMA
 from gateway.quote_base import QuoteBase
 from gateway.brokerage_base import BrokerageBase
 from backtesting.BacktestingQuote import BacktestingQuote
 from backtesting.BacktestingBrokerage import BacktestingBrokerage
+from strategy.StrategyBase import Strategy
 
 
 class BacktestingBase:
-    def __init__(self, quote: QuoteBase, brokerage: BrokerageBase, strategy: Strategy, strategy_parameter
+    def __init__(self, quote: BacktestingQuote, brokerage: BacktestingBrokerage, strategy: Strategy, strategy_parameter
                  , start=None, end=None, initial_capital=100, backtesting_setting=None):
         self.quote_ctx = quote
         self.brokerage_ctx = brokerage
@@ -21,7 +23,11 @@ class BacktestingBase:
         self.backtesting_setting = backtesting_setting
 
         self.data = None
-        self.data_source = None
+
+        if self.start is None:
+            self.start = self.backtesting_setting.get('start', None)
+        if self.end is None:
+            self.end = self.backtesting_setting.get('end', None)
 
     def _check_data_valid(self):
         """
@@ -59,7 +65,28 @@ class BacktestingBase:
                 d[key] = self.backtesting_setting[key]
 
     def _load_data(self):
-        pass
+        """
+
+        :return:
+        """
+        self.data = dict()
+        if self.backtesting_setting['data_source'] == 'csv':
+            time_key = self.backtesting_setting['time_key']
+            for symbol, bar_data in self.backtesting_setting['data'].items():
+                self.data[symbol] = dict()
+                for bar_type, path in bar_data.items():
+                    bar = pd.read_csv(path)
+                    bar[time_key] = pd.to_datetime(bar[time_key])
+                    bar.set_index(time_key, inplace=True)
+                    if self.start is not None:
+                        bar = bar[bar.index >= pd.to_datetime(self.start)]
+                    if self.end is not None:
+                        bar = bar[bar.index <= pd.to_datetime(self.end)]
+                    self.data[symbol][bar_type] = bar
+        elif self.backtesting_setting['data_source'] == 'db':
+
+            pass
+        self.quote_ctx.set_history_data(self.data)
 
     def _reset_data(self):
         self.data = None
@@ -86,11 +113,15 @@ class DayTradeBacktesting(BacktestingBase):
 
 
 class VectorizedBacktesting(BacktestingBase):
-    def __init__(self, quote: QuoteBase, brokerage: BrokerageBase, strategy: Strategy, strategy_parameter):
-        super(VectorizedBacktesting, self).__init__(quote, brokerage, strategy, strategy_parameter)
+    def __init__(self, quote: QuoteBase, brokerage: BrokerageBase, strategy: Strategy, strategy_parameter, start=None, end=None,
+                 initial_capital=100, backtesting_setting=None):
+        super(VectorizedBacktesting, self).__init__(quote, brokerage, strategy, strategy_parameter, start=start,
+                                                    end=end,
+                                                    initial_capital=initial_capital,
+                                                    backtesting_setting=backtesting_setting)
 
     def _load_data(self):
-        pass
+        super(VectorizedBacktesting, self)._load_data()
 
     def _initial_strategy(self):
         super()._initial_strategy()
@@ -108,6 +139,7 @@ class VectorizedBacktesting(BacktestingBase):
             lookback_period[symbol] = {}
             for subtype, data in subtype_data.items():
                 lookback_period[symbol][subtype] = len(data)
+        self.strategy.lookback_period = lookback_period
         self.strategy.strategy_parameters['lookback_period'] = lookback_period
 
     def run(self):
@@ -117,18 +149,20 @@ class VectorizedBacktesting(BacktestingBase):
         self._load_data()
         self._check_data_valid()
         self._change_lookback_period()
-        self.strategy.init_kline_object()
+        self.strategy.on_strategy_init(datetime.datetime.now())
+        # self.strategy.init_kline_object()
+        # self.strategy.load_history_data()
         # self
 
 
 if __name__ == '__main__':
-    df = pd.read_csv('../hkex_data/HK.800000_2019-02-25 09:30:00_2020-02-21 16:00:00_K_1M_qfq.csv')
+    # df = pd.read_csv('../hkex_data/HK.800000_2019-02-25 09:30:00_2020-02-21 16:00:00_K_1M_qfq.csv')
 
     quote = BacktestingQuote()
 
     broker = BacktestingBrokerage(1)
 
-    strategy = Strategy()
+    strategy = DoubleMA()
     backtesting_setting = {
         'data_source': 'csv',
 
@@ -138,10 +172,45 @@ if __name__ == '__main__':
             }
         },
         'start': '2019-07-01',
-        'end': '2020-05-30',
+        'end': '2020-04-30',
+        'time_key': 'time_key'
 
     }
 
-    backtesting = VectorizedBacktesting(quote, broker, strategy,
-                                        '/Users/liujunyue/PycharmProjects/ljquant/strategy/1_min_hsi_futures_setting.json')
+    strategy_parameter = {
+        "lookback_period": {
+            "HK.999010": {
+                "K_1M": 100
+            }
+        },
+        "subscribe": {
+            "HK.999010": [
+                "K_1M"
+            ]
+        },
+        "ta_parameters": {
+            "HK.999010": {
+                "K_1M": {
+                    "MA1": {
+                        "indicator": "MA",
+                        "period": 5
+                    },
+                    "MA2": {
+                        "indicator": "MA",
+                        "period": 10,
+                        "matype": "MA_Type.SMA",
+                        "price_type": "'close'"
+                    },
+                    "MA3": {
+                        "indicator": "MA",
+                        "period": 20
+                    }
+                }
+
+            }
+        }
+    }
+
+    backtesting = VectorizedBacktesting(quote, broker, strategy, strategy_parameter,
+                                        backtesting_setting=backtesting_setting)
     backtesting.run()

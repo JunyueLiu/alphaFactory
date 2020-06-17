@@ -40,11 +40,13 @@ class BacktestingQuote(QuoteBase):
         self.subscribe_dict = {}
         return 1, None
 
-    def get_history_kline(self, symbol, start, end, kline_type, num, *args, **kwargs):
+    def get_history_kline(self, symbol, start=None, end=None, kline_type='k_1D', num=1000, *args, **kwargs):
         if symbol in self.subscribe_dict.keys():
             df = self.history_data[symbol][kline_type]
-            df = df[df.index >= pd.to_datetime(start)]
-            df = df[df.index < pd.to_datetime(end)]
+            if start is not None:
+                df = df[df.index >= pd.to_datetime(start)]
+            if end is not None:
+                df = df[df.index < pd.to_datetime(end)]
             df = df[-num:]
             return 1, df
         else:
