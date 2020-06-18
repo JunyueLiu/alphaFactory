@@ -87,6 +87,8 @@ class BarManager:
         self._calculate_ta()
 
     def _set_technical_indicator(self, ta_parameter):
+        if ta_parameter is None:
+            return
         ta_setting = ta_parameter[self.bar_name]
         self.technical_indicator_parameters = ta_setting
 

@@ -33,9 +33,9 @@ class Strategy:
         self.k_5m = None
         self.k_15m = None
         self.k_30m = None
-        self.k_1m = None
-        self.k_4m = None
-        self.k_8m = None
+        self.k_1h = None
+        self.k_4h = None
+        self.k_8h = None
 
         # parameter setting
         self.ta_parameters = {}
@@ -57,7 +57,7 @@ class Strategy:
         self.end = None
 
     def set_quote_context(self, quote_context: QuoteBase):
-        self._quote_ctx = quote_context
+        self._quote_ctx = quote_context  # type: QuoteBase
 
     def set_brokerage_context(self, brokerage_context: BrokerageBase):
         self._brokerage_ctx = brokerage_context
@@ -69,7 +69,7 @@ class Strategy:
         self.symbols = self.subscribe.keys()
         for key, value in self.subscribe.items():
             self.write_log_info('subscribe {}:{}'.format(key, value))
-            self._quote_ctx.subscribe(key, value)
+            self._quote_ctx.subscribe([key], value)
             for sub_type in value:
                 sub_type_lower = sub_type.lower()
                 if sub_type[0] == 'K':
@@ -111,10 +111,11 @@ class Strategy:
         self.write_log_info('load history data')
         for symbol, sub_types in self.subscribe.items():
             if self.backtesting:
-                self.write_log_info('load backtesting data: {}:{}:{}:{}')
-                data = self._quote_ctx.get_history_kline(symbol, self.start, self.end, sub_types,
-                                                         self.lookback_period[symbol][sub_types])
-                self.__dict__[sub_types.lower()][symbol].init_with_pandas(data)
+                for sub in sub_types:
+                    num = self.lookback_period[symbol][sub]
+                    self.write_log_info('load backtesting data: {}:{} number:{}'.format(symbol, sub, num))
+                    _, data = self._quote_ctx.get_history_kline(symbol, kline_type=sub, num=num)
+                    self.__dict__[sub.lower()][symbol].init_with_pandas(data)
             else:
                 self.write_log_info('load history data: {}:{}:{}:{}')
 
@@ -213,5 +214,3 @@ class Strategy:
 class DayTradeStrategy(Strategy):
     def __init__(self):
         super(DayTradeStrategy, self).__init__()
-
-

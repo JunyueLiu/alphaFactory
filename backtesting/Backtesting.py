@@ -1,6 +1,7 @@
 import json
 import datetime
 import pandas as pd
+from numba import njit
 # from backtesting.Exchange import *
 from strategy.DoubleMA import DoubleMA
 from gateway.quote_base import QuoteBase
@@ -8,6 +9,7 @@ from gateway.brokerage_base import BrokerageBase
 from backtesting.BacktestingQuote import BacktestingQuote
 from backtesting.BacktestingBrokerage import BacktestingBrokerage
 from strategy.StrategyBase import Strategy
+from bar_manager.BarManager import BarManager
 
 
 class BacktestingBase:
@@ -113,15 +115,24 @@ class DayTradeBacktesting(BacktestingBase):
 
 
 class VectorizedBacktesting(BacktestingBase):
-    def __init__(self, quote: QuoteBase, brokerage: BrokerageBase, strategy: Strategy, strategy_parameter, start=None, end=None,
+    def __init__(self, quote: QuoteBase, brokerage: BrokerageBase, strategy: Strategy, strategy_parameter, start=None,
+                 end=None,
                  initial_capital=100, backtesting_setting=None):
         super(VectorizedBacktesting, self).__init__(quote, brokerage, strategy, strategy_parameter, start=start,
                                                     end=end,
                                                     initial_capital=initial_capital,
                                                     backtesting_setting=backtesting_setting)
+        self.full_picture_bar_manager = dict()
 
     def _load_data(self):
         super(VectorizedBacktesting, self)._load_data()
+        for symbol, klines in self.data.items():
+            self.full_picture_bar_manager[symbol] = dict()
+            for kline_type, data in klines.items():
+                self.full_picture_bar_manager[symbol][kline_type] = BarManager(kline_type,
+                                                                               len(data),
+                                                                               self.strategy.ta_parameters[symbol])
+                self.full_picture_bar_manager[symbol][kline_type].init_with_pandas(data) # type:BarManager
 
     def _initial_strategy(self):
         super()._initial_strategy()
@@ -142,17 +153,35 @@ class VectorizedBacktesting(BacktestingBase):
         self.strategy.lookback_period = lookback_period
         self.strategy.strategy_parameters['lookback_period'] = lookback_period
 
+    @njit
+    def generate_bar_manager_state(self, bar_manager: BarManager, size):
+        partial_bar_manager = BarManager(bar_manager.bar_name, size, None)
+        partial_bar_manager.technical_indicator_parameters = bar_manager.technical_indicator_parameters
+        partial_bar_manager.ta = dict()
+        for i in range(bar_manager.size - size):
+            partial_bar_manager.time = bar_manager.time[i: i + size]
+            partial_bar_manager.open = bar_manager.open[i: i + size]
+            partial_bar_manager.high = bar_manager.high[i: i + size]
+            partial_bar_manager.low = bar_manager.low[i: i + size]
+            partial_bar_manager.close = bar_manager.close[i: i + size]
+            for k, v in bar_manager.ta.items():
+                partial_bar_manager.ta[k] = v[i: i + size]
+            for customized in bar_manager.customized_indicator_name:
+                partial_bar_manager.__dict__[customized] = bar_manager.__dict__[customized][i: i + size]
+            yield partial_bar_manager
+
     def run(self):
         # self.strategy.load_setting()
         # overload the lookback to change the performance of barmanager
         self._initial_strategy()
         self._load_data()
         self._check_data_valid()
-        self._change_lookback_period()
+        # self._change_lookback_period()
         self.strategy.on_strategy_init(datetime.datetime.now())
         # self.strategy.init_kline_object()
         # self.strategy.load_history_data()
         # self
+        # for i in range(len(self.data)):
 
 
 if __name__ == '__main__':
@@ -214,3 +243,4 @@ if __name__ == '__main__':
     backtesting = VectorizedBacktesting(quote, broker, strategy, strategy_parameter,
                                         backtesting_setting=backtesting_setting)
     backtesting.run()
+    g = backtesting.generate_bar_manager_state(backtesting.full_picture_bar_manager['HK.999010']['K_1M'], 100)
