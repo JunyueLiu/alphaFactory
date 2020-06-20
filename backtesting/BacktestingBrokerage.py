@@ -76,12 +76,34 @@ class BacktestingBrokerage(BrokerageBase):
     def deal_list_query(self, *args, **kwargs):
         return 1, self.deal_order_list
 
-
-    def _update_time(self, time):
+    def update_time(self, time):
         self.time = time
 
-    def order_deal(self, order_id):
+    def order_deal(self, order_id, deal_price, deal_qty):
         order = self.working_order.pop(order_id)
+        order.dealt_avg_price = deal_price
+        order.deal_qty = deal_qty
         order.order_status = FILLED_ALL
         self.history_order_list.append(order)
+
+    def limit_order_matching(self, order_id, open_price, high_price, low_price):
+        order = self.working_order[order_id]
+        if order.order_status == 'SUBMITTED' and (order.order_type is None or order.order_type == 'NORMAL'):
+            if order.order_direction == 'LONG':
+
+                if order.order_price >= open_price:
+                    deal_price = open_price
+                    self.order_deal(order_id, deal_price, order.order_qty)
+                elif order.order_price <= high_price:
+                    deal_price = order.order_price
+                    self.order_deal(order_id, deal_price, order.order_qty)
+            elif order.order_direction == 'SHORT':
+
+                if order.order_price <= open_price:
+                    deal_price = open_price
+                    self.order_deal(order_id, deal_price, order.order_qty)
+                elif order.order_price >= low_price:
+                    deal_price = order.order_price
+                    self.order_deal(order_id, deal_price, order.order_qty)
+
 
