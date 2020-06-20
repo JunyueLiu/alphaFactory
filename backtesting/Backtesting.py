@@ -253,7 +253,6 @@ class VectorizedBacktesting(BacktestingBase):
 
     def run(self):
         # self.strategy.load_setting()
-        start = datetime.datetime.now()
         self._initial_strategy()
         self._load_data()
         self._check_data_valid()
@@ -264,11 +263,13 @@ class VectorizedBacktesting(BacktestingBase):
 
         # last_state = self.strategy.lookback_period.copy()
         self.update_state(init=True)
+        start = datetime.datetime.now()
         for t in self.time_list:
             # if t is in the smallest timestamp the strategy should make decision
+            self.brokerage_ctx.update_time(t)
+            # self.brokerage_ctx.limit_order_matching()
             if t == self.min_timestamp:
-                self.brokerage_ctx.time = t
-                # print(t, self.bar_timestamp['K_1M'])
+                # print(t)
                 # todo test that whether can handle same ktype data with different start
                 if 'K_1M' in self.bar_timestamp.keys():
                     keys = [k for k, v in self.bar_timestamp['K_1M'].items() if v == t]

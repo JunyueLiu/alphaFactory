@@ -16,6 +16,8 @@ class DoubleMA(Strategy):
 
     def strategy_logic(self, bar: BarManager):
         # print(bar.__dict__)
+        self.cancel_all()
+
         price = bar.close[-1]
         if bar.ta['MA1'][-1] >= bar.ta['MA2'][-1] \
                 and bar.ta['MA1'][-2] < bar.ta['MA2'][-2]:
