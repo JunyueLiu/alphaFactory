@@ -222,19 +222,19 @@ class Strategy:
         pass
 
     def buy(self, symbol, price, vol, order_type, *args, **kwargs):
-        self._brokerage_ctx.place_order(price, vol, symbol, 'BUY')
+        self._brokerage_ctx.place_order(price, vol, symbol, 'LONG')
 
     def sell(self, symbol, price, vol, order_type, *args, **kwargs):
-        self._brokerage_ctx.place_order(price, vol, symbol, 'SELL')
+        self._brokerage_ctx.place_order(price, vol, symbol, 'SHORT')
 
     def short(self, symbol, price, vol, order_type, *args, **kwargs):
-        self._brokerage_ctx.place_order(price, vol, symbol, 'SELL_SHORT')
+        self._brokerage_ctx.place_order(price, vol, symbol, 'SHORT')
 
     def cover(self, symbol, price, vol, order_type, *args, **kwargs):
-        self._brokerage_ctx.place_order(price, vol, symbol, 'BUY_BACK')
+        self._brokerage_ctx.place_order(price, vol, symbol, 'LONG')
 
     def cancel_all(self):
-        pass
+        self._brokerage_ctx.cancel_all_order()
 
     def modified_order(self, order_id):
         pass
