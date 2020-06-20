@@ -1,6 +1,7 @@
 import json
 import datetime
 import pandas as pd
+import numpy as np
 from numba import njit
 # from backtesting.Exchange import *
 from strategy.DoubleMA import DoubleMA
@@ -86,7 +87,6 @@ class BacktestingBase:
                         bar = bar[bar.index <= pd.to_datetime(self.end)]
                     self.data[symbol][bar_type] = bar
         elif self.backtesting_setting['data_source'] == 'db':
-
             pass
         self.quote_ctx.set_history_data(self.data)
 
@@ -123,19 +123,31 @@ class VectorizedBacktesting(BacktestingBase):
                                                     initial_capital=initial_capital,
                                                     backtesting_setting=backtesting_setting)
         self.full_picture_bar_manager = dict()
+        self.strategy_lookback_period = None
+
+        self.time_list = np.empty(1, dtype='datetime64')
+        self.state_generators = dict()
+        self.state = dict()
+        self.bar_timestamp = dict()
+        self.min_timestamp = None
 
     def _load_data(self):
         super(VectorizedBacktesting, self)._load_data()
+        for klines in self.data.values():
+            for k in klines.keys():
+                self.full_picture_bar_manager[k] = dict()
+
         for symbol, klines in self.data.items():
-            self.full_picture_bar_manager[symbol] = dict()
             for kline_type, data in klines.items():
-                self.full_picture_bar_manager[symbol][kline_type] = BarManager(kline_type,
-                                                                               len(data),
+                self.full_picture_bar_manager[kline_type][symbol] = BarManager(kline_type,
+                                                                               size=len(data),
+                                                                               ta_parameters=
                                                                                self.strategy.ta_parameters[symbol])
-                self.full_picture_bar_manager[symbol][kline_type].init_with_pandas(data) # type:BarManager
+                self.full_picture_bar_manager[kline_type][symbol].init_with_pandas(data)  # type:BarManager
 
     def _initial_strategy(self):
         super()._initial_strategy()
+        self.strategy_lookback_period = self.strategy.lookback_period
 
     def _check_data_valid(self):
         super()._check_data_valid()
@@ -153,8 +165,26 @@ class VectorizedBacktesting(BacktestingBase):
         self.strategy.lookback_period = lookback_period
         self.strategy.strategy_parameters['lookback_period'] = lookback_period
 
-    @njit
+    def _infer_time(self):
+        """
+
+        :return:
+        """
+        self.time_list = np.empty(0, dtype='datetime64')
+        for symbol, subs in self.data.items():
+            for v in subs.values():
+                self.time_list = np.append(self.time_list, v.index.values)
+        self.time_list = np.unique(self.time_list)
+        self.time_list.sort()
+
+    # @njit
     def generate_bar_manager_state(self, bar_manager: BarManager, size):
+        """
+
+        :param bar_manager:
+        :param size:
+        :return:
+        """
         partial_bar_manager = BarManager(bar_manager.bar_name, size, None)
         partial_bar_manager.technical_indicator_parameters = bar_manager.technical_indicator_parameters
         partial_bar_manager.ta = dict()
@@ -168,20 +198,109 @@ class VectorizedBacktesting(BacktestingBase):
                 partial_bar_manager.ta[k] = v[i: i + size]
             for customized in bar_manager.customized_indicator_name:
                 partial_bar_manager.__dict__[customized] = bar_manager.__dict__[customized][i: i + size]
-            yield partial_bar_manager
+            yield (partial_bar_manager.time[-1], partial_bar_manager)
+
+    def initial_bar_manager_generators(self):
+        """
+        initial generators
+        and save in self.state_generators[sub_types][symbol]
+        (dt for bar manager state, bar manager)
+        :return:
+        """
+        for sub_types, symbol_data in self.full_picture_bar_manager.items():
+            self.state_generators[sub_types] = dict()
+            for symbol, bm in symbol_data.items():
+                self.state_generators[sub_types][symbol] \
+                    = self.generate_bar_manager_state(bm, self.strategy_lookback_period[symbol][sub_types])
+
+    def update_state(self, dt=None, init=False):
+        """
+
+        :param dt:
+        :param init:
+        :return:
+        """
+        # generate first state of each ohlc data
+        if init is True:
+            for kline_type, symbol_generator in self.state_generators.items():  #
+                self.state[kline_type] = dict()
+                self.bar_timestamp[kline_type] = dict()
+                for symbol, generator in symbol_generator.items():
+                    bar_t, bar = next(generator)
+                    if self.min_timestamp is None or bar_t < self.min_timestamp:
+                        self.min_timestamp = bar_t
+                    self.state[kline_type][symbol] = bar
+                    self.bar_timestamp[kline_type][symbol] = bar_t
+                return True
+        else:
+            # if current dt is less than first dt that bar occupies, skip it
+            if dt < self.min_timestamp:
+                return False
+            for kline_type, symbol_generator in self.state_generators.items():
+                for symbol, generator in symbol_generator.items():
+                    #
+                    if dt < self.bar_timestamp[kline_type][symbol]:
+                        continue
+                    try:
+                        bar_t, bar = next(generator)
+                    except StopIteration:
+                        return None
+                    if bar_t > self.min_timestamp:
+                        self.min_timestamp = bar_t
+                    self.state[kline_type][symbol] = bar
+                    self.bar_timestamp[kline_type][symbol] = bar_t
+            return True
 
     def run(self):
         # self.strategy.load_setting()
-        # overload the lookback to change the performance of barmanager
+        start = datetime.datetime.now()
         self._initial_strategy()
         self._load_data()
         self._check_data_valid()
-        # self._change_lookback_period()
         self.strategy.on_strategy_init(datetime.datetime.now())
-        # self.strategy.init_kline_object()
-        # self.strategy.load_history_data()
-        # self
-        # for i in range(len(self.data)):
+        self._infer_time()
+        # todo Don't know how to make sure the datetime is correct for multi time frame
+        self.initial_bar_manager_generators()
+
+        # last_state = self.strategy.lookback_period.copy()
+        self.update_state(init=True)
+        for t in self.time_list:
+            # if t is in the smallest timestamp the strategy should make decision
+            if t == self.min_timestamp:
+                self.brokerage_ctx.time = t
+                # print(t, self.bar_timestamp['K_1M'])
+                # todo test that whether can handle same ktype data with different start
+                if 'K_1M' in self.bar_timestamp.keys():
+                    keys = [k for k, v in self.bar_timestamp['K_1M'].items() if v == t]
+                    self.strategy.on_1min_bar({k: v for k, v in self.state['K_1M'].items() if k in keys})
+                if 'K_5M' in self.bar_timestamp.keys():
+                    keys = [k for k, v in self.bar_timestamp['K_5M'].items() if v == t]
+                    self.strategy.on_5min_bar({k: v for k, v in self.state['K_5M'].items() if k in keys})
+                if 'K_15M' in self.bar_timestamp.keys():
+                    keys = [k for k, v in self.bar_timestamp['K_15M'].items() if v == t]
+                    self.strategy.on_15min_bar({k: v for k, v in self.state['K_15M'].items() if k in keys})
+                if 'K_30M' in self.bar_timestamp.keys():
+                    keys = [k for k, v in self.bar_timestamp['K_30M'].items() if v == t]
+                    self.strategy.on_30min_bar({k: v for k, v in self.state['K_30M'].items() if k in keys})
+                if 'K_1H' in self.bar_timestamp.keys():
+                    keys = [k for k, v in self.bar_timestamp['K_60M'].items() if v == t]
+                    self.strategy.on_60min_bar({k: v for k, v in self.state['K_60M'].items() if k in keys})
+                if 'K_4H' in self.bar_timestamp.keys():
+                    keys = [k for k, v in self.bar_timestamp['K_4H'].items() if v == t]
+                    self.strategy.on_4h_bar({k: v for k, v in self.state['K_4H'].items() if k in keys})
+
+
+            updated = self.update_state(t)
+            if updated is None:
+                print('finish backtest')
+                print(datetime.datetime.now() - start)
+                break
+            if updated is False:
+                print('skip kline for look back')
+
+            # self.strategy.on_1min_bar()
+
+            # self.generate_bar_manager_state(self.full_picture_bar_manager['K_1M']['HK.999010'], 100, i)
 
 
 if __name__ == '__main__':
@@ -205,6 +324,7 @@ if __name__ == '__main__':
         'time_key': 'time_key'
 
     }
+    # todo one should guarantee lookback period for same kline_type is same.
 
     strategy_parameter = {
         "lookback_period": {
@@ -237,10 +357,11 @@ if __name__ == '__main__':
                 }
 
             }
-        }
+        },
+        "traded_code": "HK.999010"
     }
 
     backtesting = VectorizedBacktesting(quote, broker, strategy, strategy_parameter,
                                         backtesting_setting=backtesting_setting)
     backtesting.run()
-    g = backtesting.generate_bar_manager_state(backtesting.full_picture_bar_manager['HK.999010']['K_1M'], 100)
+    # g = backtesting.generate_bar_manager_state(backtesting.full_picture_bar_manager['HK.999010']['K_1M'], 100)

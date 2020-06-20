@@ -33,7 +33,7 @@ class Strategy:
         self.k_5m = None
         self.k_15m = None
         self.k_30m = None
-        self.k_1h = None
+        self.k_60m = None
         self.k_4h = None
         self.k_8h = None
 
@@ -43,8 +43,8 @@ class Strategy:
         self.lookback_period = {}
 
         # trade related state variable
-        self._quote_ctx = None
-        self._brokerage_ctx = None
+        self._quote_ctx = None  # type: QuoteBase
+        self._brokerage_ctx = None  # type: BrokerageBase
 
         # strategy related state variables
         self.subscribe = {}
@@ -60,7 +60,7 @@ class Strategy:
         self._quote_ctx = quote_context  # type: QuoteBase
 
     def set_brokerage_context(self, brokerage_context: BrokerageBase):
-        self._brokerage_ctx = brokerage_context
+        self._brokerage_ctx = brokerage_context  # type: BrokerageBase
 
     def set_trade_day(self):
         pass
@@ -120,7 +120,54 @@ class Strategy:
                 self.write_log_info('load history data: {}:{}:{}:{}')
 
     def process_kline(self, data):
-        pass
+        for ix, row in data.iterrows():
+            code = row['code']
+            if row['k_type'] == 'K_1M':
+                if self.last_bar['K_1M'] < ix:  # new bar comes in
+                    # self.same_bar_traded = False
+                    self.on_1min_bar(self.k_1m)
+                    self.last_bar['K_1M'] = ix
+                    self.k_1m[code].update_with_pandas(row, time_key='time_key')
+                else:
+                    self.k_1m[code].update_with_pandas(row, time_key='time_key')
+                    self.on_1min_bar(self.k_1m)
+            elif row['k_type'] == 'K_5M':
+                if self.last_bar['K_5M'] < ix:  # new bar comes in
+                    # self.same_bar_traded = False
+                    self.on_5min_bar(self.k_5m)
+                    self.last_bar['K_5M'] = ix
+                    self.k_5m[code].update_with_pandas(row, time_key='time_key')
+                else:
+                    self.k_5m[code].update_with_pandas(row, time_key='time_key')
+                    self.on_5min_bar(self.k_5m)
+            elif row['k_type'] == 'K_15M':
+                if self.last_bar['K_15M'] < ix:  # new bar comes in
+                    # self.same_bar_traded = False
+                    self.on_15min_bar(self.k_15m)
+                    self.last_bar['K_15M'] = ix
+                    self.k_15m[code].update_with_pandas(row, time_key='time_key')
+                else:
+                    self.k_15m[code].update_with_pandas(row, time_key='time_key')
+                    self.on_15min_bar(self.k_15m)
+            elif row['k_type'] == 'K_30M':
+                if self.last_bar['K_30M'] < ix:  # new bar comes in
+                    # self.same_bar_traded = False
+                    self.on_30min_bar(self.k_30m)
+                    self.last_bar['K_30M'] = ix
+                    self.k_30m[code].update_with_pandas(row, time_key='time_key')
+                else:
+                    self.k_30m[code].update_with_pandas(row, time_key='time_key')
+                    self.on_30min_bar(self.k_30m)
+            elif row['k_type'] == 'K_60M':
+                if self.last_bar['K_60M'] < ix:  # new bar comes in
+                    # self.same_bar_traded = False
+                    self.on_60min_bar(self.k_60m)
+                    self.last_bar['K_60M'] = ix
+                    self.k_60m[code].update_with_pandas(row, time_key='time_key')
+                else:
+                    self.k_60m[code].update_with_pandas(row, time_key='time_key')
+                    self.on_60min_bar(self.k_60m)
+            self.logger.info('process_kline for {} {}'.format(ix, code))
 
     def strategy_logic(self, data):
         pass
@@ -153,7 +200,7 @@ class Strategy:
     def on_30min_bar(self, bar):
         pass
 
-    def on_1h_bar(self, bar):
+    def on_60min_bar(self, bar):
         pass
 
     def on_4h_bar(self, bar):
@@ -175,16 +222,16 @@ class Strategy:
         pass
 
     def buy(self, symbol, price, vol, order_type, *args, **kwargs):
-        pass
+        self._brokerage_ctx.place_order(price, vol, symbol, 'BUY')
 
     def sell(self, symbol, price, vol, order_type, *args, **kwargs):
-        pass
+        self._brokerage_ctx.place_order(price, vol, symbol, 'SELL')
 
     def short(self, symbol, price, vol, order_type, *args, **kwargs):
-        pass
+        self._brokerage_ctx.place_order(price, vol, symbol, 'SELL_SHORT')
 
     def cover(self, symbol, price, vol, order_type, *args, **kwargs):
-        pass
+        self._brokerage_ctx.place_order(price, vol, symbol, 'BUY_BACK')
 
     def cancel_all(self):
         pass

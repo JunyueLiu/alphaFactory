@@ -11,7 +11,7 @@ class BacktestingBrokerage(BrokerageBase):
         self.deal_order_list = []
         self.working_order = {}
         self.account_id = account_id
-        self.time = datetime.datetime(1970, 1, 1)
+        self.time = None
         if initial_position is None:
             self.current_position = []
         else:
