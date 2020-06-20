@@ -35,7 +35,7 @@ def returns_plot(factor_returns, factor_name='factor'):
     strftime_format = generate_strftime_format(factor_returns.index)
     for col in factor_returns.columns:
         fig.add_trace(line(factor_returns[col], name=factor_name + '_' + col, strftime_format=strftime_format))
-    fig.update_layout(yaxis_tickformat='g')
+    # fig.update_layout(yaxis_tickformat='g')
     return fig
 
 

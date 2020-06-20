@@ -1,3 +1,4 @@
+import pandas as pd
 from strategy.StrategyBase import Strategy
 from bar_manager.BarManager import BarManager
 
@@ -10,47 +11,30 @@ class DoubleMA(Strategy):
         self.author = 'AlphaFactory Trader'
         self.strategy_version = '0.0.1'
         self.strategy_description = 'Two MA lines, cross over'
+        self.long = None
+        self.traded_code = None
 
     def strategy_logic(self, bar: BarManager):
-        print(bar.__dict__)
-        if bar.ta['MA1'][-1] > bar.ta['MA2'][-1] and bar.ta['MA1'][-2] < bar.ta['MA2'][-2]:
-            print('cross buy')
-        else:
-            print('no')
+        # print(bar.__dict__)
+        price = bar.close[-1]
+        if bar.ta['MA1'][-1] >= bar.ta['MA2'][-1] \
+                and bar.ta['MA1'][-2] < bar.ta['MA2'][-2]:
+            if self.long is False:
+                self.cover(self.traded_code, price, 1, None)
+            self.long = True
+            self.buy(self.traded_code, price, 1, None)
+        elif bar.ta['MA1'][-1] <= bar.ta['MA2'][-1] \
+                and bar.ta['MA1'][-2] > bar.ta['MA2'][-2]:
+            if self.long is True:
+                self.sell(self.traded_code, price, 1, None)
+            self.short(self.traded_code, price, 1, None)
+            self.long = False
 
-    def process_kline(self, data):
-        for ix, row in data.iterrows():
-            code = row['code']
-            if row['k_type'] == 'K_1M':
-                if self.last_bar['K_1M'] < ix:  # new bar comes in
-                    self.same_bar_traded = False
-                    self.on_1min_bar(self.k_1m)
-                    # self.strategy_logic(self.k_1m)
-                    self.last_bar['K_1M'] = ix
-                    self.k_1m[code].update_with_pandas(row, time_key='time_key')
-                else:
-                    self.k_1m[code].update_with_pandas(row, time_key='time_key')
-                    self.on_1min_bar(self.k_1m)
-            self.logger.info('process_kline for {} {}'.format(ix, code))
+    def process_kline(self, data: pd.DataFrame):
+        super(DoubleMA, self).process_kline(data)
 
     def on_1min_bar(self, bar: dict):
-        print('on_1_min')
-        if bar.ta['MA1'][-1] > bar['HK.999010'].ta['MA2'][-1] \
-                and bar['HK.999010'].ta['MA1'][-2] < bar['HK.999010'].ta['MA2'][-2]:
-            pass
-        self.strategy_logic()
-
-    def buy(self, symbol, price, vol, order_type, *args, **kwargs):
-        pass
-
-    def sell(self, symbol, price, vol, order_type, *args, **kwargs):
-        pass
-
-    def short(self, symbol, price, vol, order_type, *args, **kwargs):
-        pass
-
-    def cover(self, symbol, price, vol, order_type, *args, **kwargs):
-        pass
+        self.strategy_logic(bar[self.traded_code])
 
     def run_strategy(self):
         pass

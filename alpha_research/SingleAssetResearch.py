@@ -268,4 +268,4 @@ if __name__ == '__main__':
     factor_study.calculate_factor(alpha_6, time_lag=5)
     factor_study.evaluate_alpha()
     # factor_study.out_of_sample_evaluation()
-    # factor_study.get_evalution_dash_app().run_server(debug=True)
+    factor_study.get_evaluation_dash_app().run_server(debug=True)
