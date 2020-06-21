@@ -218,7 +218,7 @@ class Strategy:
     def on_order_send(self):
         pass
 
-    def on_order_status_change(self):
+    def on_order_status_change(self, *args, **kwargs):
         pass
 
     def buy(self, symbol, price, vol, order_type, *args, **kwargs):
@@ -243,9 +243,6 @@ class Strategy:
         self.traded_list.append(trade)
 
     def _update_indicators(self, all=True):
-        pass
-
-    def run_strategy(self):
         pass
 
     def write_log_info(self, content):
