@@ -27,6 +27,8 @@ class BacktestingBase:
 
         self.data = None
 
+        self.dealt_list = []
+
         if self.start is None:
             self.start = self.backtesting_setting.get('start', None)
         if self.end is None:
@@ -96,6 +98,9 @@ class BacktestingBase:
     def get_trading_history(self):
         return self.brokerage_ctx.history_order_list_query()
 
+    def get_dealt_history(self):
+        return self.brokerage_ctx.deal_order_list()
+
     def _load_data_from_db(self):
         pass
 
@@ -103,7 +108,7 @@ class BacktestingBase:
         pass
 
     def calculate_result(self):
-        pass
+        self.dealt_list = self.get_dealt_history()
 
     def run(self):
         pass
@@ -130,6 +135,7 @@ class VectorizedBacktesting(BacktestingBase):
         self.state = dict()
         self.bar_timestamp = dict()
         self.min_timestamp = None
+        self.kline_type_on_bar_match: dict = None
 
     def _load_data(self):
         super(VectorizedBacktesting, self)._load_data()
@@ -148,6 +154,16 @@ class VectorizedBacktesting(BacktestingBase):
     def _initial_strategy(self):
         super()._initial_strategy()
         self.strategy_lookback_period = self.strategy.lookback_period
+        self.kline_type_on_bar_match = {
+            'K_1M': self.strategy.on_1min_bar,
+            'K_5M': self.strategy.on_5min_bar,
+            'K_15M': self.strategy.on_15min_bar,
+            'K_30M': self.strategy.on_30min_bar,
+            'K_60M': self.strategy.on_60min_bar,
+            'K_4H': self.strategy.on_4h_bar,
+            'K_8H': self.strategy.on_8h_bar
+
+        }
 
     def _check_data_valid(self):
         super()._check_data_valid()
@@ -238,9 +254,11 @@ class VectorizedBacktesting(BacktestingBase):
                 return False
             for kline_type, symbol_generator in self.state_generators.items():
                 for symbol, generator in symbol_generator.items():
-                    #
+                    # this condition is to make sure the unaligned kline input
+                    # first generator may generate klines with different starting point with same kline type
                     if dt < self.bar_timestamp[kline_type][symbol]:
                         continue
+                    # finish generate if one of the data is finished
                     try:
                         bar_t, bar = next(generator)
                     except StopIteration:
@@ -267,29 +285,19 @@ class VectorizedBacktesting(BacktestingBase):
         for t in self.time_list:
             # if t is in the smallest timestamp the strategy should make decision
             self.brokerage_ctx.update_time(t)
-            # self.brokerage_ctx.limit_order_matching()
             if t == self.min_timestamp:
-                # print(t)
+                # self.brokerage_ctx.match_working_order()
                 # todo test that whether can handle same ktype data with different start
-                if 'K_1M' in self.bar_timestamp.keys():
-                    keys = [k for k, v in self.bar_timestamp['K_1M'].items() if v == t]
-                    self.strategy.on_1min_bar({k: v for k, v in self.state['K_1M'].items() if k in keys})
-                if 'K_5M' in self.bar_timestamp.keys():
-                    keys = [k for k, v in self.bar_timestamp['K_5M'].items() if v == t]
-                    self.strategy.on_5min_bar({k: v for k, v in self.state['K_5M'].items() if k in keys})
-                if 'K_15M' in self.bar_timestamp.keys():
-                    keys = [k for k, v in self.bar_timestamp['K_15M'].items() if v == t]
-                    self.strategy.on_15min_bar({k: v for k, v in self.state['K_15M'].items() if k in keys})
-                if 'K_30M' in self.bar_timestamp.keys():
-                    keys = [k for k, v in self.bar_timestamp['K_30M'].items() if v == t]
-                    self.strategy.on_30min_bar({k: v for k, v in self.state['K_30M'].items() if k in keys})
-                if 'K_1H' in self.bar_timestamp.keys():
-                    keys = [k for k, v in self.bar_timestamp['K_60M'].items() if v == t]
-                    self.strategy.on_60min_bar({k: v for k, v in self.state['K_60M'].items() if k in keys})
-                if 'K_4H' in self.bar_timestamp.keys():
-                    keys = [k for k, v in self.bar_timestamp['K_4H'].items() if v == t]
-                    self.strategy.on_4h_bar({k: v for k, v in self.state['K_4H'].items() if k in keys})
-
+                matching_order = True
+                for k, on_bar in self.kline_type_on_bar_match.items():
+                    if k in self.bar_timestamp.keys():
+                        keys = [k for k, v in self.bar_timestamp[k].items() if v == t]
+                        bar_state = {k: v for k, v in self.state[k].items() if k in keys}
+                        if matching_order is True:
+                            dealt_list = self.brokerage_ctx.match_working_order(bar_state)
+                            self.strategy.on_order_status_change(dealt_list)
+                            matching_order = False
+                        on_bar(bar_state)
 
             updated = self.update_state(t)
             if updated is None:
@@ -298,10 +306,7 @@ class VectorizedBacktesting(BacktestingBase):
                 break
             if updated is False:
                 print('skip kline for look back')
-
-            # self.strategy.on_1min_bar()
-
-            # self.generate_bar_manager_state(self.full_picture_bar_manager['K_1M']['HK.999010'], 100, i)
+        self.calculate_result()
 
 
 if __name__ == '__main__':
