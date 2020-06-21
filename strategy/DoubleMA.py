@@ -18,20 +18,17 @@ class DoubleMA(Strategy):
 
     def strategy_logic(self, bar: BarManager):
         self.cancel_all()
-
         price = bar.close[-1]
         if bar.ta['MA1'][-1] >= bar.ta['MA2'][-1] \
                 and bar.ta['MA1'][-2] < bar.ta['MA2'][-2]:
             if self.long is False:
                 self.cover(self.traded_code, price, 1, None)
-            self.long = True
             self.buy(self.traded_code, price, 1, None)
         elif bar.ta['MA1'][-1] <= bar.ta['MA2'][-1] \
                 and bar.ta['MA1'][-2] > bar.ta['MA2'][-2]:
             if self.long is True:
                 self.sell(self.traded_code, price, 1, None)
             self.short(self.traded_code, price, 1, None)
-            self.long = False
 
     def process_kline(self, data: pd.DataFrame):
         super(DoubleMA, self).process_kline(data)
