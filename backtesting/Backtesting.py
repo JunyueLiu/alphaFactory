@@ -99,7 +99,8 @@ class BacktestingBase:
         return self.brokerage_ctx.history_order_list_query()
 
     def get_dealt_history(self):
-        return self.brokerage_ctx.deal_order_list()
+        return self.brokerage_ctx.deal_order_list
+
 
     def _load_data_from_db(self):
         pass
@@ -108,7 +109,7 @@ class BacktestingBase:
         pass
 
     def calculate_result(self):
-        self.dealt_list = self.get_dealt_history()
+        self.dealt_list = self.get_dealt_history
 
     def run(self):
         pass
@@ -314,7 +315,7 @@ if __name__ == '__main__':
 
     quote = BacktestingQuote()
 
-    broker = BacktestingBrokerage(1)
+    broker = BacktestingBrokerage(10000000000)
 
     strategy = DoubleMA()
     backtesting_setting = {

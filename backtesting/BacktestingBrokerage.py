@@ -13,6 +13,7 @@ class BacktestingBrokerage(BrokerageBase):
         self.working_order = {}
         self.account_id = account_id
         self.time = None
+        self.order_count = 0
         if initial_position is None:
             self.current_position: dict = dict()
         else:
@@ -28,16 +29,23 @@ class BacktestingBrokerage(BrokerageBase):
         return 1, {'account_id': self.account_id, 'cash': self.cash, 'current position': self.current_position}
 
     def place_order(self, price, qty, code, trd_side, order_type=None, *args, **kwargs):
-        if code in self.current_position.keys():
-            #todo check whether you can buy or sell that amount
-            pass
+        """
 
-
-        else:
-            if self.cash < price * qty:
-                return 0, 'No enough money to open the position'
-
-        order = Order(code, price, qty, order_type, trd_side, SUBMITTED, order_time=self.time, update_time=self.time)
+        :param price:
+        :param qty:
+        :param code:
+        :param trd_side:
+        :param order_type:
+        :param args:
+        :param kwargs:
+        :return:
+        """
+        ret, data = self._check_place_order_validity(code, price, qty, trd_side)
+        if ret == 0:
+            return 0, data
+        self.order_count += 1
+        order = Order(code, price, qty, order_type, trd_side, SUBMITTED, order_time=self.time, update_time=self.time,
+                      order_identifier=self.order_count)
         self.working_order[order.order_id] = order
         self.history_order_list.append(order)
         return 1, None
@@ -127,14 +135,16 @@ class BacktestingBrokerage(BrokerageBase):
             if order.order_direction == 'LONG':
                 self.current_position[order.code] = {
                     'cost': order.dealt_avg_price,
-                    'qty': order.deal_qty
+                    'qty': order.deal_qty,
+                    'direction': 'LONG'
 
                 }
                 self.cash -= order.dealt_avg_price * order.deal_qty
             else:
                 self.current_position[order.code] = {
-                    'cost': - order.dealt_avg_price,
-                    'qty': order.deal_qty
+                    'cost': order.dealt_avg_price,
+                    'qty': - order.deal_qty,
+                    'direction': 'SHORT'
                 }
                 self.cash += order.dealt_avg_price * order.deal_qty
 
@@ -161,6 +171,7 @@ class BacktestingBrokerage(BrokerageBase):
 
     def match_working_order(self, bar_state):
         dealt_list = []
+        dealt_order_list = []
         for order_id, order in self.working_order.items():
             bm = bar_state[order.code]  # type: BarManager
             open_price = bm.open[-1]
@@ -171,5 +182,46 @@ class BacktestingBrokerage(BrokerageBase):
             # todo add stop order logic
             # todo update current position balance price
         for order_id, deal_price, deal_qty in dealt_list:
+            dealt_order_list.append(self.working_order[order_id])
             self.order_deal(order_id, deal_price, deal_qty)
-        return dealt_list
+        return dealt_order_list
+
+    def _check_place_order_validity(self, code, price, qty, trd_side):
+        """
+        This implementation doesn't allow naked short.
+        :param code:
+        :param price:
+        :param qty:
+        :param trd_side:
+        :return:
+        """
+        if code in self.current_position.keys():
+            # todo check whether you can buy or sell that amount
+            if self.current_position[code]['qty'] > 0:
+                if trd_side == 'LONG' and self.cash < price * qty:
+                    return 0, \
+                           'No enough money to open the position. You want to open {}, but have cash {}'.format(
+                               price * qty, self.cash)
+                elif trd_side == 'SHORT' and self.current_position[code]['qty'] < qty:
+                    # larger than currently holding
+                    net_short_qty = qty - self.current_position[code]['qty']
+                    if self.cash < price * net_short_qty:
+                        return 0, \
+                               'No enough money to open the position. You want to open {}, but have cash {}'.format(
+                                   price * net_short_qty, self.cash)
+            else:
+                if trd_side == 'SHORT' and self.cash < price * qty:
+                    return 0, \
+                           'No enough money to open the position. You want to open {}, but have cash {}'.format(
+                               price * qty, self.cash)
+                elif trd_side == 'LONG' and self.current_position[code]['qty'] < qty:
+                    # larger than currently holding
+                    net_long_qty = qty - self.current_position[code]['qty']
+                    if self.cash < price * net_long_qty:
+                        return 0, \
+                               'No enough money to open the position. You want to open {}, but have cash {}'.format(
+                                   price * net_long_qty, self.cash)
+        else:
+            if self.cash < price * qty:
+                return 0, 'No enough money to open the position'
+        return 1, None
