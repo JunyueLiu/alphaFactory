@@ -57,6 +57,8 @@ class Order:
              'order_price': self.order_price,
              'order_qty': self.order_qty,
              'order_type': self.order_type,
+             'dealt_price': self.dealt_avg_price,
+             'dealt_qty': self.deal_qty,
              'order_status': self.order_status,
              'update_time': self.update_time,
              'exchange_order_id': self.exchange_order_id,
