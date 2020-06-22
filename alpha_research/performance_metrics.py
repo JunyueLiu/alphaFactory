@@ -3,9 +3,9 @@ import numpy as np
 from scipy import stats
 import statsmodels.api as sm
 from scipy import stats
-from alpha_research.performance_metrics import calculate_information_coefficient, factor_ols_regression
 import plotly.figure_factory as ff
 from plotly.subplots import make_subplots
+from alpha_research.utils import *
 
 
 def factor_summary(factor: pd.DataFrame, name='factor'):
@@ -85,8 +85,10 @@ def get_monthly_ic(returns: pd.DataFrame, factor: pd.DataFrame, periods: list) -
 
     for i in concat.groupby(pd.Grouper(freq='M')):
         # i[0] is timestamp i[1] is dataframe
-        monthfactor = i[1]['factor']
-        monthreturn = i[1].drop('factor', axis=1)
+        #因为factor这列传进来的是series 没有取名 列名用0来定位
+
+        monthfactor = i[1][0]
+        monthreturn = i[1].drop(0, axis=1)
 
         ic = calculate_information_coefficient(monthfactor, monthreturn)
         information_coefficient = information_coefficient.append(ic, ignore_index=True)
@@ -160,7 +162,7 @@ def plot_monthly_ic_heatmap(mean_monthly_ic):
         layout
     )
 
-    fig.show()
+    return fig
 
 
 

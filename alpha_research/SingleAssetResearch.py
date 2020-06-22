@@ -13,18 +13,16 @@ from alpha_research.utils import *
 from alpha_research.factor_zoo import *
 from IPython.display import display
 
+
+
+
 # import plotly.io as pio
 
-#####xlwww
 # pio.renderers.default = "browser"
 
 
 class SingleAssetResearch(AlphaResearch):
-    """
-
-
-    """
-
+    #data是传进去的
     def __init__(self, data: pd.DataFrame, out_of_sample: pd.DataFrame = None, split_ratio: float = 0.3,
                  factor_parameters=None):
         super().__init__()
@@ -61,6 +59,8 @@ class SingleAssetResearch(AlphaResearch):
             self.factor = func(self.in_sample, **kwargs)
         else:
             self.factor = func(self.in_sample)
+        # self.factor = pd.DataFrame(self.factor, columns=[self.factor_name])
+
 
     def evaluate_alpha(self, forward_return_lag: list = None):
 
@@ -88,6 +88,11 @@ class SingleAssetResearch(AlphaResearch):
         fig = qq_plot(self.factor)
         fig.show()
 
+        # ic heatmap
+        ic_heatmap = get_monthly_ic(returns, self.factor,forward_return_lag)
+        fig = plot_monthly_ic_heatmap(ic_heatmap)
+        fig.show()
+
         # factor backtesting
         fig = price_factor_plot(self.in_sample, self.factor)
         fig.show()
@@ -102,9 +107,11 @@ class SingleAssetResearch(AlphaResearch):
         fig = entry_and_exit_plot(self.in_sample, per_factor)
         fig.show()
 
-        # todo according infer timeframe of the factor to generate heatmap
+
 
     def out_of_sample_evaluation(self):
+        #self.factor是insample的 self.outofsamplefactor是outofsample的
+
 
         self.out_of_sample_factor = self.alpha_func(self.out_of_sample, **self.alpha_func_paras)
 
@@ -117,12 +124,11 @@ class SingleAssetResearch(AlphaResearch):
 
     def get_evaluation_dash_app(self):
         """
-
         :return:
         """
         external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
         app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
-        forward_returns_period = [1, 2, 5, 10]
+        forward_returns_period = [1, 2, 5, 10] #period list
         forward_str = str(forward_returns_period).replace('[', '').replace(']', '')
         app.layout = html.Div(children=[
             html.H1(children=self.factor_name + ' evaluation'),
@@ -150,9 +156,10 @@ class SingleAssetResearch(AlphaResearch):
                         value=str(v), debounce=True
                     ) for k, v in self.alpha_func_paras.items()
                 ]),
-                html.Button('Submit', id='button'),
+                html.Button('Submit', id='AlphaButton'),
                 html.Div(id="current-parameter"),
             ], style={'width': '49%', 'display': 'inline-block'}),
+
             html.Div([
                 dcc.RadioItems(
                     id='in-out-sample',
@@ -160,12 +167,17 @@ class SingleAssetResearch(AlphaResearch):
                     value='In sample',
                     labelStyle={'display': 'inline-block'}
                 )
-
             ]),
             html.Div([html.Div(children='Factor Distribution'), dcc.Graph(id='distribution')],
                      style={'width': '49%', 'display': 'inline-block'}),
+
             html.Div([html.Div(children='Q-Q plot '), dcc.Graph(id='qqplot')],
                      style={'width': '49%', 'display': 'inline-block'}),
+
+            html.Div([html.Div(children='Factor IC'),
+                      dcc.Graph(id='ic_heatmap')],
+                     style={'width': '100%', 'display': 'inline-block'}),
+
             html.Div([html.Div(children='Price Factor'),
                       dcc.Graph(id='price_factor')],
                      style={'width': '100%', 'display': 'inline-block'}),
@@ -177,10 +189,19 @@ class SingleAssetResearch(AlphaResearch):
                      style={'width': '100%', 'display': 'inline-block'}),
         ])
 
-        @app.callback(Output("forward-returns-period", "children"),
-                      [Input("UpdateButton", "n_clicks")],
+        @app.callback([Output("forward-returns-period", "children"),
+                       Output('distribution', 'figure'),
+                       Output('ic_heatmap', 'figure'),
+                       Output('qqplot', 'figure'),
+                       Output('price_factor', 'figure'),
+                       Output('factor-returns', 'figure'),
+                       Output('factor-backtest', 'figure')
+                       ],[Input("UpdateButton", "n_clicks"),
+                       Input('in-out-sample', 'value')],
                       [State("forwards-periods-input", "value")])
-        def add_forward_returns(n_clicks, s: str):
+
+
+        def add_forward_returns(n_clicks,value, s: str):
             try:
                 global forward_returns_period
                 global forward_str
@@ -191,61 +212,122 @@ class SingleAssetResearch(AlphaResearch):
                 forward_returns_period = list(set([int(p) for p in s.split(',')]))
                 forward_returns_period.sort()
                 forward_str = str(forward_returns_period).replace('[', '').replace(']', '')
-                return 'Forward return list: ' + forward_str
+                if value == 'In sample':
+                    update_distribution_figure = factor_distribution_plot(self.factor)
+
+                    returns = calculate_forward_returns(self.in_sample, forward_returns_period)
+                    ic_heatmap = get_monthly_ic(returns, self.factor, forward_returns_period)
+                    update_heatmap_figure = plot_monthly_ic_heatmap(ic_heatmap)
+
+                    update_qqplot_figure = qq_plot(self.factor)
+
+                    update_factor_plot_figure = price_factor_plot(self.in_sample, self.factor)
+
+                    factor_returns = calculate_factor_returns(self.in_sample, self.factor, forward_returns_period)
+                    update_factor_plot_figure1 = returns_plot(factor_returns, self.factor_name)
+
+                    factor_returns = calculate_factor_returns(self.in_sample, self.factor, forward_returns_period)
+                    cumulative_returns = calculate_cumulative_returns(factor_returns, 1)
+                    benchmark = self.in_sample['close'] / self.in_sample['close'][0]
+                    update_factor_plot_figure2 =  cumulative_return_plot(cumulative_returns, benchmark=benchmark, factor_name=self.factor_name)
+
+                else:
+                    #out of sample的情况还没搞好
+                    pass
+
+                return 'Forward return list: ' + forward_str,\
+                       update_distribution_figure,update_heatmap_figure,\
+                       update_qqplot_figure,update_factor_plot_figure,\
+                       update_factor_plot_figure1,update_factor_plot_figure2
+
             except:
                 return 'Update Failed, please check your input. Forward return list: ' + forward_str
 
-        @app.callback(
-            Output('distribution', 'figure'),
-            [Input('in-out-sample', 'value')])
-        def update_distribution_figure(value):
-            if value == 'In sample':
-                return factor_distribution_plot(self.factor)
-            else:
-                return factor_distribution_plot(self.out_of_sample_factor)
+#Factor_Parameter
+        # @app.callback([Output("forward-returns-period", "children"),
+        #                Output('distribution', 'figure'),
+        #                Output('ic_heatmap', 'figure'),
+        #                Output('qqplot', 'figure'),
+        #                Output('price_factor', 'figure'),
+        #                Output('factor-returns', 'figure'),
+        #                Output('factor-backtest', 'figure')
+        #                ],
+        #               [Input('AlphaButton', "n_clicks"),
+        #                Input('in-out-sample', 'value')],
+        #               [State('input_Factor_Parameter', "value")])
+        #
+        # def update_alpha(n_clicks,value, Factor_Parameter: str):
+        #     pass
 
-        @app.callback(
-            Output('qqplot', 'figure'),
-            [Input('in-out-sample', 'value')])
-        def update_qqplot_figure(value):
-            if value == 'In sample':
-                return qq_plot(self.factor)
-            else:
-                return qq_plot(self.out_of_sample_factor)
 
-        @app.callback(
-            Output('price_factor', 'figure'),
-            [Input('in-out-sample', 'value')])
-        def update_factor_plot_figure(value):
-            if value == 'In sample':
-                return price_factor_plot(self.in_sample, self.factor)
-            else:
-                return price_factor_plot(self.out_of_sample, self.out_of_sample_factor)
 
-        @app.callback(
-            Output('factor-returns', 'figure'),
-            [Input('in-out-sample', 'value')])
-        def update_factor_plot_figure(value):
-            # global forward_returns_period
-            if value == 'In sample':
-                factor_returns = calculate_factor_returns(self.in_sample, self.factor, forward_returns_period)
-                return returns_plot(factor_returns, self.factor_name)
-            else:
-                return None
 
-        @app.callback(
-            Output('factor-backtest', 'figure'),
-            [Input('in-out-sample', 'value')])
-        def update_factor_plot_figure(value):
-            # global forward_returns_period
-            if value == 'In sample':
-                factor_returns = calculate_factor_returns(self.in_sample, self.factor, forward_returns_period)
-                cumulative_returns = calculate_cumulative_returns(factor_returns, 1)
-                benchmark = self.in_sample['close'] / self.in_sample['close'][0]
-                return cumulative_return_plot(cumulative_returns, benchmark=benchmark, factor_name=self.factor_name)
-            else:
-                return None
 
+        # @app.callback(
+        #     Output('distribution', 'figure'),
+        #     [Input('in-out-sample', 'value')])
+        # def update_distribution_figure(value):
+        #     if value == 'In sample':
+        #         return factor_distribution_plot(self.factor)
+        #     else:
+        #         return factor_distribution_plot(self.out_of_sample_factor)
+        #
+        # #heatmap
+        # @app.callback(
+        #     Output('ic_heatmap', 'figure'),
+        #     [Input('in-out-sample', 'value')])
+        # def update_heatmap_figure(value):
+        #     if value == 'In sample':
+        #         returns = calculate_forward_returns(self.in_sample, forward_returns_period)
+        #         ic_heatmap = get_monthly_ic(returns, self.factor, forward_returns_period)
+        #         return plot_monthly_ic_heatmap(ic_heatmap)
+        #     else:
+        #         returns = calculate_forward_returns(self.out_of_sample, forward_returns_period)
+        #         ic_heatmap = get_monthly_ic(returns, self.out_of_sample_factor, forward_returns_period)
+        #
+        #         return plot_monthly_ic_heatmap(ic_heatmap)
+        #
+        # @app.callback(
+        #     Output('qqplot', 'figure'),
+        #     [Input('in-out-sample', 'value')])
+        # def update_qqplot_figure(value):
+        #     if value == 'In sample':
+        #         return qq_plot(self.factor)
+        #     else:
+        #         return qq_plot(self.out_of_sample_factor)
+        #
+        # @app.callback(
+        #     Output('price_factor', 'figure'),
+        #     [Input('in-out-sample', 'value')])
+        # def update_factor_plot_figure(value):
+        #     if value == 'In sample':
+        #         return price_factor_plot(self.in_sample, self.factor)
+        #     else:
+        #         return price_factor_plot(self.out_of_sample, self.out_of_sample_factor)
+        #
+        # @app.callback(
+        #     Output('factor-returns', 'figure'),
+        #     [Input('in-out-sample', 'value')])
+        # def update_factor_plot_figure(value):
+        #     # global forward_returns_period
+        #     if value == 'In sample':
+        #         factor_returns = calculate_factor_returns(self.in_sample, self.factor, forward_returns_period)
+        #         return returns_plot(factor_returns, self.factor_name)
+        #     else:
+        #         return None
+        #
+        # @app.callback(
+        #     Output('factor-backtest', 'figure'),
+        #     [Input('in-out-sample', 'value')])
+        # def update_factor_plot_figure(value):
+        #     # global forward_returns_period
+        #     if value == 'In sample':
+        #         factor_returns = calculate_factor_returns(self.in_sample, self.factor, forward_returns_period)
+        #         cumulative_returns = calculate_cumulative_returns(factor_returns, 1)
+        #         benchmark = self.in_sample['close'] / self.in_sample['close'][0]
+        #         return cumulative_return_plot(cumulative_returns, benchmark=benchmark, factor_name=self.factor_name)
+        #     else:
+        #         return None
         return app
 
 
@@ -256,16 +338,24 @@ class DemoSingleAssetFactor(SingleAssetResearch):
 
 
 if __name__ == '__main__':
-    data_path = '/Users/liujunyue/PycharmProjects/alphaFactory/HK.999010_2019-06-01 00:00:00_2020-05-30 03:00:00_K_1M_qfq.csv'
+    data_path = r'../HK.999010_2019-06-01 00:00:00_2020-05-30 03:00:00_K_1M_qfq.csv'
 
     df = pd.read_csv(data_path)
     df['time_key'] = pd.to_datetime(df['time_key'])
     df.set_index('time_key', inplace=True)
     df = df[-500:]
     parameter = {'short_period': 5, 'long_period': 10}
+
     factor_study = SingleAssetResearch(df)
 
-    factor_study.calculate_factor(alpha_6, time_lag=5)
-    factor_study.evaluate_alpha()
+
+    def ma5_ma10(df, time_lag_1 = 5, time_lag2= 10):
+        pass
+
+    factor_study.calculate_factor(alpha_6, **{'time_lag':5})
+    # factor_study.evaluate_alpha()
     # factor_study.out_of_sample_evaluation()
     factor_study.get_evaluation_dash_app().run_server(debug=True)
+
+
+
