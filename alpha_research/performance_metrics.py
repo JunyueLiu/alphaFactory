@@ -2,6 +2,10 @@ import pandas as pd
 import numpy as np
 from scipy import stats
 import statsmodels.api as sm
+from scipy import stats
+from alpha_research.performance_metrics import calculate_information_coefficient, factor_ols_regression
+import plotly.figure_factory as ff
+from plotly.subplots import make_subplots
 
 
 def factor_summary(factor: pd.DataFrame, name='factor'):
@@ -67,6 +71,97 @@ def factor_ols_regression(factor, returns: pd.DataFrame) -> pd.DataFrame:
         d['p value'] = result.pvalues[1]
         result_dic[col] = d
     return pd.DataFrame(result_dic)
+
+
+
+def get_monthly_ic(returns: pd.DataFrame, factor: pd.DataFrame, periods: list) -> pd.DataFrame:
+    # 先把factor和return合并，再切片
+    concat = pd.concat([returns, factor], axis=1)
+    concat.rename(columns={'close': 'factor'}, inplace=True)
+    columnnames = [str(i) + '_period_return_ic' for i in periods]
+    information_coefficient = pd.DataFrame(columns=columnnames)
+    year = []
+    month = []
+
+    for i in concat.groupby(pd.Grouper(freq='M')):
+        # i[0] is timestamp i[1] is dataframe
+        monthfactor = i[1]['factor']
+        monthreturn = i[1].drop('factor', axis=1)
+
+        ic = calculate_information_coefficient(monthfactor, monthreturn)
+        information_coefficient = information_coefficient.append(ic, ignore_index=True)
+
+        year.append(str(i[0].year))
+        month.append(str(i[0].month))
+
+        information_coefficient['year'] = year
+        information_coefficient['month'] = month
+
+    return information_coefficient
+
+
+def plot_monthly_ic_heatmap(mean_monthly_ic):
+    mean_monthly_ic = mean_monthly_ic.copy()
+
+    # 给原来df的添加一个index,便于后面搜索
+    mean_monthly_ic = mean_monthly_ic \
+        .set_index([mean_monthly_ic['year'], mean_monthly_ic['month']])
+    print(mean_monthly_ic)
+
+    # 设定集合
+    x = [str(i) for i in range(1, 13)]  # month
+    y = list(set([str(i) for i in mean_monthly_ic['year']]))  # year 去重
+
+    mean_monthly_ic = mean_monthly_ic.drop(columns=['month', 'year'])
+    print(mean_monthly_ic)
+    # heatmap的z
+    z = list()
+    # heatmap titles
+    titles = list()
+
+    for i in mean_monthly_ic.iteritems():
+        titles.append(i[0])
+
+        z_year = list()
+        for year in y:
+            z_month = list()
+            for month in x:
+                try:
+                    ic = i[1].loc[str(year), str(month)]
+                except:
+                    z_month.append(np.nan)
+                else:
+                    z_month.append(ic)
+            # z_year存的是一个period的heatmap
+            z_year.append(z_month)
+        # z存的是所有period的heatmap
+        z.append(z_year)
+    # 开始画图
+
+    fig = make_subplots(rows=int(len(mean_monthly_ic.columns) / 3) + 1,
+                        cols=3, subplot_titles=titles)
+    count = 0
+    for z1 in z:
+        # z1 是其中一个subplot的z
+        fig1 = ff.create_annotated_heatmap(x=x, y=y, z=np.array(z1),
+                                           hoverinfo='z')
+        #fig1.show()
+        fig.add_trace(fig1.data[0], int(count / 3) + 1, count % 3 + 1)
+
+        count += 1
+
+    layout=dict()
+    for i in range(1,count+1):
+        layout['xaxis' + str(i)]={'type':'category'}
+        layout['yaxis' + str(i)] = {'type': 'category'}
+
+
+    fig.update_layout(
+        layout
+    )
+
+    fig.show()
+
 
 
 def in_out_sample_factor_t_test(insample_factor: pd.Series, out_of_sample_factor: pd.Series):
