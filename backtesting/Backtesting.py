@@ -101,7 +101,6 @@ class BacktestingBase:
     def get_dealt_history(self):
         return self.brokerage_ctx.deal_order_list
 
-
     def _load_data_from_db(self):
         pass
 
@@ -109,7 +108,27 @@ class BacktestingBase:
         pass
 
     def calculate_result(self):
-        self.dealt_list = self.get_dealt_history
+        # first make the all asset price dataframe
+        dfs = []
+        for code, ktype_data in self.data.items():
+            for ktype, data in ktype_data.items():
+                d = data.reset_index()
+                dfs.append(d)
+        # print(self.backtesting_setting['time_key'])
+        asset_price = pd.concat(dfs)
+        asset_price.set_index(['code', self.backtesting_setting['time_key']], inplace=True)
+        self.asset_price = asset_price
+        self.dealt_list = self.get_dealt_history()
+        # todo evaluate backtesting result
+        traded = pd.DataFrame([order.order_dict() for order in self.dealt_list])
+        traded['dealt_qty'] = np.where(traded['order_direction'] == 'LONG', traded['dealt_qty'], -traded['dealt_qty'])
+        traded['dealt_outflow'] = - traded['dealt_price'] * traded['dealt_qty']
+        traded_grouped = traded.groupby(['code', 'update_time', 'order_direction']).agg(
+            {'dealt_outflow': 'sum', 'dealt_qty': 'sum'})
+        traded_grouped.reset_index([2], inplace=True)
+        traded_grouped = traded_grouped.groupby(level=[0]).cumsum()
+
+        # print(traded_grouped)
 
     def run(self):
         pass
@@ -166,25 +185,9 @@ class VectorizedBacktesting(BacktestingBase):
 
         }
 
-    def _check_data_valid(self):
-        super()._check_data_valid()
-
-    def _change_lookback_period(self):
-        """
-        modify the lookback period to calculate the indicator only once
-        :return:
-        """
-        lookback_period = {}
-        for symbol, subtype_data in self.data.items():
-            lookback_period[symbol] = {}
-            for subtype, data in subtype_data.items():
-                lookback_period[symbol][subtype] = len(data)
-        self.strategy.lookback_period = lookback_period
-        self.strategy.strategy_parameters['lookback_period'] = lookback_period
-
     def _infer_time(self):
         """
-
+        Infer all the timestamp from the data input.
         :return:
         """
         self.time_list = np.empty(0, dtype='datetime64')
@@ -277,7 +280,6 @@ class VectorizedBacktesting(BacktestingBase):
         self._check_data_valid()
         self.strategy.on_strategy_init(datetime.datetime.now())
         self._infer_time()
-        # todo Don't know how to make sure the datetime is correct for multi time frame
         self.initial_bar_manager_generators()
 
         # last_state = self.strategy.lookback_period.copy()
@@ -287,7 +289,6 @@ class VectorizedBacktesting(BacktestingBase):
             # if t is in the smallest timestamp the strategy should make decision
             self.brokerage_ctx.update_time(t)
             if t == self.min_timestamp:
-                # self.brokerage_ctx.match_working_order()
                 # todo test that whether can handle same ktype data with different start
                 matching_order = True
                 for k, on_bar in self.kline_type_on_bar_match.items():
@@ -315,14 +316,14 @@ if __name__ == '__main__':
 
     quote = BacktestingQuote()
 
-    broker = BacktestingBrokerage(10000000000)
+    broker = BacktestingBrokerage(100000)
 
     strategy = DoubleMA()
     backtesting_setting = {
         'data_source': 'csv',
 
         'data': {
-            'HK.999010': {
+            'HK_FUTURE.999010': {
                 'K_1M': '/Users/liujunyue/PycharmProjects/ljquant/hkex_data/HK.999010_2019-06-01 00:00:00_2020-05-30 03:00:00_K_1M_qfq.csv'
             }
         },
@@ -335,17 +336,17 @@ if __name__ == '__main__':
 
     strategy_parameter = {
         "lookback_period": {
-            "HK.999010": {
+            "HK_FUTURE.999010": {
                 "K_1M": 100
             }
         },
         "subscribe": {
-            "HK.999010": [
+            "HK_FUTURE.999010": [
                 "K_1M"
             ]
         },
         "ta_parameters": {
-            "HK.999010": {
+            "HK_FUTURE.999010": {
                 "K_1M": {
                     "MA1": {
                         "indicator": "MA",
@@ -365,10 +366,19 @@ if __name__ == '__main__':
 
             }
         },
-        "traded_code": "HK.999010"
+        "traded_code": "HK_FUTURE.999010"
     }
 
     backtesting = VectorizedBacktesting(quote, broker, strategy, strategy_parameter,
                                         backtesting_setting=backtesting_setting)
     backtesting.run()
     # g = backtesting.generate_bar_manager_state(backtesting.full_picture_bar_manager['HK.999010']['K_1M'], 100)
+
+    traded = pd.DataFrame([order.order_dict() for order in backtesting.dealt_list])
+    traded['dealt_qty'] = np.where(traded['order_direction'] == 'LONG', traded['dealt_qty'], -traded['dealt_qty'])
+    traded['dealt_inflow'] = - traded['dealt_price'] * traded['dealt_qty']
+    traded_grouped = traded.groupby(['code', 'update_time', 'order_direction']).agg(
+        {'dealt_outflow': 'sum', 'dealt_qty': 'sum'})
+    traded_grouped.reset_index([2], inplace=True)
+    traded_grouped.index = traded_grouped.index.set_names(['code', 'time_key'])
+    traded_grouped = traded_grouped.groupby(level=[0]).cumsum()

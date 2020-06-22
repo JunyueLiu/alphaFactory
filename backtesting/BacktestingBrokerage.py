@@ -113,7 +113,7 @@ class BacktestingBrokerage(BrokerageBase):
         removed_code = []
         if order.code in self.current_position.keys():
             pos = self.current_position[order.code]
-            if pos['direction'] == 'LONG':
+            if order.order_direction == 'LONG':
                 update_qty = pos['qty'] + order.deal_qty
                 if update_qty != 0:
                     pos['cost'] = (pos['cost'] * pos['qty'] + order.dealt_avg_price * order.deal_qty) \
@@ -136,7 +136,6 @@ class BacktestingBrokerage(BrokerageBase):
                 self.current_position[order.code] = {
                     'cost': order.dealt_avg_price,
                     'qty': order.deal_qty,
-                    'direction': 'LONG'
 
                 }
                 self.cash -= order.dealt_avg_price * order.deal_qty
@@ -144,7 +143,6 @@ class BacktestingBrokerage(BrokerageBase):
                 self.current_position[order.code] = {
                     'cost': order.dealt_avg_price,
                     'qty': - order.deal_qty,
-                    'direction': 'SHORT'
                 }
                 self.cash += order.dealt_avg_price * order.deal_qty
 

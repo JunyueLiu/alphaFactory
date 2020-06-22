@@ -1,0 +1,1 @@
+mongoimport --type csv -d quant -c hsi_futures_1_min --headerline --drop -u root --password AlphaFactory2020 --authenticationDatabase admin  HK.999010_2019-06-01\ 00\:00\:00_2020-05-30\ 03\:00\:00_K_1M_qfq.csv

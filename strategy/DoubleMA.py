@@ -13,7 +13,7 @@ class DoubleMA(Strategy):
         self.author = 'AlphaFactory Trader'
         self.strategy_version = '0.0.1'
         self.strategy_description = 'Two MA lines, cross over'
-        self.long = None
+        self.position = 0
         self.traded_code = None
 
     def strategy_logic(self, bar: BarManager):
@@ -21,14 +21,19 @@ class DoubleMA(Strategy):
         price = bar.close[-1]
         if bar.ta['MA1'][-1] >= bar.ta['MA2'][-1] \
                 and bar.ta['MA1'][-2] < bar.ta['MA2'][-2]:
-            if self.long is False:
-                self.cover(self.traded_code, price, 1, None)
-            self.buy(self.traded_code, price, 1, None)
+            if self.position < 0:
+                self.cover(self.traded_code, 1.01 * price, 1, None)
+                self.buy(self.traded_code, 1.01 * price, 1, None)
+            elif self.position == 0:
+                self.buy(self.traded_code, 1.01 * price, 1, None)
         elif bar.ta['MA1'][-1] <= bar.ta['MA2'][-1] \
                 and bar.ta['MA1'][-2] > bar.ta['MA2'][-2]:
-            if self.long is True:
-                self.sell(self.traded_code, price, 1, None)
-            self.short(self.traded_code, price, 1, None)
+            if self.position > 0:
+                self.sell(self.traded_code, 0.99 * price, 1, None)
+                self.short(self.traded_code, 0.99 * price, 1, None)
+            elif self.position == 0:
+                self.short(self.traded_code, 0.99 * price, 1, None)
+
 
     def process_kline(self, data: pd.DataFrame):
         super(DoubleMA, self).process_kline(data)
@@ -36,17 +41,11 @@ class DoubleMA(Strategy):
     def on_1min_bar(self, bar: dict):
         self.strategy_logic(bar[self.traded_code])
 
+
     def on_order_status_change(self, dealt_list: list):
         if len(dealt_list) > 0:
-            order = dealt_list[0]  # type: Order
-            if self.long is None:
+            for order in dealt_list:
                 if order.order_direction == "LONG":
-                    self.long = True
+                    self.position += 1
                 else:
-                    self.long = False
-            elif self.long is True:
-                if order.order_direction == 'SHORT':
-                    self.long = False
-            elif self.long is False:
-                if order.order_direction == 'LONG':
-                    self.long = None
+                    self.position -= 1
