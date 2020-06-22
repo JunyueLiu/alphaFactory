@@ -13,9 +13,9 @@ def alpha_6(df: pd.DataFrame, time_lag=10):
     return factor
 
 
-def alpha_9(df: pd.DataFrame):
-    condition = (df['close'] - df['close'].shift(1)).rolling(5).min()
-    condition2 = (df['close'] - df['close'].shift(1)).rolling(5).max()
+def alpha_9(df: pd.DataFrame, time_shift=1, rolling_windows = 5):
+    condition = (df['close'] - df['close'].shift(time_shift)).rolling(rolling_windows).min()
+    condition2 = (df['close'] - df['close'].shift(time_shift)).rolling(rolling_windows).max()
     ans1 = df['close'] - df['close'].shift(1)
     factor = np.where(condition > 0, ans1, np.where(condition2 < 0, ans1, -1 * ans1))
     # print(factor)

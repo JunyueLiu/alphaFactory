@@ -1,7 +1,6 @@
 import pandas as pd
 from scipy import stats
 import numpy as np
-from alpha_research.performance_metrics import calculate_information_coefficient, factor_ols_regression
 
 
 def calculate_forward_returns(data: pd.DataFrame, periods: list, price_key='close') -> pd.DataFrame:
@@ -181,6 +180,6 @@ if __name__ == '__main__':
     #   print(cumulatereturns)
 
     # #Information Coefficient
-    ic = calculate_information_coefficient(factor, returns)
-    print(ic)
+    # ic = calculate_information_coefficient(factor, returns)
+    # print(ic)
 # results = factor_ols_regression(factor, returns)
