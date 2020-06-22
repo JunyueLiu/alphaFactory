@@ -194,7 +194,7 @@ class BacktestingBrokerage(BrokerageBase):
         :return:
         """
         if code in self.current_position.keys():
-            # todo check whether you can buy or sell that amount
+            # check whether you can buy or sell that amount
             if self.current_position[code]['qty'] > 0:
                 if trd_side == 'LONG' and self.cash < price * qty:
                     return 0, \

@@ -108,25 +108,42 @@ class BacktestingBase:
         pass
 
     def calculate_result(self):
-        # first make the all asset price dataframe
+        # first make the all asset prices dataframe
         dfs = []
         for code, ktype_data in self.data.items():
             for ktype, data in ktype_data.items():
                 d = data.reset_index()
                 dfs.append(d)
-        # print(self.backtesting_setting['time_key'])
         asset_price = pd.concat(dfs)
-        asset_price.set_index(['code', self.backtesting_setting['time_key']], inplace=True)
-        self.asset_price = asset_price
+        asset_price.set_index([self.backtesting_setting['time_key'], 'code'], inplace=True)
+        asset_price = asset_price[['close']].drop_duplicates()
+
+
         self.dealt_list = self.get_dealt_history()
         # todo evaluate backtesting result
         traded = pd.DataFrame([order.order_dict() for order in self.dealt_list])
+        # make the dealt_qty with +- sign
         traded['dealt_qty'] = np.where(traded['order_direction'] == 'LONG', traded['dealt_qty'], -traded['dealt_qty'])
-        traded['dealt_outflow'] = - traded['dealt_price'] * traded['dealt_qty']
-        traded_grouped = traded.groupby(['code', 'update_time', 'order_direction']).agg(
-            {'dealt_outflow': 'sum', 'dealt_qty': 'sum'})
-        traded_grouped.reset_index([2], inplace=True)
+        # calculate cash inflow from dealt qty and dealt price
+        # long will have cash outflow (negative inflow) and short will have cash inflow
+        traded['cash_inflow'] = - traded['dealt_price'] * traded['dealt_qty']
+        # aggregate the cash inflow and dealt among with same code and same datetime
+        traded_grouped = traded.groupby(['code', 'update_time']).agg(
+            {'cash_inflow': 'sum', 'dealt_qty': 'sum'})
+        traded_grouped.index = traded_grouped.index.set_names(['code', self.backtesting_setting['time_key']])
+        # transform into time series of cumulative cash inflow and cumulative asset holding
         traded_grouped = traded_grouped.groupby(level=[0]).cumsum()
+        traded_grouped.rename(columns={'cash_inflow': 'cumulative_cash_inflow',
+                                       'dealt_qty': 'holding'}, inplace=True)
+        joint = asset_price.join(traded_grouped)
+        # need to use groupby fillna
+        joint = joint.groupby(level=1).ffill()
+        joint.fillna(value=0, inplace=True)
+        joint['equity'] = joint['close'] * joint['holding'] + joint['cumulative_cash_inflow']
+        # aggegate different assets class returns with same timestamp.
+        net_value = joint['equity'].groupby(level=0).sum() + self.initial_capital
+        # todo calculate every the metric from the net value index
+
 
         # print(traded_grouped)
 
@@ -274,7 +291,7 @@ class VectorizedBacktesting(BacktestingBase):
             return True
 
     def run(self):
-        # self.strategy.load_setting()
+        self._load_setting(self.backtesting_setting)
         self._initial_strategy()
         self._load_data()
         self._check_data_valid()
@@ -320,11 +337,12 @@ if __name__ == '__main__':
 
     strategy = DoubleMA()
     backtesting_setting = {
+        'initial_capital': 100000,
         'data_source': 'csv',
 
         'data': {
             'HK_FUTURE.999010': {
-                'K_1M': '/Users/liujunyue/PycharmProjects/ljquant/hkex_data/HK.999010_2019-06-01 00:00:00_2020-05-30 03:00:00_K_1M_qfq.csv'
+                'K_1M': r'../HK.999010_2019-06-01 00:00:00_2020-05-30 03:00:00_K_1M_qfq.csv'
             }
         },
         'start': '2019-07-01',
@@ -372,13 +390,3 @@ if __name__ == '__main__':
     backtesting = VectorizedBacktesting(quote, broker, strategy, strategy_parameter,
                                         backtesting_setting=backtesting_setting)
     backtesting.run()
-    # g = backtesting.generate_bar_manager_state(backtesting.full_picture_bar_manager['HK.999010']['K_1M'], 100)
-
-    traded = pd.DataFrame([order.order_dict() for order in backtesting.dealt_list])
-    traded['dealt_qty'] = np.where(traded['order_direction'] == 'LONG', traded['dealt_qty'], -traded['dealt_qty'])
-    traded['dealt_inflow'] = - traded['dealt_price'] * traded['dealt_qty']
-    traded_grouped = traded.groupby(['code', 'update_time', 'order_direction']).agg(
-        {'dealt_outflow': 'sum', 'dealt_qty': 'sum'})
-    traded_grouped.reset_index([2], inplace=True)
-    traded_grouped.index = traded_grouped.index.set_names(['code', 'time_key'])
-    traded_grouped = traded_grouped.groupby(level=[0]).cumsum()
