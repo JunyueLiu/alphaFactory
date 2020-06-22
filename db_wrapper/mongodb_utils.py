@@ -1,6 +1,9 @@
 from pymongo import MongoClient, database
 from pymongo.results import UpdateResult
 import pandas as pd
+import os
+
+from data_downloader.multi_asset_data_merger import merge_single_asset
 
 
 class MongoConnection:
@@ -46,6 +49,10 @@ class MongoConnection:
 
 
 if __name__ == '__main__':
-    con = MongoConnection('port', 27017, 'user', 'password')
-    # con.read_mongo('quant', 'hsi_1_min', {}, {'time_key': 1, 'close': 1, 'open': 1, 'high': 1, 'low': 1, 'turnover': 1})
-    df = con.get_ohlc_dataframe('quant', 'hsi_futures_1_min', {"time_key": {"$gt": "2020-05-01"}})
+    con = MongoConnection('120.55.45.12', 27017, 'root', 'AlphaFactory2020')
+    files = os.listdir('/Users/liujunyue/PycharmProjects/alphaFactory/local_data')
+    paths = [os.path.join('/Users/liujunyue/PycharmProjects/alphaFactory/local_data', f) for f in files]
+    df = merge_single_asset(paths)
+    con.insert_from_dataframe('quant', 'HKEX_1d', df)
+# # con.read_mongo('quant', 'hsi_1_min', {}, {'time_key': 1, 'close': 1, 'open': 1, 'high': 1, 'low': 1, 'turnover':
+# 1}) # df = con.get_ohlc_dataframe('quant', 'hsi_futures_1_min', {"time_key": {"$gt": "2020-05-01"}})
