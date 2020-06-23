@@ -2,6 +2,9 @@ import json
 import datetime
 import pandas as pd
 import numpy as np
+import quantstats as qs
+
+qs.extend_pandas()
 from numba import njit
 # from backtesting.Exchange import *
 from strategy.DoubleMA import DoubleMA
@@ -116,8 +119,7 @@ class BacktestingBase:
                 dfs.append(d)
         asset_price = pd.concat(dfs)
         asset_price.set_index([self.backtesting_setting['time_key'], 'code'], inplace=True)
-        asset_price = asset_price[['close']].drop_duplicates()
-
+        # asset_price = asset_price[['close']].drop_duplicates()
 
         self.dealt_list = self.get_dealt_history()
         # todo evaluate backtesting result
@@ -127,6 +129,7 @@ class BacktestingBase:
         # calculate cash inflow from dealt qty and dealt price
         # long will have cash outflow (negative inflow) and short will have cash inflow
         traded['cash_inflow'] = - traded['dealt_price'] * traded['dealt_qty']
+        # todo commission deduction
         # aggregate the cash inflow and dealt among with same code and same datetime
         traded_grouped = traded.groupby(['code', 'update_time']).agg(
             {'cash_inflow': 'sum', 'dealt_qty': 'sum'})
@@ -135,15 +138,17 @@ class BacktestingBase:
         traded_grouped = traded_grouped.groupby(level=[0]).cumsum()
         traded_grouped.rename(columns={'cash_inflow': 'cumulative_cash_inflow',
                                        'dealt_qty': 'holding'}, inplace=True)
-        joint = asset_price.join(traded_grouped)
+        joint = asset_price.join(traded_grouped, )
         # need to use groupby fillna
         joint = joint.groupby(level=1).ffill()
         joint.fillna(value=0, inplace=True)
         joint['equity'] = joint['close'] * joint['holding'] + joint['cumulative_cash_inflow']
         # aggegate different assets class returns with same timestamp.
-        net_value = joint['equity'].groupby(level=0).sum() + self.initial_capital
+        net_value = joint['equity'].groupby(level=0).sum() + self.initial_capital  # type:pd.DataFrame
         # todo calculate every the metric from the net value index
-
+        returns = net_value.pct_change()
+        returns.to_csv('sample_returns.csv')
+        qs.reports.html(returns, title=self.strategy.strategy_name,output='report.html')
 
         # print(traded_grouped)
 
