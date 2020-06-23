@@ -112,7 +112,8 @@ def plot_monthly_ic_heatmap(mean_monthly_ic):
 
     # 设定集合
     x = [str(i) for i in range(1, 13)]  # month
-    y = list(set([str(i) for i in mean_monthly_ic['year']]))  # year 去重
+    y = list(set([int(i) for i in mean_monthly_ic['year']]))  # year 去重
+    y.sort(reverse=True)
 
     mean_monthly_ic = mean_monthly_ic.drop(columns=['month', 'year'])
     print(mean_monthly_ic)
