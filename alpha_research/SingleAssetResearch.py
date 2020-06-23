@@ -58,9 +58,17 @@ class SingleAssetResearch(AlphaResearch):
         self.alpha_func = func
         self.alpha_func_paras = kwargs
         if kwargs is not None:
-            self.factor = func(self.in_sample, **kwargs)
+            factor = func(self.in_sample, **kwargs)
+            if isinstance(factor, pd.Series):
+                self.factor = factor
+            else:
+                self.factor = pd.Series(factor, index=self.in_sample.index)
         else:
-            self.factor = func(self.in_sample)
+            factor = func(self.in_sample)
+            if isinstance(factor, pd.Series):
+                self.factor = factor
+            else:
+                self.factor = pd.Series(factor, index=self.in_sample.index)
 
     def evaluate_alpha(self, forward_return_lag: list = None):
 

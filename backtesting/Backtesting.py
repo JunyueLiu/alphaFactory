@@ -12,6 +12,7 @@ from gateway.quote_base import QuoteBase
 from gateway.brokerage_base import BrokerageBase
 from backtesting.BacktestingQuote import BacktestingQuote
 from backtesting.BacktestingBrokerage import BacktestingBrokerage
+from backtesting.backtesting_metric import *
 from strategy.StrategyBase import Strategy
 from bar_manager.BarManager import BarManager
 
@@ -83,14 +84,7 @@ class BacktestingBase:
             for symbol, bar_data in self.backtesting_setting['data'].items():
                 self.data[symbol] = dict()
                 for bar_type, path in bar_data.items():
-                    bar = pd.read_csv(path)
-                    bar[time_key] = pd.to_datetime(bar[time_key])
-                    bar.set_index(time_key, inplace=True)
-                    if self.start is not None:
-                        bar = bar[bar.index >= pd.to_datetime(self.start)]
-                    if self.end is not None:
-                        bar = bar[bar.index <= pd.to_datetime(self.end)]
-                    self.data[symbol][bar_type] = bar
+                    self.data[symbol][bar_type] = self._load_data_from_csv(path, time_key)
         elif self.backtesting_setting['data_source'] == 'db':
             pass
         self.quote_ctx.set_history_data(self.data)
@@ -107,8 +101,15 @@ class BacktestingBase:
     def _load_data_from_db(self):
         pass
 
-    def _load_data_from_csv(self):
-        pass
+    def _load_data_from_csv(self, path, time_key):
+        bar = pd.read_csv(path)
+        bar[time_key] = pd.to_datetime(bar[time_key])
+        bar.set_index(time_key, inplace=True)
+        if self.start is not None:
+            bar = bar[bar.index >= pd.to_datetime(self.start)]
+        if self.end is not None:
+            bar = bar[bar.index <= pd.to_datetime(self.end)]
+        return bar
 
     def calculate_result(self):
         # first make the all asset prices dataframe
@@ -119,7 +120,6 @@ class BacktestingBase:
                 dfs.append(d)
         asset_price = pd.concat(dfs)
         asset_price.set_index([self.backtesting_setting['time_key'], 'code'], inplace=True)
-        # asset_price = asset_price[['close']].drop_duplicates()
 
         self.dealt_list = self.get_dealt_history()
         # todo evaluate backtesting result
@@ -138,7 +138,11 @@ class BacktestingBase:
         traded_grouped = traded_grouped.groupby(level=[0]).cumsum()
         traded_grouped.rename(columns={'cash_inflow': 'cumulative_cash_inflow',
                                        'dealt_qty': 'holding'}, inplace=True)
-        joint = asset_price.join(traded_grouped, )
+
+        first_traded, last_traded = first_last_trade_time(traded, 'update_time')
+
+
+        joint = asset_price.join(traded_grouped)
         # need to use groupby fillna
         joint = joint.groupby(level=1).ffill()
         joint.fillna(value=0, inplace=True)
@@ -147,10 +151,8 @@ class BacktestingBase:
         net_value = joint['equity'].groupby(level=0).sum() + self.initial_capital  # type:pd.DataFrame
         # todo calculate every the metric from the net value index
         returns = net_value.pct_change()
-        returns.to_csv('sample_returns.csv')
-        qs.reports.html(returns, title=self.strategy.strategy_name,output='report.html')
-
-        # print(traded_grouped)
+        # returns.to_csv('sample_returns.csv')
+        qs.reports.html(returns, title=self.strategy.strategy_name, output='report.html')
 
     def run(self):
         pass
