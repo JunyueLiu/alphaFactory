@@ -56,18 +56,8 @@ class SingleAssetResearch(AlphaResearch):
         self.alpha_func = func
         self.alpha_func_paras = kwargs
         if kwargs is not None:
-            factor = func(self.in_sample, **kwargs)
-            if isinstance(factor, pd.Series):
-                self.factor = factor
-            else:
-                self.factor = pd.Series(factor, index=self.in_sample.index)
+            self.factor = func(self.in_sample, **kwargs)
         else:
-            factor = func(self.in_sample)
-            if isinstance(factor, pd.Series):
-                self.factor = factor
-            else:
-                self.factor = pd.Series(factor, index=self.in_sample.index)
-
             self.factor = func(self.in_sample)
         # self.factor = pd.DataFrame(self.factor, columns=[self.factor_name])
 
