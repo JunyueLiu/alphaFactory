@@ -49,7 +49,7 @@ class MongoConnection:
 
 
 if __name__ == '__main__':
-    con = MongoConnection('120.55.45.12', 27017, 'root', 'AlphaFactory2020')
+    con = MongoConnection('ip', 27017, 'user', 'password')
     files = os.listdir('/Users/liujunyue/PycharmProjects/alphaFactory/local_data')
     paths = [os.path.join('/Users/liujunyue/PycharmProjects/alphaFactory/local_data', f) for f in files]
     df = merge_single_asset(paths)
