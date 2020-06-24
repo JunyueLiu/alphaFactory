@@ -8,7 +8,7 @@ from plotly.subplots import make_subplots
 from alpha_research.utils import *
 
 
-def factor_summary(factor: pd.DataFrame, name='factor'):
+def factor_summary(factor: pd.Series, name='factor') -> pd.DataFrame:
     """
 
     :param factor:
@@ -16,8 +16,10 @@ def factor_summary(factor: pd.DataFrame, name='factor'):
     :return:
     """
     summary = factor.describe()
-    summary['skewness'] = summary.skew()
-    summary['kurtosis'] = summary.kurtosis()
+
+    # for SingleAssetResearch
+    summary['skewness'] = factor.skew()
+    summary['kurtosis'] = factor.kurtosis()
     # t test
     stat, pvalue = stats.ttest_ind(np.zeros_like(factor.values), factor.values, nan_policy='omit')
     summary['t test stat'] = stat
@@ -36,6 +38,7 @@ def factor_summary(factor: pd.DataFrame, name='factor'):
         summary['Augmented Dickey-Fuller test p value'] = adf[1]
     summary = pd.DataFrame(summary)
     summary.columns = [name]
+
     return summary
 
 
@@ -47,10 +50,12 @@ def calculate_information_coefficient(factor, returns, suffix='ic') -> pd.Series
     :return:
     """
 
-    _ic = returns \
-        .apply(lambda x: stats.spearmanr(x, factor, nan_policy='omit')[0])
 
-    return _ic.rename(index={idx: idx + '_' + suffix for idx in _ic.index})
+    _ic = returns \
+            .apply(lambda x: stats.spearmanr(x, factor, nan_policy='omit')[0])
+    _ic.rename(index={idx: idx + '_' + suffix for idx in _ic.index}, inplace=True)
+
+    return _ic
 
 
 def factor_ols_regression(factor, returns: pd.DataFrame) -> pd.DataFrame:
@@ -73,7 +78,6 @@ def factor_ols_regression(factor, returns: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(result_dic)
 
 
-
 def get_monthly_ic(returns: pd.DataFrame, factor: pd.DataFrame, periods: list) -> pd.DataFrame:
     # 先把factor和return合并，再切片
     concat = pd.concat([returns, factor], axis=1)
@@ -85,7 +89,7 @@ def get_monthly_ic(returns: pd.DataFrame, factor: pd.DataFrame, periods: list) -
 
     for i in concat.groupby(pd.Grouper(freq='M')):
         # i[0] is timestamp i[1] is dataframe
-        #因为factor这列传进来的是series 没有取名 列名用0来定位
+        # 因为factor这列传进来的是series 没有取名 列名用0来定位
 
         monthfactor = i[1][0]
         monthreturn = i[1].drop(0, axis=1)
@@ -148,23 +152,21 @@ def plot_monthly_ic_heatmap(mean_monthly_ic):
         # z1 是其中一个subplot的z
         fig1 = ff.create_annotated_heatmap(x=x, y=y, z=np.array(z1),
                                            hoverinfo='z')
-        #fig1.show()
+        # fig1.show()
         fig.add_trace(fig1.data[0], int(count / 3) + 1, count % 3 + 1)
 
         count += 1
 
-    layout=dict()
-    for i in range(1,count+1):
-        layout['xaxis' + str(i)]={'type':'category'}
+    layout = dict()
+    for i in range(1, count + 1):
+        layout['xaxis' + str(i)] = {'type': 'category'}
         layout['yaxis' + str(i)] = {'type': 'category'}
-
 
     fig.update_layout(
         layout
     )
 
     return fig
-
 
 
 def in_out_sample_factor_t_test(insample_factor: pd.Series, out_of_sample_factor: pd.Series):

@@ -6,8 +6,11 @@ from alpha_research import AlphaResearch
 from alpha_research.plotting import factor_distribution_plot, qq_plot, returns_plot, cumulative_return_plot
 from alpha_research.utils import infer_factor_time_frame, calculate_forward_returns, calculate_factor_returns, \
     calculate_position, calculate_cumulative_returns
-from alpha_research.performance_metrics import calculate_information_coefficient, factor_summary
+from alpha_research.performance_metrics import calculate_information_coefficient, factor_summary, factor_ols_regression
 
+import plotly.io as pio
+
+pio.renderers.default = "browser"
 
 class MultiAssetResearch(AlphaResearch):
     """
@@ -56,10 +59,12 @@ class MultiAssetResearch(AlphaResearch):
         self.alpha_func_paras = kwargs
         if kwargs is not None:
             factor = func(self.in_sample, **kwargs)
+            assert type(factor) == pd.Series
             assert np.array_equal(factor.index, self.in_sample.index)
             assert factor.values.shape[0] == self.in_sample.shape[0]
         else:
             factor = func(self.in_sample)
+            assert type(factor) == pd.Series
             assert np.array_equal(factor.index, self.in_sample.index)
             assert factor.values.shape[0] == self.in_sample.shape[0]
         self.factor = factor
@@ -80,25 +85,37 @@ class MultiAssetResearch(AlphaResearch):
         display(pd.DataFrame(ic_table, columns=[self.factor_name]))
 
         # factor beta table
-        # pd.set_option('display.float_format', None)
-        # ols_table = factor_ols_regression(self.factor, returns)
-        # display(ols_table)
+        pd.set_option('display.float_format', None)
+        ols_table = factor_ols_regression(self.factor, returns)
+        display(ols_table)
+
         # factor distribution plot
         fig = factor_distribution_plot(self.factor)
         fig.show()
         fig = qq_plot(self.factor)
         fig.show()
+
+        # factor
         factor_returns = calculate_factor_returns(self.in_sample, self.factor, forward_return_lag)
         fig = returns_plot(factor_returns, self.factor_name)
         fig.show()
-        cumulative_returns = calculate_cumulative_returns(factor_returns, 1)
 
+
+        cumulative_returns = calculate_cumulative_returns(factor_returns, 1)
         fig = cumulative_return_plot(cumulative_returns, benchmark=self.benchmark, factor_name=self.factor_name)
         fig.show()
 
+        # position time series of each asset
+
+        # return by factor bin
+
+        #
+
+
+
 
 if __name__ == '__main__':
-    data = pd.read_csv('../hsi_multiasset_sample.csv')
+    data = pd.read_csv('../hsi_component.csv')
     data['Date'] = pd.to_datetime(data['Date'])
     data.set_index(['Date', 'code'], inplace=True)
     multi_study = MultiAssetResearch(data)
@@ -106,8 +123,7 @@ if __name__ == '__main__':
 
     def random_alpha(df):
         np.random.seed(0)
-        factor = pd.DataFrame(np.random.randint(-10, 10, df.values.shape[0]), index=df.index, columns=['factor'])
-        # factor.column = ['factor']
+        factor = pd.Series(np.random.randn(df.values.shape[0]), index=df.index)
         return factor
 
 
