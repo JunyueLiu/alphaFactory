@@ -147,7 +147,7 @@ class BacktestingBase:
         joint = joint.groupby(level=1).ffill()
         joint.fillna(value=0, inplace=True)
         joint['equity'] = joint['close'] * joint['holding'] + joint['cumulative_cash_inflow']
-        # aggegate different assets class returns with same timestamp.
+        # aggregate different assets class returns with same timestamp.
         net_value = joint['equity'].groupby(level=0).sum() + self.initial_capital  # type:pd.DataFrame
         # todo calculate every the metric from the net value index
         returns = net_value.pct_change()

@@ -50,7 +50,7 @@ def calculate_cumulative_returns(returns, starting_value=0, out=None):
     return out
 
 
-def calculate_position(factor: pd.DataFrame):
+def calculate_position(factor: pd.Series):
     """
     The position of cross sectional alpha is calculated by
     alpha / (sum(abs(alpha)))
@@ -71,6 +71,12 @@ def calculate_position(factor: pd.DataFrame):
     return factor.groupby(level=0).apply(lambda x: x / x.abs().sum())
 
 
+def trading_basket(last_position, alpha):
+    pass
+
+def calculate_quantile_returns(factor, quantile):
+    pass
+
 # here
 def calculate_factor_returns(data: pd.DataFrame, factor: pd.DataFrame, periods: list,
                              price_key='close', factor_name='factor') -> pd.DataFrame:
@@ -78,12 +84,13 @@ def calculate_factor_returns(data: pd.DataFrame, factor: pd.DataFrame, periods: 
     # for cross sectional factor
     if type(factor_returns.index) == pd.MultiIndex:
         # todo returns with different holding period
+        # calculate position by factor weight
         position = calculate_position(factor)
         # first shift the factor by date, because the factor can only decide future return
         shifted_position = position.groupby(level=1).shift(1)
         rate_of_return = data[price_key].groupby(level=1).pct_change()
         # do multiple elementwise
-        factor_returns = pd.DataFrame(shifted_position.values[:, 0] * rate_of_return.values, index=rate_of_return.index)
+        factor_returns = pd.DataFrame(shifted_position.values * rate_of_return.values, index=rate_of_return.index)
         # sum up the return in the same date.
         factor_returns = factor_returns.groupby(level=0).sum()
         factor_returns.rename({0: factor_name}, axis=1, inplace=True)
@@ -153,6 +160,10 @@ def generate_strftime_format(index):
         return '%Y/%m/%d %H:%M:%S'
     else:
         return '%Y/%m/%d'
+
+
+
+
 
 
 if __name__ == '__main__':

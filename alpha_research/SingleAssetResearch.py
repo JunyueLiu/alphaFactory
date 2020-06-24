@@ -68,8 +68,6 @@ class SingleAssetResearch(AlphaResearch):
             else:
                 self.factor = pd.Series(factor, index=self.in_sample.index)
 
-            self.factor = func(self.in_sample)
-        # self.factor = pd.DataFrame(self.factor, columns=[self.factor_name])
 
 
     def evaluate_alpha(self, forward_return_lag: list = None):
@@ -92,6 +90,7 @@ class SingleAssetResearch(AlphaResearch):
         pd.set_option('display.float_format', None)
         ols_table = factor_ols_regression(self.factor, returns)
         display(ols_table)
+
         # factor distribution plot
         fig = factor_distribution_plot(self.factor)
         fig.show()
@@ -113,6 +112,7 @@ class SingleAssetResearch(AlphaResearch):
         benchmark = self.in_sample['close'] / self.in_sample['close'][0]
         fig = cumulative_return_plot(cumulative_returns, benchmark=benchmark, factor_name=self.factor_name)
         fig.show()
+        # percentile entry and exit
         per_factor = percentile_factor(self.factor, self.factor_percentile_entry)
         fig = entry_and_exit_plot(self.in_sample, per_factor)
         fig.show()
@@ -359,13 +359,13 @@ if __name__ == '__main__':
     factor_study = SingleAssetResearch(df)
 
 
-    def ma5_ma10(df, time_lag_1 = 5, time_lag2= 10):
-        pass
-
+    # def ma5_ma10(df, time_lag_1 = 5, time_lag2= 10):
+    #     pass
+    #
     factor_study.calculate_factor(alpha_6, **{'time_lag':5})
-    # factor_study.evaluate_alpha()
+    factor_study.evaluate_alpha()
     # factor_study.out_of_sample_evaluation()
-    factor_study.get_evaluation_dash_app().run_server(debug=True)
+    # factor_study.get_evaluation_dash_app().run_server(debug=True)
 
 
 

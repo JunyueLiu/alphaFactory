@@ -12,6 +12,8 @@ def first_last_trade_time(traded: pd.DataFrame, time_key = 'time_key'):
     time_list = traded[time_key].sort_values().values
     return time_list[0], time_list[-1]
 
+def num_trade(traded: pd.DataFrame):
+    pass
 
 def compund_return(returns):
     """
