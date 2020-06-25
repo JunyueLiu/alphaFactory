@@ -3,14 +3,14 @@ import numpy as np
 from IPython.core.display import display
 
 from alpha_research import AlphaResearch
-from alpha_research.plotting import factor_distribution_plot, qq_plot, returns_plot, cumulative_return_plot
-from alpha_research.utils import infer_factor_time_frame, calculate_forward_returns, calculate_factor_returns, \
-    calculate_position, calculate_cumulative_returns
-from alpha_research.performance_metrics import calculate_information_coefficient, factor_summary, factor_ols_regression
+from alpha_research.plotting import *
+from alpha_research.utils import *
+from alpha_research.performance_metrics import *
 
 import plotly.io as pio
 
 pio.renderers.default = "browser"
+
 
 class MultiAssetResearch(AlphaResearch):
     """
@@ -43,9 +43,11 @@ class MultiAssetResearch(AlphaResearch):
         self.out_of_sample_factor = None
         self.factor_timeframe = infer_factor_time_frame(self.in_sample.index.get_level_values(0))
         self.factor_name = 'Cross Sectional Factor'
-        self.factor_percentile_entry = 0.8
+        self.factor_bin_num = 5
+
         self.alpha_func = None
         self.alpha_func_paras = None
+        self.alpha_position_func = calculate_position
 
         if benchmark is not None:
             # todo compare the index in the benchmark and the first level of the index
@@ -53,6 +55,16 @@ class MultiAssetResearch(AlphaResearch):
             self.benchmark = benchmark
         else:
             self.benchmark = benchmark
+
+    def set_from_alpha_to_position_func(self, func):
+        # todo check whether this function is valid
+        self.alpha_position_func = func
+
+    def set_factor_bin(self):
+        pass
+
+    def set_benchmark(self, df):
+        pass
 
     def calculate_factor(self, func, **kwargs):
         self.alpha_func = func
@@ -70,6 +82,11 @@ class MultiAssetResearch(AlphaResearch):
         self.factor = factor
 
     def evaluate_alpha(self, forward_return_lag: list = None):
+        """
+
+        :param forward_return_lag:
+        :return:
+        """
         if forward_return_lag is None:
             forward_return_lag = [1, 5, 10]
         returns = calculate_forward_returns(self.in_sample, forward_return_lag)
@@ -95,23 +112,43 @@ class MultiAssetResearch(AlphaResearch):
         fig = qq_plot(self.factor)
         fig.show()
 
+        # to calculate factor return and cumulative return, first need to transform the alpha into position of holding
+        # position time series of each asset
+        position = self.alpha_position_func(self.factor)
+
         # factor
-        factor_returns = calculate_factor_returns(self.in_sample, self.factor, forward_return_lag)
+        factor_returns = calculate_cross_section_factor_returns(self.in_sample, position)
         fig = returns_plot(factor_returns, self.factor_name)
         fig.show()
-
 
         cumulative_returns = calculate_cumulative_returns(factor_returns, 1)
         fig = cumulative_return_plot(cumulative_returns, benchmark=self.benchmark, factor_name=self.factor_name)
         fig.show()
 
-        # position time series of each asset
+        fig = position_plot(position)
+        fig.show()
 
         # return by factor bin
+        lowers_uppers = np.linspace(0, 1, self.factor_bin_num)
+        quantile_factor_returns = pd.DataFrame(index=self.in_sample.index.get_level_values(0))
+        quantile_factor_cumulative_returns = pd.DataFrame(index=self.in_sample.index.get_level_values(0))
+        for i in range(len(lowers_uppers) - 1):
+            quantile_factor = calculate_quantile_returns(self.factor, lowers_uppers[i], lowers_uppers[i + 1])
+            qf_pos = self.alpha_position_func(quantile_factor)
+            quantile_factor_returns[str(i + 1) + '_quantile'] = calculate_cross_section_factor_returns(self.in_sample,
+                                                                                                       qf_pos,
+                                                                                                       factor_name=str(
+                                                                                                           i + 1) + '_quantile')
+            # todo bug wired graph here
+            quantile_factor_cumulative_returns[str(i + 1) + '_quantile'] = calculate_cumulative_returns(
+                quantile_factor_returns[str(i + 1) + '_quantile'], 1)
+        fig = returns_plot(quantile_factor_returns, factor_name=self.factor_name)
+        fig.show()
+        fig = cumulative_return_plot(quantile_factor_cumulative_returns, benchmark=self.benchmark,
+                                     factor_name=self.factor_name)
+        fig.show()
 
         #
-
-
 
 
 if __name__ == '__main__':

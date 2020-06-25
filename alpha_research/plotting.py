@@ -121,5 +121,21 @@ def observed_qq_plot(in_sample_factor: pd.Series, out_sample_factor: pd.Series):
     return fig
 
 
+def position_plot(position: pd.Series) -> go.Figure:
+    """
+
+    :param position:
+    :return:
+    """
+    # todo so many lines here, need to support selection functionality.
+    fig = go.Figure()
+    strftime_format = generate_strftime_format(position.index.get_level_values(0))
+    for asset_ts in position.groupby(level=1):
+        fig.add_trace(
+            line(asset_ts[1], timestamp=asset_ts[1].index.get_level_values(0), name=asset_ts[0],
+                 strftime_format=strftime_format))
+    return fig
+
+
 def report_plot():
     pass

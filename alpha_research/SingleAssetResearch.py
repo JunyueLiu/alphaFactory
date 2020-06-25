@@ -14,15 +14,13 @@ from alpha_research.factor_zoo import *
 from IPython.display import display
 
 
-
-
 # import plotly.io as pio
 
 # pio.renderers.default = "browser"
 
 
 class SingleAssetResearch(AlphaResearch):
-    #data是传进去的
+    # data是传进去的
     def __init__(self, data: pd.DataFrame, out_of_sample: pd.DataFrame = None, split_ratio: float = 0.3,
                  factor_parameters=None):
         super().__init__()
@@ -68,8 +66,6 @@ class SingleAssetResearch(AlphaResearch):
             else:
                 self.factor = pd.Series(factor, index=self.in_sample.index)
 
-
-
     def evaluate_alpha(self, forward_return_lag: list = None):
 
         if forward_return_lag is None:
@@ -98,14 +94,14 @@ class SingleAssetResearch(AlphaResearch):
         fig.show()
 
         # ic heatmap
-        ic_heatmap = get_monthly_ic(returns, self.factor,forward_return_lag)
+        ic_heatmap = get_monthly_ic(returns, self.factor, forward_return_lag)
         fig = plot_monthly_ic_heatmap(ic_heatmap)
         fig.show()
 
         # factor backtesting
         fig = price_factor_plot(self.in_sample, self.factor)
         fig.show()
-        factor_returns = calculate_factor_returns(self.in_sample, self.factor, forward_return_lag)
+        factor_returns = calculate_ts_factor_returns(self.in_sample, self.factor, forward_return_lag)
         fig = returns_plot(factor_returns, self.factor_name)
         fig.show()
         cumulative_returns = calculate_cumulative_returns(factor_returns, 1)
@@ -117,11 +113,8 @@ class SingleAssetResearch(AlphaResearch):
         fig = entry_and_exit_plot(self.in_sample, per_factor)
         fig.show()
 
-
-
     def out_of_sample_evaluation(self):
-        #self.factor是insample的 self.outofsamplefactor是outofsample的
-
+        # self.factor是insample的 self.outofsamplefactor是outofsample的
 
         self.out_of_sample_factor = self.alpha_func(self.out_of_sample, **self.alpha_func_paras)
 
@@ -138,7 +131,7 @@ class SingleAssetResearch(AlphaResearch):
         """
         external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
         app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
-        forward_returns_period = [1, 2, 5, 10] #period list
+        forward_returns_period = [1, 2, 5, 10]  # period list
         forward_str = str(forward_returns_period).replace('[', '').replace(']', '')
         app.layout = html.Div(children=[
             html.H1(children=self.factor_name + ' evaluation'),
@@ -206,12 +199,10 @@ class SingleAssetResearch(AlphaResearch):
                        Output('price_factor', 'figure'),
                        Output('factor-returns', 'figure'),
                        Output('factor-backtest', 'figure')
-                       ],[Input("UpdateButton", "n_clicks"),
-                       Input('in-out-sample', 'value')],
+                       ], [Input("UpdateButton", "n_clicks"),
+                           Input('in-out-sample', 'value')],
                       [State("forwards-periods-input", "value")])
-
-
-        def add_forward_returns(n_clicks,value, s: str):
+        def add_forward_returns(n_clicks, value, s: str):
             try:
                 global forward_returns_period
                 global forward_str
@@ -233,27 +224,28 @@ class SingleAssetResearch(AlphaResearch):
 
                     update_factor_plot_figure = price_factor_plot(self.in_sample, self.factor)
 
-                    factor_returns = calculate_factor_returns(self.in_sample, self.factor, forward_returns_period)
+                    factor_returns = calculate_ts_factor_returns(self.in_sample, self.factor, forward_returns_period)
                     update_factor_plot_figure1 = returns_plot(factor_returns, self.factor_name)
 
-                    factor_returns = calculate_factor_returns(self.in_sample, self.factor, forward_returns_period)
+                    factor_returns = calculate_ts_factor_returns(self.in_sample, self.factor, forward_returns_period)
                     cumulative_returns = calculate_cumulative_returns(factor_returns, 1)
                     benchmark = self.in_sample['close'] / self.in_sample['close'][0]
-                    update_factor_plot_figure2 =  cumulative_return_plot(cumulative_returns, benchmark=benchmark, factor_name=self.factor_name)
+                    update_factor_plot_figure2 = cumulative_return_plot(cumulative_returns, benchmark=benchmark,
+                                                                        factor_name=self.factor_name)
 
                 else:
-                    #out of sample的情况还没搞好
+                    # out of sample的情况还没搞好
                     pass
 
-                return 'Forward return list: ' + forward_str,\
-                       update_distribution_figure,update_heatmap_figure,\
-                       update_qqplot_figure,update_factor_plot_figure,\
-                       update_factor_plot_figure1,update_factor_plot_figure2
+                return 'Forward return list: ' + forward_str, \
+                       update_distribution_figure, update_heatmap_figure, \
+                       update_qqplot_figure, update_factor_plot_figure, \
+                       update_factor_plot_figure1, update_factor_plot_figure2
 
             except:
                 return 'Update Failed, please check your input. Forward return list: ' + forward_str
 
-#Factor_Parameter
+        # Factor_Parameter
         # @app.callback([Output("forward-returns-period", "children"),
         #                Output('distribution', 'figure'),
         #                Output('ic_heatmap', 'figure'),
@@ -268,10 +260,6 @@ class SingleAssetResearch(AlphaResearch):
         #
         # def update_alpha(n_clicks,value, Factor_Parameter: str):
         #     pass
-
-
-
-
 
         # @app.callback(
         #     Output('distribution', 'figure'),
@@ -358,14 +346,10 @@ if __name__ == '__main__':
 
     factor_study = SingleAssetResearch(df)
 
-
     # def ma5_ma10(df, time_lag_1 = 5, time_lag2= 10):
     #     pass
     #
-    factor_study.calculate_factor(alpha_6, **{'time_lag':5})
+    factor_study.calculate_factor(alpha_6, **{'time_lag': 5})
     factor_study.evaluate_alpha()
     # factor_study.out_of_sample_evaluation()
     # factor_study.get_evaluation_dash_app().run_server(debug=True)
-
-
-

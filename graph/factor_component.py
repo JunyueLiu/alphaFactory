@@ -8,6 +8,8 @@ def line(data: pd.DataFrame or pd.Series, timestamp=None, name=None, mode='lines
         timestamp = timestamp.strftime(strftime_format)
     if isinstance(timestamp, pd.Series):
         timestamp = timestamp.apply(lambda x: pd.Timestamp.strftime(x, strftime_format))
+    elif isinstance(timestamp, pd.DatetimeIndex):
+        timestamp = timestamp.strftime(strftime_format)
 
     return go.Scatter(x=timestamp, y=data.values,
                       mode=mode, line_color=color,
