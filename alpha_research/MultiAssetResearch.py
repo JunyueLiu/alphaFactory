@@ -174,7 +174,7 @@ class MultiAssetResearch(AlphaResearch):
         # todo return by quantile heatmap
         returns_by_quantile_heatmap_plot(mean_ret)
         # todo cumulative return by quantile
-        
+
         # print(factor_quantile)
 
 

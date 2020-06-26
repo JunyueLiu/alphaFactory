@@ -1,22 +1,21 @@
-import pandas as pd
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output, State
-import dash_table
 
 from alpha_research import AlphaResearch
 from alpha_research.factor_transformation import percentile_factor
 from alpha_research.performance_metrics import *
 from alpha_research.plotting import *
+from alpha_research.plotting import monthly_ic_heatmap_plot
 from alpha_research.utils import *
 from alpha_research.factor_zoo import *
 from IPython.display import display
 
 
-# import plotly.io as pio
+import plotly.io as pio
 
-# pio.renderers.default = "browser"
+pio.renderers.default = "browser"
 
 
 class SingleAssetResearch(AlphaResearch):
@@ -95,7 +94,7 @@ class SingleAssetResearch(AlphaResearch):
 
         # ic heatmap
         ic_heatmap = get_monthly_ic(returns, self.factor, forward_return_lag)
-        fig = plot_monthly_ic_heatmap(ic_heatmap)
+        fig = monthly_ic_heatmap_plot(ic_heatmap)
         fig.show()
 
         # factor backtesting
@@ -218,7 +217,7 @@ class SingleAssetResearch(AlphaResearch):
 
                     returns = calculate_forward_returns(self.in_sample, forward_returns_period)
                     ic_heatmap = get_monthly_ic(returns, self.factor, forward_returns_period)
-                    update_heatmap_figure = plot_monthly_ic_heatmap(ic_heatmap)
+                    update_heatmap_figure = monthly_ic_heatmap_plot(ic_heatmap)
 
                     update_qqplot_figure = qq_plot(self.factor)
 
