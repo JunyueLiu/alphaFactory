@@ -42,7 +42,7 @@ def factor_summary(factor: pd.Series, name='factor') -> pd.DataFrame:
     return summary
 
 
-def calculate_information_coefficient(factor, returns, suffix='ic') -> pd.Series:
+def calculate_ts_information_coefficient(factor, returns, suffix='ic') -> pd.Series:
     """
     :param factor:
     :param returns:
@@ -50,12 +50,43 @@ def calculate_information_coefficient(factor, returns, suffix='ic') -> pd.Series
     :return:
     """
 
-
     _ic = returns \
-            .apply(lambda x: stats.spearmanr(x, factor, nan_policy='omit')[0])
+        .apply(lambda x: stats.spearmanr(x, factor, nan_policy='omit')[0])
     _ic.rename(index={idx: idx + '_' + suffix for idx in _ic.index}, inplace=True)
 
     return _ic
+
+
+def calculate_cs_information_coefficient(merged_data: pd.DataFrame, returns, by_group=False,
+                                         suffix='ic') -> pd.DataFrame:
+    grouper = [merged_data.index.get_level_values(level=0)]
+    if 'group' in merged_data.columns and by_group:
+        grouper.append('group')
+    data = merged_data.join(returns)
+
+    def src_ic(group):
+        f = group['factor']
+        _ic = group[get_returns_columns(group)] \
+            .apply(lambda x: stats.spearmanr(x, f)[0])
+        return _ic
+
+    ic = data.groupby(grouper).apply(src_ic)  # type: pd.DataFrame
+    ic.rename(columns={idx: idx + '_' + suffix for idx in ic.columns}, inplace=True)
+    return ic
+
+
+def information_analysis(cross_sectional_ic):
+    ic_summary_table = pd.DataFrame()
+    ic_summary_table["IC Mean"] = cross_sectional_ic.mean()
+    ic_summary_table["IC Std."] = cross_sectional_ic.std()
+    ic_summary_table["Risk-Adjusted IC"] = \
+        cross_sectional_ic.mean() / cross_sectional_ic.std()
+    t_stat, p_value = stats.ttest_1samp(cross_sectional_ic, 0, nan_policy='omit')
+    ic_summary_table["t-stat(IC)"] = t_stat
+    ic_summary_table["p-value(IC)"] = p_value
+    ic_summary_table["IC Skew"] = stats.skew(cross_sectional_ic, nan_policy='omit')
+    ic_summary_table["IC Kurtosis"] = stats.kurtosis(cross_sectional_ic, nan_policy='omit')
+    return ic_summary_table.T
 
 
 def factor_ols_regression(factor, returns: pd.DataFrame) -> pd.DataFrame:
@@ -94,7 +125,7 @@ def get_monthly_ic(returns: pd.DataFrame, factor: pd.DataFrame, periods: list) -
         monthfactor = i[1][0]
         monthreturn = i[1].drop(0, axis=1)
 
-        ic = calculate_information_coefficient(monthfactor, monthreturn)
+        ic = calculate_ts_information_coefficient(monthfactor, monthreturn)
         information_coefficient = information_coefficient.append(ic, ignore_index=True)
 
         year.append(str(i[0].year))

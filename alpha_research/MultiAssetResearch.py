@@ -32,6 +32,7 @@ class MultiAssetResearch(AlphaResearch):
             insample = int(len(data) * split_ratio)
             self.in_sample = data[:insample]
             self.out_of_sample = data[insample:]
+            self.alpha_universe = self.in_sample.index.get_level_values(level=1)
         else:
             if list(data.colums) != list(out_of_sample.columns):
                 raise AttributeError('The in the sample data and the out of sample data should have same columns')
@@ -40,10 +41,12 @@ class MultiAssetResearch(AlphaResearch):
 
         self.factor_parameter = factor_parameters
         self.factor = None
+        self.merged_data = None
         self.out_of_sample_factor = None
         self.factor_timeframe = infer_factor_time_frame(self.in_sample.index.get_level_values(0))
         self.factor_name = 'Cross Sectional Factor'
         self.factor_bin_num = 5
+        self.asset_group = None
 
         self.alpha_func = None
         self.alpha_func_paras = None
@@ -60,11 +63,20 @@ class MultiAssetResearch(AlphaResearch):
         # todo check whether this function is valid
         self.alpha_position_func = func
 
-    def set_factor_bin(self):
-        pass
+    def set_factor_bin(self, bin_num):
+        self.factor_bin_num = bin_num
+
+    def set_asset_group(self, group: dict):
+        diff = set(self.in_sample.index.get_level_values(level=1)) - set(group.keys())
+        if len(diff) > 0:
+            raise KeyError(
+                "Assets {} not in group mapping".format(
+                    list(diff)))
+        self.asset_group = group
 
     def set_benchmark(self, df):
-        pass
+        # todo check benchmark is valid or not
+        self.benchmark = df
 
     def calculate_factor(self, func, **kwargs):
         self.alpha_func = func
@@ -80,6 +92,13 @@ class MultiAssetResearch(AlphaResearch):
             assert np.array_equal(factor.index, self.in_sample.index)
             assert factor.values.shape[0] == self.in_sample.shape[0]
         self.factor = factor
+        self.merged_data = pd.DataFrame(index=factor.index)
+        self.merged_data['factor'] = factor
+        if self.asset_group is not None:
+            ss = pd.Series(self.asset_group)
+            groupby = pd.Series(index=self.factor.index,
+                                data=ss[self.factor.index.get_level_values(level=1)].values)
+            self.merged_data['group'] = groupby.astype('category')
 
     def evaluate_alpha(self, forward_return_lag: list = None):
         """
@@ -97,9 +116,15 @@ class MultiAssetResearch(AlphaResearch):
         display(summary)
 
         # ic table
-        ic_table = calculate_information_coefficient(self.factor, returns)
+        # todo should show group by time ic
+        ic = calculate_cs_information_coefficient(self.merged_data, returns)
+
         pd.set_option('display.float_format', lambda x: '{:.5f}'.format(x))
-        display(pd.DataFrame(ic_table, columns=[self.factor_name]))
+
+        display(information_analysis(ic))
+
+        # turnover analysis
+
 
         # factor beta table
         pd.set_option('display.float_format', None)
@@ -129,6 +154,7 @@ class MultiAssetResearch(AlphaResearch):
         fig.show()
 
         # return by factor bin
+        # maybe will change to another implementation
         lowers_uppers = np.linspace(0, 1, self.factor_bin_num)
         quantile_factor_returns = pd.DataFrame(index=self.in_sample.index.get_level_values(0))
         quantile_factor_cumulative_returns = pd.DataFrame(index=self.in_sample.index.get_level_values(0))
@@ -164,5 +190,19 @@ if __name__ == '__main__':
         return factor
 
 
-    multi_study.calculate_factor(random_alpha)
+    def cheating_alpha(df: pd.DataFrame):
+        return df['close'].groupby(level=1).pct_change().groupby(level=1).shift(-1)
+
+
+    group = {'0001.HK': 1, '0002.HK': 1, '0003.HK': 1, '0005.HK': 1, '0006.HK': 1, '0011.HK': 1,
+             '0012.HK': 2, '0016.HK': 2, '0017.HK': 2, '0019.HK': 2, '0066.HK': 2, '0083.HK': 2,
+             '0101.HK': 3, '0151.HK': 3, '0175.HK': 3, '0267.HK': 3, '0386.HK': 3, '0388.HK': 3,
+             '0669.HK': 4, '0688.HK': 4, '0700.HK': 4, '0762.HK': 4, '0823.HK': 4, '0857.HK': 4,
+             '0883.HK': 5, '0939.HK': 5, '0941.HK': 5, '1038.HK': 5, '1044.HK': 5, '1088.HK': 5,
+             '1093.HK': 6, '1109.HK': 6, '1177.HK': 6, '1398.HK': 6, '1928.HK': 6, '2007.HK': 6,
+             '2018.HK': 7, '2313.HK': 7, '2318.HK': 7, '2319.HK': 7, '2382.HK': 7, '2388.HK': 7,
+             '2628.HK': 8, '3328.HK': 8, '3988.HK': 8, '1299.HK': 8, '0027.HK': 8, '0288.HK': 8,
+             '1113.HK': 9, '1997.HK': 9}
+    multi_study.set_asset_group(group)
+    multi_study.calculate_factor(cheating_alpha)
     multi_study.evaluate_alpha()
