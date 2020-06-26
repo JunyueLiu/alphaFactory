@@ -1,11 +1,15 @@
 """
 Aim to contain some studied factor in the literature
 
-delta = df - df.shift()
 """
 import pandas as pd
 import numpy as np
 from scipy import stats
+
+
+def alpha_1():
+    pass
+
 
 
 def alpha_6(df: pd.DataFrame, time_lag=10):
