@@ -71,9 +71,7 @@ def signedpower(x: pd.Series, a) -> pd.Series:
     :param a:
     :return:
     """
-    # todo
-    raise NotImplementedError
-    pass
+    return x.pow(a)
 
 
 def decay_linear(x: pd.Series, d: int) -> pd.Series:
@@ -84,9 +82,17 @@ def decay_linear(x: pd.Series, d: int) -> pd.Series:
     :param d:
     :return:
     """
-    # todo
-    raise NotImplementedError
-    pass
+    # todo https://www.joinquant.com/community/post/detailMobile?postId=10674&page=&limit=20&replyId=&tag=
+    if isinstance(d, float):
+        d = math.floor(d)
+    def func(a):
+        weights = np.arange(1, d + 1)
+        weights = weights / weights.sum()
+        return np.nansum(weights * a)
+    if isinstance(x.index, pd.MultiIndex):
+        return x.groupby(level=1).rolling(d).apply(func)
+    else:
+        return x.rolling(d).apply(func)
 
 
 def indneutralize(x: pd.Series, g) -> pd.Series:
@@ -98,7 +104,11 @@ def indneutralize(x: pd.Series, g) -> pd.Series:
     :param g:
     :return:
     """
-    pass
+    if x.index.nlevels != 3:
+        raise ValueError(
+            'x has not grouped by industry. Expect 3 levels of index, but {} given instead.'.format(x.index.nlevels))
+    # todo check this is right.
+    return x.groupby(level=[0, 2]).apply(lambda a: a - a.mean())
 
 
 def ts_operation(x: pd.Series, d: int or float, operation) -> pd.Serie:
