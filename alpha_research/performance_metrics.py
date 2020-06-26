@@ -1,10 +1,4 @@
-import pandas as pd
-import numpy as np
-from scipy import stats
 import statsmodels.api as sm
-from scipy import stats
-import plotly.figure_factory as ff
-from plotly.subplots import make_subplots
 from alpha_research.utils import *
 
 
@@ -57,12 +51,11 @@ def calculate_ts_information_coefficient(factor, returns, suffix='ic') -> pd.Ser
     return _ic
 
 
-def calculate_cs_information_coefficient(merged_data: pd.DataFrame, returns, by_group=False,
+def calculate_cs_information_coefficient(merged_data: pd.DataFrame, by_group=False,
                                          suffix='ic') -> pd.DataFrame:
     grouper = [merged_data.index.get_level_values(level=0)]
     if 'group' in merged_data.columns and by_group:
         grouper.append('group')
-    data = merged_data.join(returns)
 
     def src_ic(group):
         f = group['factor']
@@ -70,12 +63,17 @@ def calculate_cs_information_coefficient(merged_data: pd.DataFrame, returns, by_
             .apply(lambda x: stats.spearmanr(x, f)[0])
         return _ic
 
-    ic = data.groupby(grouper).apply(src_ic)  # type: pd.DataFrame
+    ic = merged_data.groupby(grouper).apply(src_ic)  # type: pd.DataFrame
     ic.rename(columns={idx: idx + '_' + suffix for idx in ic.columns}, inplace=True)
     return ic
 
 
 def information_analysis(cross_sectional_ic):
+    """
+
+    :param cross_sectional_ic:
+    :return:
+    """
     ic_summary_table = pd.DataFrame()
     ic_summary_table["IC Mean"] = cross_sectional_ic.mean()
     ic_summary_table["IC Std."] = cross_sectional_ic.std()
@@ -109,6 +107,62 @@ def factor_ols_regression(factor, returns: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(result_dic)
 
 
+def position_turnover(positions: pd.Series):
+    """
+
+    :param positions:
+    :return:
+    """
+    # daily turnover
+    diff = positions.groupby(level=1).diff(1)  # type: pd.Series
+    turnover_ts = diff.groupby(level=0).apply(lambda x: x.abs().sum())  # type: pd.Series
+    turnover_ts.name = 'Turnover'
+    return turnover_ts
+
+
+def turnover_analysis(turnover_ts: pd.Series):
+    """
+
+    :param turnover_ts:
+    :return:
+    """
+    summary = turnover_ts.describe()
+    summary.name = 'Turnover Analysis'
+    return summary
+
+
+def mean_return_by_quantile(merged_data: pd.DataFrame) -> tuple:
+    """
+
+    :param merged_data:
+    :return:
+    """
+    grouper = ['factor_quantile', merged_data.index.get_level_values(level=0)]
+    # this computes the mean, std, count for each forwards return
+    # will generate multi columns output
+    #                            1_period_return            ... 10_period_return
+    #                                       mean       std  ...              std count
+    # factor_quantile  Date                                  ...
+    group_stats = merged_data.groupby(grouper)[get_returns_columns(merged_data)] \
+        .agg(['mean', 'std', 'count'])
+
+    mean_ret = group_stats.T.xs('mean', level=1).T # type: pd.DataFrame
+
+    #              1_period_return            ... 10_period_return
+    #                            mean       std  ...              std count
+    # factor_quantile                            ...
+
+    group_stats = mean_ret.groupby(level=0).agg(['mean', 'std', 'count'])
+    mean_ret = group_stats.T.xs('mean', level=1).T
+    std_error_ret = group_stats.T.xs('std', level=1).T \
+                    / np.sqrt(group_stats.T.xs('count', level=1).T)
+    return mean_ret, std_error_ret
+
+
+
+
+
+
 def get_monthly_ic(returns: pd.DataFrame, factor: pd.DataFrame, periods: list) -> pd.DataFrame:
     # 先把factor和return合并，再切片
     concat = pd.concat([returns, factor], axis=1)
@@ -135,69 +189,6 @@ def get_monthly_ic(returns: pd.DataFrame, factor: pd.DataFrame, periods: list) -
         information_coefficient['month'] = month
 
     return information_coefficient
-
-
-def plot_monthly_ic_heatmap(mean_monthly_ic):
-    mean_monthly_ic = mean_monthly_ic.copy()
-
-    # 给原来df的添加一个index,便于后面搜索
-    mean_monthly_ic = mean_monthly_ic \
-        .set_index([mean_monthly_ic['year'], mean_monthly_ic['month']])
-    print(mean_monthly_ic)
-
-    # 设定集合
-    x = [str(i) for i in range(1, 13)]  # month
-    y = list(set([int(i) for i in mean_monthly_ic['year']]))  # year 去重
-    y.sort(reverse=True)
-
-    mean_monthly_ic = mean_monthly_ic.drop(columns=['month', 'year'])
-    print(mean_monthly_ic)
-    # heatmap的z
-    z = list()
-    # heatmap titles
-    titles = list()
-
-    for i in mean_monthly_ic.iteritems():
-        titles.append(i[0])
-
-        z_year = list()
-        for year in y:
-            z_month = list()
-            for month in x:
-                try:
-                    ic = i[1].loc[str(year), str(month)]
-                except:
-                    z_month.append(np.nan)
-                else:
-                    z_month.append(ic)
-            # z_year存的是一个period的heatmap
-            z_year.append(z_month)
-        # z存的是所有period的heatmap
-        z.append(z_year)
-    # 开始画图
-
-    fig = make_subplots(rows=int(len(mean_monthly_ic.columns) / 3) + 1,
-                        cols=3, subplot_titles=titles)
-    count = 0
-    for z1 in z:
-        # z1 是其中一个subplot的z
-        fig1 = ff.create_annotated_heatmap(x=x, y=y, z=np.array(z1),
-                                           hoverinfo='z')
-        # fig1.show()
-        fig.add_trace(fig1.data[0], int(count / 3) + 1, count % 3 + 1)
-
-        count += 1
-
-    layout = dict()
-    for i in range(1, count + 1):
-        layout['xaxis' + str(i)] = {'type': 'category'}
-        layout['yaxis' + str(i)] = {'type': 'category'}
-
-    fig.update_layout(
-        layout
-    )
-
-    return fig
 
 
 def in_out_sample_factor_t_test(insample_factor: pd.Series, out_of_sample_factor: pd.Series):

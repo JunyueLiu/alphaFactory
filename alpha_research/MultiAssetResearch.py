@@ -9,7 +9,7 @@ from alpha_research.performance_metrics import *
 
 import plotly.io as pio
 
-pio.renderers.default = "browser"
+# pio.renderers.default = "jpg"
 
 
 class MultiAssetResearch(AlphaResearch):
@@ -45,6 +45,7 @@ class MultiAssetResearch(AlphaResearch):
         self.out_of_sample_factor = None
         self.factor_timeframe = infer_factor_time_frame(self.in_sample.index.get_level_values(0))
         self.factor_name = 'Cross Sectional Factor'
+        self.factor_quantile_list = None
         self.factor_bin_num = 5
         self.asset_group = None
 
@@ -59,12 +60,18 @@ class MultiAssetResearch(AlphaResearch):
         else:
             self.benchmark = benchmark
 
+    def set_factor_quantile_list(self, quantile_list):
+        self.factor_quantile_list = quantile_list
+        self.factor_bin_num = None
+
+
     def set_from_alpha_to_position_func(self, func):
         # todo check whether this function is valid
         self.alpha_position_func = func
 
     def set_factor_bin(self, bin_num):
         self.factor_bin_num = bin_num
+        self.factor_quantile_list = None
 
     def set_asset_group(self, group: dict):
         diff = set(self.in_sample.index.get_level_values(level=1)) - set(group.keys())
@@ -109,6 +116,7 @@ class MultiAssetResearch(AlphaResearch):
         if forward_return_lag is None:
             forward_return_lag = [1, 5, 10]
         returns = calculate_forward_returns(self.in_sample, forward_return_lag)
+        merged_data = self.merged_data.join(returns) # type: pd.DataFrame
         # in sample
         # factor summary
         summary = factor_summary(self.factor, self.factor_name)
@@ -116,15 +124,10 @@ class MultiAssetResearch(AlphaResearch):
         display(summary)
 
         # ic table
-        # todo should show group by time ic
-        ic = calculate_cs_information_coefficient(self.merged_data, returns)
 
+        ic = calculate_cs_information_coefficient(merged_data)
         pd.set_option('display.float_format', lambda x: '{:.5f}'.format(x))
-
         display(information_analysis(ic))
-
-        # turnover analysis
-
 
         # factor beta table
         pd.set_option('display.float_format', None)
@@ -141,7 +144,7 @@ class MultiAssetResearch(AlphaResearch):
         # position time series of each asset
         position = self.alpha_position_func(self.factor)
 
-        # factor
+        # factor returns
         factor_returns = calculate_cross_section_factor_returns(self.in_sample, position)
         fig = returns_plot(factor_returns, self.factor_name)
         fig.show()
@@ -150,10 +153,31 @@ class MultiAssetResearch(AlphaResearch):
         fig = cumulative_return_plot(cumulative_returns, benchmark=self.benchmark, factor_name=self.factor_name)
         fig.show()
 
+        # turnover analysis
+        turnover = position_turnover(position)
+        display(turnover_analysis(turnover))
+        # position graph
         fig = position_plot(position)
         fig.show()
+        # turnover time series graph
+        fig = turnover_plot(turnover)
+        fig.show()
 
+        # Return analysis
         # return by factor bin
+        factor_quantile = quantize_factor(merged_data, self.factor_quantile_list, self.factor_bin_num) # type: pd.Series
+        merged_data['factor_quantile'] = factor_quantile
+        mean_ret, std_error_ret = mean_return_by_quantile(merged_data)
+        display(mean_ret)
+        # todo return by quantile graph
+        returns_by_quantile_bar_plot(mean_ret)
+        # todo return by quantile heatmap
+        returns_by_quantile_heatmap_plot(mean_ret)
+        # todo cumulative return by quantile
+
+        # print(factor_quantile)
+
+
         # maybe will change to another implementation
         lowers_uppers = np.linspace(0, 1, self.factor_bin_num)
         quantile_factor_returns = pd.DataFrame(index=self.in_sample.index.get_level_values(0))
@@ -194,6 +218,10 @@ if __name__ == '__main__':
         return df['close'].groupby(level=1).pct_change().groupby(level=1).shift(-1)
 
 
+    def price_average_alpha(df: pd.DataFrame):
+        return df['close'].groupby(level=0).apply(lambda x: (x - x.mean()) / x.std())
+
+
     group = {'0001.HK': 1, '0002.HK': 1, '0003.HK': 1, '0005.HK': 1, '0006.HK': 1, '0011.HK': 1,
              '0012.HK': 2, '0016.HK': 2, '0017.HK': 2, '0019.HK': 2, '0066.HK': 2, '0083.HK': 2,
              '0101.HK': 3, '0151.HK': 3, '0175.HK': 3, '0267.HK': 3, '0386.HK': 3, '0388.HK': 3,
@@ -204,5 +232,5 @@ if __name__ == '__main__':
              '2628.HK': 8, '3328.HK': 8, '3988.HK': 8, '1299.HK': 8, '0027.HK': 8, '0288.HK': 8,
              '1113.HK': 9, '1997.HK': 9}
     multi_study.set_asset_group(group)
-    multi_study.calculate_factor(cheating_alpha)
+    multi_study.calculate_factor(price_average_alpha)
     multi_study.evaluate_alpha()
