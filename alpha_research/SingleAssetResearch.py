@@ -78,7 +78,7 @@ class SingleAssetResearch(AlphaResearch):
         display(summary)
 
         # ic table
-        ic_table = calculate_information_coefficient(self.factor, returns)
+        ic_table = calculate_ts_information_coefficient(self.factor, returns)
         pd.set_option('display.float_format', lambda x: '{:.5f}'.format(x))
         display(pd.DataFrame(ic_table, columns=[self.factor_name]))
 

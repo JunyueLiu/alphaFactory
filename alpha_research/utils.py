@@ -95,9 +95,37 @@ def calculate_quantile_returns(factor, quantile_lower, quantile_upper) -> pd.Ser
     return factor_df['quantile_factor']
 
 
+def quantize_factor(merged_data: pd.DataFrame, quantiles: list = None, bins: int = None):
+    """
+    merged_data multi index, level 0 is pd.Timestamp, level 1 is asset code.
+    two column, factor and 'group'
+    :param merged_data:
+    :param quantiles:
+    :param bins:
+    :return:
+    """
+    if not ((quantiles is not None and bins is None) or
+            (quantiles is None and bins is not None)):
+        raise ValueError('Either quantiles or bins should be provided')
+
+    grouper = [merged_data.index.get_level_values(level=0)]
+    if 'group' in merged_data.columns:
+        grouper.append('group')
+
+    def quantile_calc(x, _quantiles, _bins):
+        if _quantiles is not None and _bins is None:
+            return pd.qcut(x, _quantiles, labels=False) + 1
+        elif _bins is not None and _quantiles is None:
+            return pd.cut(x, _bins, labels=False) + 1
+
+    factor_quantile = merged_data.groupby(grouper)['factor'] \
+        .apply(quantile_calc, quantiles, bins)
+    factor_quantile.name = 'factor_quantile'
+    return factor_quantile
+
+
 def calculate_cross_section_factor_returns(data: pd.DataFrame, position: pd.Series, price_key='close',
                                            factor_name='cross_sectional_factor') -> pd.DataFrame:
-
     """
 
     :param data:
@@ -150,8 +178,8 @@ def calculate_ts_factor_returns(data: pd.DataFrame, factor: pd.Series, periods: 
     return factor_returns
 
 
-def get_returns_columns() -> list:
-    pass
+def get_returns_columns(df: pd.DataFrame) -> list:
+    return [col for col in df.columns if '_period_return' in col]
 
 
 def infer_factor_time_frame(data: pd.DatetimeIndex):
