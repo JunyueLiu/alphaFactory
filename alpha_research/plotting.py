@@ -157,7 +157,8 @@ def turnover_plot(turnover: pd.Series) -> go.Figure:
     fig.add_trace(line(turnover, strftime_format=strftime_format))
     return fig
 
-def returns_by_quantile_bar_plot(mean_ret:pd.DataFrame, ) -> go.Figure:
+
+def returns_by_quantile_bar_plot(mean_ret: pd.DataFrame, ) -> go.Figure:
     # sample
     #                       1_period_return  5_period_return  10_period_return
     # factor_quantile
@@ -166,9 +167,13 @@ def returns_by_quantile_bar_plot(mean_ret:pd.DataFrame, ) -> go.Figure:
     # 3                       0.010046         0.022567          0.032039
     # 4                       0.013727         0.029933          0.041088
     # 5                       0.012879         0.029367          0.039913
-    pass
+    fig = go.Figure()
+    for ret_col in mean_ret.columns:
+        fig.add_trace(bar(mean_ret.index, mean_ret[ret_col], ret_col))
+    return fig
 
-def returns_by_quantile_heatmap_plot(mean_ret:pd.DataFrame, ) -> go.Figure:
+
+def returns_by_quantile_heatmap_plot(mean_ret: pd.DataFrame, ) -> go.Figure:
     # sample
     #                       1_period_return  5_period_return  10_period_return
     # factor_quantile
@@ -177,9 +182,46 @@ def returns_by_quantile_heatmap_plot(mean_ret:pd.DataFrame, ) -> go.Figure:
     # 3                       0.010046         0.022567          0.032039
     # 4                       0.013727         0.029933          0.041088
     # 5                       0.012879         0.029367          0.039913
-    pass
+    fig = go.Figure()
+    fig.add_trace(heatmap(mean_ret.columns, mean_ret.index, mean_ret.values))
+    fig.update_layout(
+        {'xaxis': {'type': 'category'},
+         'yaxis': {'type': 'category'}
+
+         }
+    )
+    return fig
 
 
+def returns_by_quantile_distplot(quantile_ret_ts: pd.DataFrame):
+    """
+
+    :param quantile_ret_ts:
+    :return:
+    """
+    #                             1_period_return  5_period_return  10_period_return
+    # factor_quantile Date
+    # 1               2010-06-17         0.002230         0.021172         -0.014775
+    #                 2010-06-18         0.036203         0.017436         -0.016843
+    #                 2010-06-21        -0.004873        -0.017346         -0.035416
+    #                 2010-06-22        -0.000315        -0.036443         -0.046313
+    #                 2010-06-23        -0.010813        -0.039430         -0.039475
+    # ...                                     ...              ...               ...
+    fig = make_subplots(rows=len(quantile_ret_ts.columns), cols=1)
+    count = 1
+    for ret_col in quantile_ret_ts.columns:
+        hist_data = []
+        group_labels = []
+        grouped = quantile_ret_ts[ret_col].groupby(level=0)
+        for group in grouped:
+            group_labels.append(ret_col + ' ' + str(group[0]) + ' quantile')
+            hist_data.append(group[1].dropna().values)
+        fig1 = ff.create_distplot(hist_data, group_labels, bin_size=.1)
+        # fig1 has multi graph object
+        for i in range(len(fig1.data)):
+            fig.add_trace(fig1.data[i], row=count, col=1)
+        count += 1
+    return fig
 
 
 def monthly_ic_heatmap_plot(mean_monthly_ic):

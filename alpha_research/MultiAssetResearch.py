@@ -9,7 +9,7 @@ from alpha_research.performance_metrics import *
 
 import plotly.io as pio
 
-# pio.renderers.default = "jpg"
+pio.renderers.default = "browser"
 
 
 class MultiAssetResearch(AlphaResearch):
@@ -167,12 +167,17 @@ class MultiAssetResearch(AlphaResearch):
         # return by factor bin
         factor_quantile = quantize_factor(merged_data, self.factor_quantile_list, self.factor_bin_num) # type: pd.Series
         merged_data['factor_quantile'] = factor_quantile
-        mean_ret, std_error_ret = mean_return_by_quantile(merged_data)
+        quantile_ret_ts, mean_ret, std_error_ret = mean_return_by_quantile(merged_data)
         display(mean_ret)
         # todo return by quantile graph
-        returns_by_quantile_bar_plot(mean_ret)
+        fig = returns_by_quantile_bar_plot(mean_ret)
+        fig.show()
         # todo return by quantile heatmap
-        returns_by_quantile_heatmap_plot(mean_ret)
+        fig = returns_by_quantile_heatmap_plot(mean_ret)
+        fig.show()
+        # todo quantile ret distribution
+        fig = returns_by_quantile_distplot(quantile_ret_ts)
+        fig.show()
         # todo cumulative return by quantile
 
         # print(factor_quantile)
@@ -200,7 +205,8 @@ class MultiAssetResearch(AlphaResearch):
 
         #
 
-
+    def get_evaluation_dash_app(self):
+        pass
 if __name__ == '__main__':
     data = pd.read_csv('../hsi_component.csv')
     data['Date'] = pd.to_datetime(data['Date'])

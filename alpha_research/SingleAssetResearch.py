@@ -9,7 +9,7 @@ from alpha_research.performance_metrics import *
 from alpha_research.plotting import *
 from alpha_research.plotting import monthly_ic_heatmap_plot
 from alpha_research.utils import *
-from alpha_research.factor_zoo import *
+from alpha_research.factor_zoo.alpha_101 import *
 from IPython.display import display
 
 

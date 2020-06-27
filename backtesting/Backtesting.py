@@ -28,6 +28,7 @@ class BacktestingBase:
         self.end = end
         self.initial_capital = initial_capital
         self.backtesting_setting = backtesting_setting
+        self.backtesting_result = {}
 
         self.data = None
 
@@ -129,6 +130,7 @@ class BacktestingBase:
         # calculate cash inflow from dealt qty and dealt price
         # long will have cash outflow (negative inflow) and short will have cash inflow
         traded['cash_inflow'] = - traded['dealt_price'] * traded['dealt_qty']
+        self.backtesting_result['trade_list'] = traded
         # todo commission deduction
         # aggregate the cash inflow and dealt among with same code and same datetime
         traded_grouped = traded.groupby(['code', 'update_time']).agg(
@@ -140,7 +142,8 @@ class BacktestingBase:
                                        'dealt_qty': 'holding'}, inplace=True)
 
         first_traded, last_traded = first_last_trade_time(traded, 'update_time')
-
+        self.backtesting_result['first_traded'] = first_traded
+        self.backtesting_result['last_traded'] = last_traded
 
         joint = asset_price.join(traded_grouped)
         # need to use groupby fillna
@@ -151,6 +154,9 @@ class BacktestingBase:
         net_value = joint['equity'].groupby(level=0).sum() + self.initial_capital  # type:pd.DataFrame
         # todo calculate every the metric from the net value index
         returns = net_value.pct_change()
+        self.backtesting_result['net_value'] = net_value
+        self.backtesting_result['rate of return'] = returns
+
         # returns.to_csv('sample_returns.csv')
         qs.reports.html(returns, title=self.strategy.strategy_name, output='report.html')
 
