@@ -183,7 +183,13 @@ def returns_by_quantile_heatmap_plot(mean_ret: pd.DataFrame, ) -> go.Figure:
     # 4                       0.013727         0.029933          0.041088
     # 5                       0.012879         0.029367          0.039913
     fig = go.Figure()
-    fig.add_trace(heatmap(mean_ret.index, mean_ret.columns, mean_ret.values))
+    fig.add_trace(heatmap(mean_ret.columns, mean_ret.index, mean_ret.values))
+    fig.update_layout(
+        {'xaxis': {'type': 'category'},
+         'yaxis': {'type': 'category'}
+
+         }
+    )
     return fig
 
 
