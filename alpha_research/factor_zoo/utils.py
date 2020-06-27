@@ -8,6 +8,42 @@ detail definition see https://arxiv.org/pdf/1601.00991.pdf
 """
 
 
+def returns(close: pd.Series) -> pd.Series:
+    """
+    returns = daily close-to-close returns
+    :param close:
+    :return:
+    """
+    if isinstance(close.index, pd.MultiIndex):
+        return close.groupby(level=1).pct_change(1)
+    else:
+        return close.pct_change(1)
+
+
+def vwap(prices: pd.Series, volume: pd.Series) -> pd.Series:
+    """
+    df['vwap'] = (np.cumsum(df.quantity * df.price) / np.cumsum(df.quantity))
+    vwap = daily volume-weighted average price
+    :param prices:
+    :param volume:
+    :return:
+    """
+    if isinstance(prices.index, pd.MultiIndex):
+        return (volume * prices).groupby(level=1).cumsum() / volume.groupby(level=1).cumsum()
+    else:
+        return (volume * prices).cumsum() / volume.cumsum()
+
+
+def adv(prices: pd.Series, volume, d: int) -> pd.Series:
+    """
+    adv{d} = average daily dollar volume for the past d days
+    :param d:
+    :param volume:
+    :return:
+    """
+    return (prices * volume).rolling(d).mean()
+
+
 def rank(x: pd.Series) -> pd.Series:
     """
     rank(x) = cross-sectional rank
@@ -85,10 +121,12 @@ def decay_linear(x: pd.Series, d: int) -> pd.Series:
     # todo https://www.joinquant.com/community/post/detailMobile?postId=10674&page=&limit=20&replyId=&tag=
     if isinstance(d, float):
         d = math.floor(d)
+
     def func(a):
         weights = np.arange(1, d + 1)
         weights = weights / weights.sum()
         return np.nansum(weights * a)
+
     if isinstance(x.index, pd.MultiIndex):
         return x.groupby(level=1).rolling(d).apply(func)
     else:
