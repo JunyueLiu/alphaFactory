@@ -142,21 +142,32 @@ def mean_return_by_quantile(merged_data: pd.DataFrame) -> tuple:
     # will generate multi columns output
     #                            1_period_return            ... 10_period_return
     #                                       mean       std  ...              std count
-    # factor_quantile  Date                                  ...
+    # factor_quantile  Date
+    # 1               2010-06-17        0.002230  0.023423  ...         0.060427    19
+    #                 2010-06-18        0.036203  0.026616  ...         0.053852    20
+    #                 2010-06-21       -0.004873  0.011273  ...         0.039988    19
     group_stats = merged_data.groupby(grouper)[get_returns_columns(merged_data)] \
         .agg(['mean', 'std', 'count'])
 
-    mean_ret = group_stats.T.xs('mean', level=1).T # type: pd.DataFrame
+    # quantile_ret_ts
+    #   1_period_return  5_period_return  10_period_return
+    # factor_quantile Date
+    # 1               2010-06-17         0.002230         0.021172         -0.014775
+    #                 2010-06-18         0.036203         0.017436         -0.016843
+    #                 2010-06-21        -0.004873        -0.017346         -0.035416
+    #                 2010-06-22        -0.000315        -0.036443         -0.046313
+    quantile_ret_ts = group_stats.T.xs('mean', level=1).T # type: pd.DataFrame
+
 
     #              1_period_return            ... 10_period_return
     #                            mean       std  ...              std count
     # factor_quantile                            ...
 
-    group_stats = mean_ret.groupby(level=0).agg(['mean', 'std', 'count'])
+    group_stats = quantile_ret_ts.groupby(level=0).agg(['mean', 'std', 'count'])
     mean_ret = group_stats.T.xs('mean', level=1).T
     std_error_ret = group_stats.T.xs('std', level=1).T \
                     / np.sqrt(group_stats.T.xs('count', level=1).T)
-    return mean_ret, std_error_ret
+    return quantile_ret_ts, mean_ret, std_error_ret
 
 
 
