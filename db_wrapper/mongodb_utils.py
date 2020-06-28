@@ -57,9 +57,11 @@ class MongoConnection:
 
 if __name__ == '__main__':
 
+
     con = MongoConnection('ip', 27017, 'user', 'pw')
     files = os.listdir('/Users/silviaysy/Desktop/local_data')
     paths = [os.path.join('/Users/silviaysy/Desktop/local_data', f) for f in files]
+
     df = merge_single_asset(paths)
     con.insert_from_dataframe('test', '0001_HKEX_1d', df)
 
