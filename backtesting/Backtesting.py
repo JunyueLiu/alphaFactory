@@ -154,9 +154,13 @@ class BacktestingBase:
         net_value = joint['equity'].groupby(level=0).sum() + self.initial_capital  # type:pd.DataFrame
         # todo calculate every the metric from the net value index
         returns = net_value.pct_change()
+        drawdown_metric = drawdown(net_value)
         self.backtesting_result['net_value'] = net_value
         self.backtesting_result['rate of return'] = returns
-
+        self.backtesting_result['drawdone'] = drawdown_metric
+        self.backtesting_result['drawdone_detail'] = drawdown_details(drawdown_metric)
+        self.backtesting_result['kelly'] = kelly(returns)
+        self.backtesting_result['value_at_risk'] = value_at_risk(returns)
         # returns.to_csv('sample_returns.csv')
         qs.reports.html(returns, title=self.strategy.strategy_name, output='report.html')
 
