@@ -147,26 +147,28 @@ class SingleAssetResearch(AlphaResearch):
             ))
 
         app.layout = html.Div(children=[
-            html.H1(children=self.factor_name + ' evaluation'),
+            html.H1(children=self.factor_name + ' evaluation',style={'font-weight':'normal','text-align':'center','display':'block','fontFamily': 'helvetica neue','margin':'100px auto'}),
             html.Div([
-                html.Div(id='forward-returns-period'),
-                html.Br(),
-                # add forward returns
-                html.Div(children='Enter a value to add or remove forward return value'),
-                dcc.Input(
-                    id='forwards-periods-input',
-                    type='text',
-                    value='1, 2, 5, 10'
-                ),
-                html.Button('Update', id='UpdateButton'), ]
-                , style={'width': '49%', 'display': 'inline-block'}),
-            # change parameter
-            html.Div([
-                html.Div(children='Factor Parameter'),
-                html.Div(para_dcc_list, id='alpha_paras'),
-                html.Button('Submit', id='AlphaButton'),
-                html.Div(id="current-parameter"),
-            ], style={'width': '49%', 'display': 'inline-block'}),
+                html.Div([
+                    html.Div(id='forward-returns-period'),
+                    # add forward returns
+                    html.Div(children='Enter a value to add or remove forward return value'),
+                    dcc.Input(
+                        id='forwards-periods-input',
+                        type='text',
+                        value='1, 2, 5, 10'
+                    ),
+                    html.Button('Update', id='UpdateButton'), ]
+                    , style={'margin-left':'100px','width:': '400px','float':'left'}),
+                # change parameter
+                html.Div([
+                    html.Div(children='Factor Parameter'),
+                    html.Div(para_dcc_list, id='alpha_paras'),
+                    html.Button('Submit', id='AlphaButton'),
+                    html.Div(id="current-parameter"),
+                ],style={'margin-left':'400px','display':'inline-block'}),
+
+            ]),
 
             html.Div([
                 dcc.RadioItems(
@@ -175,32 +177,32 @@ class SingleAssetResearch(AlphaResearch):
                     value='In sample',
                     labelStyle={'display': 'inline-block'}
                 )
-            ]),
-            html.Div([html.Div(children='Factor Distribution'), dcc.Graph(id='distribution')],
-                     style={'width': '49%', 'display': 'inline-block'}),
+            ],style={'display':'block','margin':'0px 100px 50px 100px'}),
+            html.Div([html.H5(children='Factor Distribution',style={'text-align':'center','margin':'auto'}), dcc.Graph(id='distribution')],
+                     style={'width': '49%', 'display': 'inline-block','margin-bottom':'50px'}),
 
-            html.Div([html.Div(children='Q-Q plot '), dcc.Graph(id='qqplot')],
-                     style={'width': '49%', 'display': 'inline-block'}),
+            html.Div([html.H5(children='Q-Q plot ',style={'text-align':'center','margin':'auto'}), dcc.Graph(id='qqplot')],
+                     style={'width': '49%', 'display': 'inline-block','margin-bottom':'50px'}),
 
-            html.Div([html.Div(children='Factor IC'),
+            html.Div([html.H5(children='Factor IC',style={'text-align':'center','margin':'auto'}),
                       dcc.Graph(id='ic_heatmap')],
-                     style={'width': '100%', 'display': 'inline-block'}),
+                     style={'width': '100%', 'display': 'inline-block','margin-bottom':'50px'}),
 
-            html.Div([html.Div(children='Price Factor'),
+            html.Div([html.H5(children='Price Factor',style={'text-align':'center','margin':'auto'}),
                       dcc.Graph(id='price_factor')],
-                     style={'width': '100%', 'display': 'inline-block'}),
-            html.Div([html.Div(children='Factor Return'),
+                     style={'width': '100%', 'display': 'inline-block','margin-bottom':'50px'}),
+            html.Div([html.H5(children='Factor Return',style={'text-align':'center','margin':'auto'}),
                       dcc.Graph(id='factor-returns')],
-                     style={'width': '100%', 'display': 'inline-block'}),
-            html.Div([html.Div(children='Factor Backtesting'),
+                     style={'width': '100%', 'display': 'inline-block','margin-bottom':'50px'}),
+            html.Div([html.H5(children='Factor Backtesting',style={'text-align':'center','margin':'auto'}),
                       dcc.Graph(id='factor-backtest')],
-                     style={'width': '100%', 'display': 'inline-block'}),
+                     style={'width': '100%', 'display': 'inline-block','margin-bottom':'50px'}),
             html.Div(children=self.factor.to_json(orient='split'), id='in_sample_factor',
                      style={'display': 'none'}),
             html.Div(id='out_sample_factor', style={'display': 'none'}),
             html.Div(children=json.dumps([1, 2, 5, 10]), id='forward_returns_period_saved', style={'display': 'none'}),
             html.Div(id='forward_str', style={'display': 'none'}),
-        ])
+        ],style={'margin':'20px'})
 
         # make input parameter into dict
         def _get_alpha_parameter_from_div(alpha_paras):
@@ -332,7 +334,7 @@ class DemoSingleAssetFactor(SingleAssetResearch):
 
 
 if __name__ == '__main__':
-    data_path = r'../HK.999010_2019-06-01 00:00:00_2020-05-30 03:00:00_K_1M_qfq.csv'
+    data_path = r'../data.csv'
 
     df = pd.read_csv(data_path)
     df['time_key'] = pd.to_datetime(df['time_key'])
