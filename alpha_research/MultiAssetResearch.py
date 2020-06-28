@@ -1,3 +1,4 @@
+import dash
 import pandas as pd
 import numpy as np
 from IPython.core.display import display
@@ -180,33 +181,37 @@ class MultiAssetResearch(AlphaResearch):
         fig.show()
         # todo cumulative return by quantile
 
+        # todo by user defined group
         # print(factor_quantile)
 
 
         # maybe will change to another implementation
-        lowers_uppers = np.linspace(0, 1, self.factor_bin_num)
-        quantile_factor_returns = pd.DataFrame(index=self.in_sample.index.get_level_values(0))
-        quantile_factor_cumulative_returns = pd.DataFrame(index=self.in_sample.index.get_level_values(0))
-        for i in range(len(lowers_uppers) - 1):
-            quantile_factor = calculate_quantile_returns(self.factor, lowers_uppers[i], lowers_uppers[i + 1])
-            qf_pos = self.alpha_position_func(quantile_factor)
-            quantile_factor_returns[str(i + 1) + '_quantile'] = calculate_cross_section_factor_returns(self.in_sample,
-                                                                                                       qf_pos,
-                                                                                                       factor_name=str(
-                                                                                                           i + 1) + '_quantile')
-            # todo bug wired graph here
-            quantile_factor_cumulative_returns[str(i + 1) + '_quantile'] = calculate_cumulative_returns(
-                quantile_factor_returns[str(i + 1) + '_quantile'], 1)
-        fig = returns_plot(quantile_factor_returns, factor_name=self.factor_name)
-        fig.show()
-        fig = cumulative_return_plot(quantile_factor_cumulative_returns, benchmark=self.benchmark,
-                                     factor_name=self.factor_name)
-        fig.show()
+        # lowers_uppers = np.linspace(0, 1, self.factor_bin_num)
+        # quantile_factor_returns = pd.DataFrame(index=self.in_sample.index.get_level_values(0))
+        # quantile_factor_cumulative_returns = pd.DataFrame(index=self.in_sample.index.get_level_values(0))
+        # for i in range(len(lowers_uppers) - 1):
+        #     quantile_factor = calculate_quantile_returns(self.factor, lowers_uppers[i], lowers_uppers[i + 1])
+        #     qf_pos = self.alpha_position_func(quantile_factor)
+        #     quantile_factor_returns[str(i + 1) + '_quantile'] = calculate_cross_section_factor_returns(self.in_sample,
+        #                                                                                                qf_pos,
+        #                                                                                                factor_name=str(
+        #                                                                                                    i + 1) + '_quantile')
+        #     # todo bug wired graph here
+        #     quantile_factor_cumulative_returns[str(i + 1) + '_quantile'] = calculate_cumulative_returns(
+        #         quantile_factor_returns[str(i + 1) + '_quantile'], 1)
+        # fig = returns_plot(quantile_factor_returns, factor_name=self.factor_name)
+        # fig.show()
+        # fig = cumulative_return_plot(quantile_factor_cumulative_returns, benchmark=self.benchmark,
+        #                              factor_name=self.factor_name)
+        # fig.show()
 
         #
 
     def get_evaluation_dash_app(self):
-        pass
+        external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
+        app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
+        return app
+
 if __name__ == '__main__':
     data = pd.read_csv('../hsi_component.csv')
     data['Date'] = pd.to_datetime(data['Date'])
@@ -227,6 +232,8 @@ if __name__ == '__main__':
     def price_average_alpha(df: pd.DataFrame):
         return df['close'].groupby(level=0).apply(lambda x: (x - x.mean()) / x.std())
 
+    def momentum_alpha(df:pd.DataFrame):
+        return df['close'].groupby(level=1).pct_change(5)
 
     group = {'0001.HK': 1, '0002.HK': 1, '0003.HK': 1, '0005.HK': 1, '0006.HK': 1, '0011.HK': 1,
              '0012.HK': 2, '0016.HK': 2, '0017.HK': 2, '0019.HK': 2, '0066.HK': 2, '0083.HK': 2,
@@ -238,5 +245,5 @@ if __name__ == '__main__':
              '2628.HK': 8, '3328.HK': 8, '3988.HK': 8, '1299.HK': 8, '0027.HK': 8, '0288.HK': 8,
              '1113.HK': 9, '1997.HK': 9}
     multi_study.set_asset_group(group)
-    multi_study.calculate_factor(price_average_alpha)
+    multi_study.calculate_factor(momentum_alpha)
     multi_study.evaluate_alpha()
