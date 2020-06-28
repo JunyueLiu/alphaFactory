@@ -109,8 +109,10 @@ def overlaid_factor_distribution_plot(in_sample_factor: pd.Series, out_sample_fa
 
 
 def observed_qq_plot(in_sample_factor: pd.Series, out_sample_factor: pd.Series):
-    x = in_sample_factor.values.sort()
-    y = out_sample_factor.values.sort()
+    x = in_sample_factor.values
+    y = out_sample_factor.values
+    x.sort()
+    y.sort()
 
     fig = go.Figure()
     pts = go.Scatter(x=x,
