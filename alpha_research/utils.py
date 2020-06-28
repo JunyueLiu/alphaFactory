@@ -104,6 +104,7 @@ def quantize_factor(merged_data: pd.DataFrame, quantiles: list = None, bins: int
     :param bins:
     :return:
     """
+    merged_data = merged_data.copy().drop_duplicates()
     if not ((quantiles is not None and bins is None) or
             (quantiles is None and bins is not None)):
         raise ValueError('Either quantiles or bins should be provided')
@@ -116,7 +117,7 @@ def quantize_factor(merged_data: pd.DataFrame, quantiles: list = None, bins: int
         if _quantiles is not None and _bins is None:
             return pd.qcut(x, _quantiles, labels=False) + 1
         elif _bins is not None and _quantiles is None:
-            return pd.cut(x, _bins, labels=False) + 1
+            return pd.cut(x, _bins, labels=False, duplicates='drop') + 1
 
     factor_quantile = merged_data.groupby(grouper)['factor'] \
         .apply(quantile_calc, quantiles, bins)

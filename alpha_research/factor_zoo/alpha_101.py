@@ -13,7 +13,10 @@ def alpha_1(df: pd.DataFrame):
     Alpha#1: (rank(Ts_ArgMax(SignedPower(((returns < 0) ? stddev(returns, 20) : close), 2.), 5)) - 0.5)
     :return:
     """
-    pass
+    _close = df['close']
+    _ret = returns(_close)
+    _cond = pd.Series(np.where(_ret < np.zeros_like(_ret.shape), stddev(_ret, 20), _close), index=_close.index)
+    return rank(ts_argmax(signedpower(_cond, 2), 5) - 0.5)
 
 
 def alpha_2(df: pd.DataFrame):
