@@ -149,7 +149,7 @@ def indneutralize(x: pd.Series, g) -> pd.Series:
     return x.groupby(level=[0, 2]).apply(lambda a: a - a.mean())
 
 
-def ts_operation(x: pd.Series, d: int or float, operation) -> pd.Serie:
+def ts_operation(x: pd.Series, d: int or float, operation) -> pd.Series:
     """
     ts_{O}(x, d) = operator O applied across the time-series for the past d days;
     non-integer number of days d is converted to floor(d)
@@ -167,7 +167,7 @@ def ts_operation(x: pd.Series, d: int or float, operation) -> pd.Serie:
         return x.rolling(d).apply(operation)
 
 
-def ts_min(x: pd.Series, d: int or float) -> pd.Serie:
+def ts_min(x: pd.Series, d: int or float) -> pd.Series:
     """
     ts_min(x, d) = time-series min over the past d days
     :param x:
@@ -182,7 +182,7 @@ def ts_min(x: pd.Series, d: int or float) -> pd.Serie:
         return x.rolling(d).min()
 
 
-def ts_max(x: pd.Series, d: int or float) -> pd.Serie:
+def ts_max(x: pd.Series, d: int or float) -> pd.Series:
     """
     ts_max(x, d) = time-series max over the past d days
     :param x:
@@ -194,7 +194,7 @@ def ts_max(x: pd.Series, d: int or float) -> pd.Serie:
     return x.groupby(level=1).rolling(d).max()
 
 
-def ts_argmax(x: pd.Series, d: int or float) -> pd.Serie:
+def ts_argmax(x: pd.Series, d: int or float) -> pd.Series:
     """
     ts_argmax(x, d) = which day ts_max(x, d) occurred on
     :param x:
@@ -209,7 +209,7 @@ def ts_argmax(x: pd.Series, d: int or float) -> pd.Serie:
         return x.rolling(d).apply(lambda r: d - np.nanargmax(r))
 
 
-def ts_argmin(x: pd.Series, d: int or float) -> pd.Serie:
+def ts_argmin(x: pd.Series, d: int or float) -> pd.Series:
     """
     ts_argmin(x, d) = which day ts_min(x, d) occurred on
     :param x:
@@ -224,7 +224,7 @@ def ts_argmin(x: pd.Series, d: int or float) -> pd.Serie:
         return x.rolling(d).apply(lambda r: d - np.nanargmin(r))
 
 
-def ts_rank(x: pd.Series, d: int or float) -> pd.Serie:
+def ts_rank(x: pd.Series, d: int or float) -> pd.Series:
     """
     ts_rank(x, d) = time-series rank in the past d days
     :param x:
@@ -243,7 +243,7 @@ def ts_rank(x: pd.Series, d: int or float) -> pd.Serie:
         return x.rolling(d).apply(func)
 
 
-def min(x: pd.Series, d: int or float) -> pd.Serie:
+def min(x: pd.Series, d: int or float) -> pd.Series:
     """
     min(x, d) = ts_min(x, d)
 
@@ -254,7 +254,7 @@ def min(x: pd.Series, d: int or float) -> pd.Serie:
     return ts_min(x, d)
 
 
-def max(x: pd.Series, d: int or float) -> pd.Serie:
+def max(x: pd.Series, d: int or float) -> pd.Series:
     """
     max(x, d) = ts_max(x, d)
     :param x:
@@ -264,7 +264,7 @@ def max(x: pd.Series, d: int or float) -> pd.Serie:
     return ts_max(x, d)
 
 
-def sum(x: pd.Series, d: int or float) -> pd.Serie:
+def sum(x: pd.Series, d: int or float) -> pd.Series:
     """
 
     :param x:
@@ -280,7 +280,7 @@ def sum(x: pd.Series, d: int or float) -> pd.Serie:
         return x.rolling(d).sum()
 
 
-def product(x: pd.Series, d: int or float) -> pd.Serie:
+def product(x: pd.Series, d: int or float) -> pd.Series:
     """
     product(x, d) = time-series product over the past d days
     :param x:
@@ -299,7 +299,7 @@ def product(x: pd.Series, d: int or float) -> pd.Serie:
         return x.rolling(d).apply(func)
 
 
-def stddev(x: pd.Series, d: int or float) -> pd.Serie:
+def stddev(x: pd.Series, d: int or float) -> pd.Series:
     """
     stddev(x, d) = moving time-series standard deviation over the past d days
     :param x:
