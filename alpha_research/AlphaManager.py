@@ -27,11 +27,11 @@ class AlphaStorage:
         self.alpha_universe = alpha_universe
         self.performance_parameter = performance_parameter
         # performance_parameter
-        # {'data': 'selection query or somehow identify the data from the dataset'
+        # [{'data': 'selection query or somehow identify the data from the dataset'
         # 'performance':{
         #
         #
-        # }}
+        # }}]
 
     def to_dict(self):
         return vars(self)
