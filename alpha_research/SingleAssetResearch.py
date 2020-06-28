@@ -132,6 +132,18 @@ class SingleAssetResearch(AlphaResearch):
         app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
         forward_returns_period = [1, 2, 5, 10]  # period list
         forward_str = str(forward_returns_period).replace('[', '').replace(']', '')
+
+        para_dcc_list = []
+        for k, v in self.alpha_func_paras.items():
+            para_dcc_list.append(html.Div(children=k))
+            para_dcc_list.append(dcc.Input(
+                                id="input_{}".format(k),
+                                placeholder=str(k),
+                                type='number',
+                                value=str(v), debounce=True
+                            ))
+
+
         app.layout = html.Div(children=[
             html.H1(children=self.factor_name + ' evaluation'),
             html.Div([
@@ -150,14 +162,7 @@ class SingleAssetResearch(AlphaResearch):
             # change parameter
             html.Div([
                 html.Div(children='Factor Parameter'),
-                html.Div([
-                    dcc.Input(
-                        id="input_{}".format(k),
-                        placeholder=str(k),
-                        type='number',
-                        value=str(v), debounce=True
-                    ) for k, v in self.alpha_func_paras.items()
-                ]),
+                html.Div(para_dcc_list),
                 html.Button('Submit', id='AlphaButton'),
                 html.Div(id="current-parameter"),
             ], style={'width': '49%', 'display': 'inline-block'}),
@@ -349,6 +354,6 @@ if __name__ == '__main__':
     #     pass
     #
     factor_study.calculate_factor(alpha_6, **{'time_lag': 5})
-    factor_study.evaluate_alpha()
+    # factor_study.evaluate_alpha()
     # factor_study.out_of_sample_evaluation()
-    # factor_study.get_evaluation_dash_app().run_server(debug=True)
+    factor_study.get_evaluation_dash_app().run_server(debug=True)

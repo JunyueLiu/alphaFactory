@@ -59,3 +59,10 @@ class AlphaManager:
 
     def alpha_vs_alpha(self):
         pass
+
+
+if __name__ == '__main__':
+    alpha_storage = AlphaStorage('test', print, {'selected': {'para1': 1},
+                                                 'parameter_range': {'para1': {'type': int, 'range': [1, 2]}}}, 'test',
+                                 CHINA, 'CSI300', {})
+
