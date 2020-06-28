@@ -2,8 +2,8 @@ from pymongo import MongoClient, database
 from pymongo.results import UpdateResult
 import pandas as pd
 import os
-
 from data_downloader.multi_asset_data_merger import merge_single_asset
+
 
 
 class MongoConnection:
@@ -11,26 +11,33 @@ class MongoConnection:
     def __init__(self, host, port, user, password):
         self.client = MongoClient(host, port, username=user, password=password)
 
-    def read_mongo(self, db: str, collection: str, query=None, projection=None, no_id=True):
+
+
+    def read_mongo(self, db: str, collection: str, query=None, projection=None,chunksize=50, no_id=True):
         """ Read from Mongo and Store into DataFrame """
         if projection is None:
             projection = {}
         if query is None:
             query = {}
 
+        # pymango的查找: The `projection` argument is used to specify a subset
+        # of fields that should be included in the result documents.
         cursor = self.client[db][collection].find(query, projection)
 
-        # Expand the cursor and construct the DataFrame
-        df = pd.DataFrame(list(cursor))  # todo This is problematic because of efficiency.
+        df = pd.DataFrame.from_records(cursor)
+
+
+        #df = pd.DataFrame(list(cursor))  # todo This is problematic because of efficiency.
         # todo See https://stackoverflow.com/questions/16249736/how-to-import-data-from-mongodb-to-pandas
 
-        # Delete the _id
-        if no_id and '_id' in df.columns:
-            del df['_id']
+
         return df
+
+
 
     def insert_from_dataframe(self, db: str, collection_name: str, df: pd.DataFrame) -> UpdateResult:
         records = df.to_dict('records')
+
         result = self.client[db][collection_name].insert_many(records)
         return result
 
@@ -49,10 +56,19 @@ class MongoConnection:
 
 
 if __name__ == '__main__':
-    con = MongoConnection('ip', 27017, 'user', 'password')
-    files = os.listdir('/Users/liujunyue/PycharmProjects/alphaFactory/local_data')
-    paths = [os.path.join('/Users/liujunyue/PycharmProjects/alphaFactory/local_data', f) for f in files]
+
+
+    con = MongoConnection('ip', 27017, 'user', 'pw')
+    files = os.listdir('/Users/silviaysy/Desktop/local_data')
+    paths = [os.path.join('/Users/silviaysy/Desktop/local_data', f) for f in files]
+
     df = merge_single_asset(paths)
-    con.insert_from_dataframe('quant', 'HKEX_1d', df)
+    con.insert_from_dataframe('test', '0001_HKEX_1d', df)
+
 # # con.read_mongo('quant', 'hsi_1_min', {}, {'time_key': 1, 'close': 1, 'open': 1, 'high': 1, 'low': 1, 'turnover':
 # 1}) # df = con.get_ohlc_dataframe('quant', 'hsi_futures_1_min', {"time_key": {"$gt": "2020-05-01"}})
+
+
+
+
+
