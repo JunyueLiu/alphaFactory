@@ -14,14 +14,14 @@ def factor_summary(factor: pd.Series, name='factor') -> pd.DataFrame:
     # for SingleAssetResearch
     summary['skewness'] = factor.skew()
     summary['kurtosis'] = factor.kurtosis()
-    # t test
-    stat, pvalue = stats.ttest_ind(np.zeros_like(factor.values), factor.values, nan_policy='omit')
-    summary['t test stat'] = stat
-    summary['t test p value'] = pvalue
-    # normality test
-    stat, pvalue = stats.normaltest(factor.values, nan_policy='omit')
-    summary['normality test stat'] = stat
-    summary['normality test p value'] = pvalue
+    # # t test
+    # stat, pvalue = stats.ttest_ind(np.zeros_like(factor.values), factor.values, nan_policy='omit')
+    # summary['t test stat'] = stat
+    # summary['t test p value'] = pvalue
+    # # normality test
+    # stat, pvalue = stats.normaltest(factor.values, nan_policy='omit')
+    # summary['normality test stat'] = stat
+    # summary['normality test p value'] = pvalue
 
     # Augmented Dickey-Fuller test
     if type(factor.index) != pd.MultiIndex:
