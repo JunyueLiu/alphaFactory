@@ -16,7 +16,7 @@ def first_last_trade_time(traded: pd.DataFrame, time_key='time_key'):
     :return:
     """
     time_list = traded[time_key].sort_values().values
-    return time_list[0], time_list[-1]
+    return time_list[0].astype(str), time_list[-1].astype(str)
 
 
 def num_trade(traded: pd.DataFrame):
@@ -292,6 +292,10 @@ def value_at_risk(returns, sigma=1, confidence=0.95):
         confidence = confidence / 100
 
     return norm.ppf(1 - confidence, mu, sigma)
+
+
+
+# related to benchmark backtesting metric
 
 
 if __name__ == '__main__':
