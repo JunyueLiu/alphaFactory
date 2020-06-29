@@ -130,7 +130,6 @@ class BacktestingBase:
         # calculate cash inflow from dealt qty and dealt price
         # long will have cash outflow (negative inflow) and short will have cash inflow
         traded['cash_inflow'] = - traded['dealt_price'] * traded['dealt_qty']
-        self.backtesting_result['trade_list'] = traded
         # todo commission deduction
         # aggregate the cash inflow and dealt among with same code and same datetime
         traded_grouped = traded.groupby(['code', 'update_time']).agg(
@@ -142,8 +141,8 @@ class BacktestingBase:
                                        'dealt_qty': 'holding'}, inplace=True)
 
         first_traded, last_traded = first_last_trade_time(traded, 'update_time')
-        self.backtesting_result['first_traded'] = first_traded
-        self.backtesting_result['last_traded'] = last_traded
+        traded_pnl = get_traded_pnl(traded)
+
 
         joint = asset_price.join(traded_grouped)
         # need to use groupby fillna
@@ -151,18 +150,30 @@ class BacktestingBase:
         joint.fillna(value=0, inplace=True)
         joint['equity'] = joint['close'] * joint['holding'] + joint['cumulative_cash_inflow']
         # aggregate different assets class returns with same timestamp.
-        net_value = joint['equity'].groupby(level=0).sum() + self.initial_capital  # type:pd.DataFrame
+        net_value = joint['equity'].groupby(level=0).sum() + self.initial_capital  # type:pd.Series
         # todo calculate every the metric from the net value index
         returns = net_value.pct_change()
-        drawdown_metric = drawdown(net_value)
+        drawdown_metric, drawdown_percent = drawdown(net_value)
+
+
+        self.backtesting_result['first_traded'] = first_traded
+        self.backtesting_result['last_traded'] = last_traded
+        self.backtesting_result['trade_list'] = traded
+        self.backtesting_result['num_trade'] = num_trade(traded)
+        self.backtesting_result['win_rate'] = win_rate(traded_pnl)
+        self.backtesting_result['avg_win'] = avg_win(traded_pnl)
+        self.backtesting_result['avg_loss'] = avg_loss(traded_pnl)
+        self.backtesting_result['payoff_ratio'] = payoff_ratio(traded_pnl)
+
         self.backtesting_result['net_value'] = net_value
         self.backtesting_result['rate of return'] = returns
-        self.backtesting_result['drawdone'] = drawdown_metric
-        self.backtesting_result['drawdone_detail'] = drawdown_details(drawdown_metric)
-        self.backtesting_result['kelly'] = kelly(returns)
+        self.backtesting_result['drawdown_value'] = drawdown_metric
+        self.backtesting_result['drawdown_percent'] = drawdown_percent
+        self.backtesting_result['drawdown_detail'] = drawdown_details(drawdown_percent)
+        self.backtesting_result['kelly'] = kelly(traded_pnl)
         self.backtesting_result['value_at_risk'] = value_at_risk(returns)
         # returns.to_csv('sample_returns.csv')
-        qs.reports.html(returns, title=self.strategy.strategy_name, output='report.html')
+        # qs.reports.html(returns, title=self.strategy.strategy_name, output='report.html')
 
     def run(self):
         pass
