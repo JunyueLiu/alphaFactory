@@ -20,7 +20,7 @@ DELETED = "DELETED"  # 已删除，无成交的订单才能删除
 
 class Order:
     def __init__(self, code, order_price, qty, order_type, order_direction, order_status, order_time=None,
-                 update_time=None):
+                 update_time=None, order_identifier=None):
         self.code = code
         self.order_time = order_time
         self.order_price = order_price
@@ -30,7 +30,8 @@ class Order:
         self.update_time = update_time
         self.deal = False
         self.order_status = order_status
-        self.order_id = '{}-{}'.format(self.code, self.order_time)
+        self.order_id = '{}|{}|{}|{}|{}|{}'.format(self.code, self.order_price, self.order_qty, self.order_direction,
+                                                   self.order_time, order_identifier)
         self.exchange_order_id = None
         self.deal_qty = 0
         self.dealt_avg_price = 0
@@ -57,6 +58,9 @@ class Order:
              'order_price': self.order_price,
              'order_qty': self.order_qty,
              'order_type': self.order_type,
+             'dealt_price': self.dealt_avg_price,
+             'dealt_qty': self.deal_qty,
+             'order_direction': self.order_direction,
              'order_status': self.order_status,
              'update_time': self.update_time,
              'exchange_order_id': self.exchange_order_id,

@@ -2,6 +2,9 @@ import json
 import datetime
 import pandas as pd
 import numpy as np
+import quantstats as qs
+
+qs.extend_pandas()
 from numba import njit
 # from backtesting.Exchange import *
 from strategy.DoubleMA import DoubleMA
@@ -9,6 +12,7 @@ from gateway.quote_base import QuoteBase
 from gateway.brokerage_base import BrokerageBase
 from backtesting.BacktestingQuote import BacktestingQuote
 from backtesting.BacktestingBrokerage import BacktestingBrokerage
+from backtesting.backtesting_metric import *
 from strategy.StrategyBase import Strategy
 from bar_manager.BarManager import BarManager
 
@@ -24,8 +28,11 @@ class BacktestingBase:
         self.end = end
         self.initial_capital = initial_capital
         self.backtesting_setting = backtesting_setting
+        self.backtesting_result = {}
 
         self.data = None
+
+        self.dealt_list = []
 
         if self.start is None:
             self.start = self.backtesting_setting.get('start', None)
@@ -78,14 +85,7 @@ class BacktestingBase:
             for symbol, bar_data in self.backtesting_setting['data'].items():
                 self.data[symbol] = dict()
                 for bar_type, path in bar_data.items():
-                    bar = pd.read_csv(path)
-                    bar[time_key] = pd.to_datetime(bar[time_key])
-                    bar.set_index(time_key, inplace=True)
-                    if self.start is not None:
-                        bar = bar[bar.index >= pd.to_datetime(self.start)]
-                    if self.end is not None:
-                        bar = bar[bar.index <= pd.to_datetime(self.end)]
-                    self.data[symbol][bar_type] = bar
+                    self.data[symbol][bar_type] = self._load_data_from_csv(path, time_key)
         elif self.backtesting_setting['data_source'] == 'db':
             pass
         self.quote_ctx.set_history_data(self.data)
@@ -96,14 +96,73 @@ class BacktestingBase:
     def get_trading_history(self):
         return self.brokerage_ctx.history_order_list_query()
 
+    def get_dealt_history(self):
+        return self.brokerage_ctx.deal_order_list
+
     def _load_data_from_db(self):
         pass
 
-    def _load_data_from_csv(self):
-        pass
+    def _load_data_from_csv(self, path, time_key):
+        bar = pd.read_csv(path)
+        bar[time_key] = pd.to_datetime(bar[time_key])
+        bar.set_index(time_key, inplace=True)
+        if self.start is not None:
+            bar = bar[bar.index >= pd.to_datetime(self.start)]
+        if self.end is not None:
+            bar = bar[bar.index <= pd.to_datetime(self.end)]
+        return bar
 
     def calculate_result(self):
-        pass
+        # first make the all asset prices dataframe
+        dfs = []
+        for code, ktype_data in self.data.items():
+            for ktype, data in ktype_data.items():
+                d = data.reset_index()
+                dfs.append(d)
+        asset_price = pd.concat(dfs)
+        asset_price.set_index([self.backtesting_setting['time_key'], 'code'], inplace=True)
+
+        self.dealt_list = self.get_dealt_history()
+        # todo evaluate backtesting result
+        traded = pd.DataFrame([order.order_dict() for order in self.dealt_list])
+        # make the dealt_qty with +- sign
+        traded['dealt_qty'] = np.where(traded['order_direction'] == 'LONG', traded['dealt_qty'], -traded['dealt_qty'])
+        # calculate cash inflow from dealt qty and dealt price
+        # long will have cash outflow (negative inflow) and short will have cash inflow
+        traded['cash_inflow'] = - traded['dealt_price'] * traded['dealt_qty']
+        self.backtesting_result['trade_list'] = traded
+        # todo commission deduction
+        # aggregate the cash inflow and dealt among with same code and same datetime
+        traded_grouped = traded.groupby(['code', 'update_time']).agg(
+            {'cash_inflow': 'sum', 'dealt_qty': 'sum'})
+        traded_grouped.index = traded_grouped.index.set_names(['code', self.backtesting_setting['time_key']])
+        # transform into time series of cumulative cash inflow and cumulative asset holding
+        traded_grouped = traded_grouped.groupby(level=[0]).cumsum()
+        traded_grouped.rename(columns={'cash_inflow': 'cumulative_cash_inflow',
+                                       'dealt_qty': 'holding'}, inplace=True)
+
+        first_traded, last_traded = first_last_trade_time(traded, 'update_time')
+        self.backtesting_result['first_traded'] = first_traded
+        self.backtesting_result['last_traded'] = last_traded
+
+        joint = asset_price.join(traded_grouped)
+        # need to use groupby fillna
+        joint = joint.groupby(level=1).ffill()
+        joint.fillna(value=0, inplace=True)
+        joint['equity'] = joint['close'] * joint['holding'] + joint['cumulative_cash_inflow']
+        # aggregate different assets class returns with same timestamp.
+        net_value = joint['equity'].groupby(level=0).sum() + self.initial_capital  # type:pd.DataFrame
+        # todo calculate every the metric from the net value index
+        returns = net_value.pct_change()
+        drawdown_metric = drawdown(net_value)
+        self.backtesting_result['net_value'] = net_value
+        self.backtesting_result['rate of return'] = returns
+        self.backtesting_result['drawdone'] = drawdown_metric
+        self.backtesting_result['drawdone_detail'] = drawdown_details(drawdown_metric)
+        self.backtesting_result['kelly'] = kelly(returns)
+        self.backtesting_result['value_at_risk'] = value_at_risk(returns)
+        # returns.to_csv('sample_returns.csv')
+        qs.reports.html(returns, title=self.strategy.strategy_name, output='report.html')
 
     def run(self):
         pass
@@ -130,6 +189,7 @@ class VectorizedBacktesting(BacktestingBase):
         self.state = dict()
         self.bar_timestamp = dict()
         self.min_timestamp = None
+        self.kline_type_on_bar_match: dict = None
 
     def _load_data(self):
         super(VectorizedBacktesting, self)._load_data()
@@ -148,26 +208,20 @@ class VectorizedBacktesting(BacktestingBase):
     def _initial_strategy(self):
         super()._initial_strategy()
         self.strategy_lookback_period = self.strategy.lookback_period
+        self.kline_type_on_bar_match = {
+            'K_1M': self.strategy.on_1min_bar,
+            'K_5M': self.strategy.on_5min_bar,
+            'K_15M': self.strategy.on_15min_bar,
+            'K_30M': self.strategy.on_30min_bar,
+            'K_60M': self.strategy.on_60min_bar,
+            'K_4H': self.strategy.on_4h_bar,
+            'K_8H': self.strategy.on_8h_bar
 
-    def _check_data_valid(self):
-        super()._check_data_valid()
-
-    def _change_lookback_period(self):
-        """
-        modify the lookback period to calculate the indicator only once
-        :return:
-        """
-        lookback_period = {}
-        for symbol, subtype_data in self.data.items():
-            lookback_period[symbol] = {}
-            for subtype, data in subtype_data.items():
-                lookback_period[symbol][subtype] = len(data)
-        self.strategy.lookback_period = lookback_period
-        self.strategy.strategy_parameters['lookback_period'] = lookback_period
+        }
 
     def _infer_time(self):
         """
-
+        Infer all the timestamp from the data input.
         :return:
         """
         self.time_list = np.empty(0, dtype='datetime64')
@@ -238,9 +292,11 @@ class VectorizedBacktesting(BacktestingBase):
                 return False
             for kline_type, symbol_generator in self.state_generators.items():
                 for symbol, generator in symbol_generator.items():
-                    #
+                    # this condition is to make sure the unaligned kline input
+                    # first generator may generate klines with different starting point with same kline type
                     if dt < self.bar_timestamp[kline_type][symbol]:
                         continue
+                    # finish generate if one of the data is finished
                     try:
                         bar_t, bar = next(generator)
                     except StopIteration:
@@ -252,13 +308,12 @@ class VectorizedBacktesting(BacktestingBase):
             return True
 
     def run(self):
-        # self.strategy.load_setting()
+        self._load_setting(self.backtesting_setting)
         self._initial_strategy()
         self._load_data()
         self._check_data_valid()
         self.strategy.on_strategy_init(datetime.datetime.now())
         self._infer_time()
-        # todo Don't know how to make sure the datetime is correct for multi time frame
         self.initial_bar_manager_generators()
 
         # last_state = self.strategy.lookback_period.copy()
@@ -267,29 +322,18 @@ class VectorizedBacktesting(BacktestingBase):
         for t in self.time_list:
             # if t is in the smallest timestamp the strategy should make decision
             self.brokerage_ctx.update_time(t)
-            # self.brokerage_ctx.limit_order_matching()
             if t == self.min_timestamp:
-                # print(t)
                 # todo test that whether can handle same ktype data with different start
-                if 'K_1M' in self.bar_timestamp.keys():
-                    keys = [k for k, v in self.bar_timestamp['K_1M'].items() if v == t]
-                    self.strategy.on_1min_bar({k: v for k, v in self.state['K_1M'].items() if k in keys})
-                if 'K_5M' in self.bar_timestamp.keys():
-                    keys = [k for k, v in self.bar_timestamp['K_5M'].items() if v == t]
-                    self.strategy.on_5min_bar({k: v for k, v in self.state['K_5M'].items() if k in keys})
-                if 'K_15M' in self.bar_timestamp.keys():
-                    keys = [k for k, v in self.bar_timestamp['K_15M'].items() if v == t]
-                    self.strategy.on_15min_bar({k: v for k, v in self.state['K_15M'].items() if k in keys})
-                if 'K_30M' in self.bar_timestamp.keys():
-                    keys = [k for k, v in self.bar_timestamp['K_30M'].items() if v == t]
-                    self.strategy.on_30min_bar({k: v for k, v in self.state['K_30M'].items() if k in keys})
-                if 'K_1H' in self.bar_timestamp.keys():
-                    keys = [k for k, v in self.bar_timestamp['K_60M'].items() if v == t]
-                    self.strategy.on_60min_bar({k: v for k, v in self.state['K_60M'].items() if k in keys})
-                if 'K_4H' in self.bar_timestamp.keys():
-                    keys = [k for k, v in self.bar_timestamp['K_4H'].items() if v == t]
-                    self.strategy.on_4h_bar({k: v for k, v in self.state['K_4H'].items() if k in keys})
-
+                matching_order = True
+                for k, on_bar in self.kline_type_on_bar_match.items():
+                    if k in self.bar_timestamp.keys():
+                        keys = [k for k, v in self.bar_timestamp[k].items() if v == t]
+                        bar_state = {k: v for k, v in self.state[k].items() if k in keys}
+                        if matching_order is True:
+                            dealt_list = self.brokerage_ctx.match_working_order(bar_state)
+                            self.strategy.on_order_status_change(dealt_list)
+                            matching_order = False
+                        on_bar(bar_state)
 
             updated = self.update_state(t)
             if updated is None:
@@ -298,10 +342,7 @@ class VectorizedBacktesting(BacktestingBase):
                 break
             if updated is False:
                 print('skip kline for look back')
-
-            # self.strategy.on_1min_bar()
-
-            # self.generate_bar_manager_state(self.full_picture_bar_manager['K_1M']['HK.999010'], 100, i)
+        self.calculate_result()
 
 
 if __name__ == '__main__':
@@ -309,15 +350,16 @@ if __name__ == '__main__':
 
     quote = BacktestingQuote()
 
-    broker = BacktestingBrokerage(1)
+    broker = BacktestingBrokerage(100000)
 
     strategy = DoubleMA()
     backtesting_setting = {
+        'initial_capital': 100000,
         'data_source': 'csv',
 
         'data': {
-            'HK.999010': {
-                'K_1M': '/Users/liujunyue/PycharmProjects/ljquant/hkex_data/HK.999010_2019-06-01 00:00:00_2020-05-30 03:00:00_K_1M_qfq.csv'
+            'HK_FUTURE.999010': {
+                'K_1M': r'../HK.999010_2019-06-01 00:00:00_2020-05-30 03:00:00_K_1M_qfq.csv'
             }
         },
         'start': '2019-07-01',
@@ -329,17 +371,17 @@ if __name__ == '__main__':
 
     strategy_parameter = {
         "lookback_period": {
-            "HK.999010": {
+            "HK_FUTURE.999010": {
                 "K_1M": 100
             }
         },
         "subscribe": {
-            "HK.999010": [
+            "HK_FUTURE.999010": [
                 "K_1M"
             ]
         },
         "ta_parameters": {
-            "HK.999010": {
+            "HK_FUTURE.999010": {
                 "K_1M": {
                     "MA1": {
                         "indicator": "MA",
@@ -359,10 +401,9 @@ if __name__ == '__main__':
 
             }
         },
-        "traded_code": "HK.999010"
+        "traded_code": "HK_FUTURE.999010"
     }
 
     backtesting = VectorizedBacktesting(quote, broker, strategy, strategy_parameter,
                                         backtesting_setting=backtesting_setting)
     backtesting.run()
-    # g = backtesting.generate_bar_manager_state(backtesting.full_picture_bar_manager['HK.999010']['K_1M'], 100)

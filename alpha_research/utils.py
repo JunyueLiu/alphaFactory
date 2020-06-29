@@ -1,7 +1,6 @@
 import pandas as pd
 from scipy import stats
 import numpy as np
-from alpha_research.performance_metrics import calculate_information_coefficient, factor_ols_regression
 
 
 def calculate_forward_returns(data: pd.DataFrame, periods: list, price_key='close') -> pd.DataFrame:
@@ -51,7 +50,7 @@ def calculate_cumulative_returns(returns, starting_value=0, out=None):
     return out
 
 
-def calculate_position(factor: pd.DataFrame):
+def calculate_position(factor: pd.Series):
     """
     The position of cross sectional alpha is calculated by
     alpha / (sum(abs(alpha)))
@@ -72,51 +71,116 @@ def calculate_position(factor: pd.DataFrame):
     return factor.groupby(level=0).apply(lambda x: x / x.abs().sum())
 
 
-# here
-def calculate_factor_returns(data: pd.DataFrame, factor: pd.DataFrame, periods: list,
-                             price_key='close', factor_name='factor') -> pd.DataFrame:
-    factor_returns = pd.DataFrame(index=data.index)
-    # for cross sectional factor
-    if type(factor_returns.index) == pd.MultiIndex:
-        # todo returns with different holding period
-        position = calculate_position(factor)
-        # first shift the factor by date, because the factor can only decide future return
-        shifted_position = position.groupby(level=1).shift(1)
-        rate_of_return = data[price_key].groupby(level=1).pct_change()
-        # do multiple elementwise
-        factor_returns = pd.DataFrame(shifted_position.values[:, 0] * rate_of_return.values, index=rate_of_return.index)
-        # sum up the return in the same date.
-        factor_returns = factor_returns.groupby(level=0).sum()
-        factor_returns.rename({0: factor_name}, axis=1, inplace=True)
-    else:
-        # for time series factor
-        for period in periods:
-            factor_returns[str(period) + '_period_factor'] = factor.copy()
-            # force the factor to in the range of -1 and 1
-            factor_returns[str(period) + '_period_factor'] = np.clip(factor_returns[str(period) + '_period_factor'], -1,
-                                                                     1)
+def trading_basket(last_position, alpha):
+    pass
 
-            if period > 1:
-                # find the first non nan value to identify where the multi step factor starts
-                i = np.argwhere(np.isnan(factor.values) == False)[0][0]
-                factor_returns['a'] = 0
-                factor_returns.iloc[i:]['a'] = 1
-                factor_returns.iloc[i:]['a'] = (factor_returns['a'].iloc[i:].cumsum() - 1).mod(period)
-                # for factor trying to predict multi steps, the factor position will be fixed until time period end
-                factor_returns[str(period) + '_period_factor'] = np.where(factor_returns['a'] == 0,
-                                                                          factor_returns[
-                                                                              str(period) + '_period_factor'],
-                                                                          np.nan)
-                factor_returns[str(period) + '_period_factor'].fillna(method='ffill', inplace=True)
-                del factor_returns['a']
-            factor_returns[str(period) + '_period_factor'] = factor_returns[str(period) + '_period_factor'].shift(1)
-            ret = data[price_key].pct_change()
-            factor_returns[str(period) + '_period_factor'] *= ret
+
+def calculate_quantile_returns(factor, quantile_lower, quantile_upper) -> pd.Series:
+    """
+
+    :param factor:
+    :param quantile_lower:
+    :param quantile_upper:
+    :return:
+    """
+    factor_df = pd.DataFrame(factor, columns=['quantile_factor'])
+    lower_range_ts = factor.groupby(level=0).quantile(quantile_lower)  # type: pd.Series
+    lower_range_ts.name = 'lower'
+    upper_range_ts = factor.groupby(level=0).quantile(quantile_upper)  # type: pd.Series
+    upper_range_ts.name = 'upper'
+    factor_df = factor_df.join(lower_range_ts).join(upper_range_ts)
+    factor_df['quantile_factor'] = np.where(
+        (factor_df['quantile_factor'] >= factor_df['lower']) & (factor_df['quantile_factor'] <= factor_df['upper']),
+        factor_df['quantile_factor'], 0)
+    return factor_df['quantile_factor']
+
+
+def quantize_factor(merged_data: pd.DataFrame, quantiles: list = None, bins: int = None):
+    """
+    merged_data multi index, level 0 is pd.Timestamp, level 1 is asset code.
+    two column, factor and 'group'
+    :param merged_data:
+    :param quantiles:
+    :param bins:
+    :return:
+    """
+    merged_data = merged_data.copy().drop_duplicates()
+    if not ((quantiles is not None and bins is None) or
+            (quantiles is None and bins is not None)):
+        raise ValueError('Either quantiles or bins should be provided')
+
+    grouper = [merged_data.index.get_level_values(level=0)]
+    if 'group' in merged_data.columns:
+        grouper.append('group')
+
+    def quantile_calc(x, _quantiles, _bins):
+        if _quantiles is not None and _bins is None:
+            return pd.qcut(x, _quantiles, labels=False) + 1
+        elif _bins is not None and _quantiles is None:
+            return pd.cut(x, _bins, labels=False, duplicates='drop') + 1
+
+    factor_quantile = merged_data.groupby(grouper)['factor'] \
+        .apply(quantile_calc, quantiles, bins)
+    factor_quantile.name = 'factor_quantile'
+    return factor_quantile
+
+
+def calculate_cross_section_factor_returns(data: pd.DataFrame, position: pd.Series, price_key='close',
+                                           factor_name='cross_sectional_factor') -> pd.DataFrame:
+    """
+
+    :param data:
+    :param position:
+    :param price_key:
+    :param factor_name:
+    :return:
+    """
+
+    # todo returns with different holding period
+    # first shift the factor by date, because the factor can only decide future return
+    shifted_position = position.groupby(level=1).shift(1)
+    rate_of_return = data[price_key].groupby(level=1).pct_change()
+    # do multiple elementwise
+    factor_returns = pd.DataFrame(shifted_position.values * rate_of_return.values, index=rate_of_return.index)
+    # sum up the return in the same date.
+    factor_returns = factor_returns.groupby(level=0).sum()
+    factor_returns.rename({0: factor_name}, axis=1, inplace=True)
     return factor_returns
 
 
-def get_returns_columns() -> list:
-    pass
+# here
+def calculate_ts_factor_returns(data: pd.DataFrame, factor: pd.Series, periods: list,
+                                price_key='close', factor_name='factor') -> pd.DataFrame:
+    factor_returns = pd.DataFrame(index=data.index)
+
+    # for time series factor
+    for period in periods:
+        factor_returns[str(period) + '_period_factor'] = factor.copy()
+        # force the factor to in the range of -1 and 1
+        factor_returns[str(period) + '_period_factor'] = np.clip(factor_returns[str(period) + '_period_factor'], -1,
+                                                                 1)
+
+        if period > 1:
+            # find the first non nan value to identify where the multi step factor starts
+            i = np.argwhere(np.isnan(factor.values) == False)[0][0]
+            factor_returns['a'] = 0
+            factor_returns.iloc[i:]['a'] = 1
+            factor_returns.iloc[i:]['a'] = (factor_returns['a'].iloc[i:].cumsum() - 1).mod(period)
+            # for factor trying to predict multi steps, the factor position will be fixed until time period end
+            factor_returns[str(period) + '_period_factor'] = np.where(factor_returns['a'] == 0,
+                                                                      factor_returns[
+                                                                          str(period) + '_period_factor'],
+                                                                      np.nan)
+            factor_returns[str(period) + '_period_factor'].fillna(method='ffill', inplace=True)
+            del factor_returns['a']
+        factor_returns[str(period) + '_period_factor'] = factor_returns[str(period) + '_period_factor'].shift(1)
+        ret = data[price_key].pct_change()
+        factor_returns[str(period) + '_period_factor'] *= ret
+    return factor_returns
+
+
+def get_returns_columns(df: pd.DataFrame) -> list:
+    return [col for col in df.columns if '_period_return' in col]
 
 
 def infer_factor_time_frame(data: pd.DatetimeIndex):
@@ -154,33 +218,3 @@ def generate_strftime_format(index):
         return '%Y/%m/%d %H:%M:%S'
     else:
         return '%Y/%m/%d'
-
-
-if __name__ == '__main__':
-    # 打印不省略部分列
-    # pd.set_option('display.max_rows', None)
-
-    period = [1]
-    df = pd.read_csv(
-        '/Users/silviaysy/Desktop/project/alphaFactory/HK.999010_2019-06-01 00:00:00_2020-05-30 03:00:00_K_1M_qfq.csv')
-    df.set_index('time_key', inplace=True)
-    df.index = pd.to_datetime(df.index)
-    df = df[-100:]
-
-    returns = calculate_forward_returns(df, period)
-
-    infer_factor_time_frame(df)
-
-    # 目前造的factor是根据两天的收盘价 这个可以变
-    factor = 1 / (1 + np.exp(-df['close'] + df['close'].shift(1)))
-
-    factorreturns = calculate_factor_returns(df, factor, period)
-    # print(factorreturns)
-
-    cumulatereturns = calculate_cumulative_returns(factorreturns, 1)
-    #   print(cumulatereturns)
-
-    # #Information Coefficient
-    ic = calculate_information_coefficient(factor, returns)
-    print(ic)
-# results = factor_ols_regression(factor, returns)
