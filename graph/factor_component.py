@@ -33,5 +33,8 @@ def bar(x, y, name, hovertext: list or None = None):
     return go.Bar(name=name, x=x, y=y, hovertext=hovertext)
 
 
-def bubble_chart():
-    pass
+def bubble_chart(x, y, marker_size):
+    return go.Scatter(
+        x=x, y=y,
+        mode='markers',
+        marker_size=marker_size)

@@ -158,22 +158,33 @@ class BacktestingBase:
 
         self.backtesting_result['first_traded'] = first_traded
         self.backtesting_result['last_traded'] = last_traded
-        self.backtesting_result['trade_list'] = traded
+        self.backtesting_result['trade_list'] = traded.to_json(orient='split')
         self.backtesting_result['num_trade'] = num_trade(traded)
         self.backtesting_result['win_rate'] = win_rate(traded_pnl)
         self.backtesting_result['avg_win'] = avg_win(traded_pnl)
         self.backtesting_result['avg_loss'] = avg_loss(traded_pnl)
         self.backtesting_result['payoff_ratio'] = payoff_ratio(traded_pnl)
 
-        self.backtesting_result['net_value'] = net_value
-        self.backtesting_result['rate of return'] = returns
-        self.backtesting_result['drawdown_value'] = drawdown_metric
-        self.backtesting_result['drawdown_percent'] = drawdown_percent
-        self.backtesting_result['drawdown_detail'] = drawdown_details(drawdown_percent)
+        self.backtesting_result['net_value'] = net_value.to_list()
+        self.backtesting_result['rate of return'] = returns.to_list()
+        self.backtesting_result['drawdown_value'] = drawdown_metric.to_list()
+        self.backtesting_result['drawdown_percent'] = drawdown_percent.to_list()
+        self.backtesting_result['drawdown_detail'] = drawdown_details(drawdown_percent).to_json(orient='split')
         self.backtesting_result['kelly'] = kelly(traded_pnl)
         self.backtesting_result['value_at_risk'] = value_at_risk(returns)
+
+        # monthly analysis
+
         # returns.to_csv('sample_returns.csv')
         # qs.reports.html(returns, title=self.strategy.strategy_name, output='report.html')
+
+    def get_dash_report(self):
+        # from self.backtesting_result data generate report
+        pass
+
+    def bakctesting_result_to_json(self):
+        return json.dumps(self.backtesting_result)
+
 
     def run(self):
         pass
@@ -396,11 +407,11 @@ if __name__ == '__main__':
                 "K_1M": {
                     "MA1": {
                         "indicator": "MA",
-                        "period": 5
+                        "period": 10
                     },
                     "MA2": {
                         "indicator": "MA",
-                        "period": 10,
+                        "period": 20,
                         "matype": "MA_Type.SMA",
                         "price_type": "'close'"
                     },
