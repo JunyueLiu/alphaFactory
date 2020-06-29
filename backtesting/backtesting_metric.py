@@ -4,11 +4,12 @@ from math import ceil
 from scipy.stats import (
     norm as norm, linregress as linregress
 )
+
 pd.set_option('max_columns', None)
 pd.set_option('max_rows', 300)
 
 
-def first_last_trade_time(traded: pd.DataFrame, time_key = 'time_key'):
+def first_last_trade_time(traded: pd.DataFrame, time_key='time_key'):
     """
 
     :param traded:
@@ -17,8 +18,10 @@ def first_last_trade_time(traded: pd.DataFrame, time_key = 'time_key'):
     time_list = traded[time_key].sort_values().values
     return time_list[0], time_list[-1]
 
+
 def num_trade(traded: pd.DataFrame):
     return len(traded)
+
 
 def compund_return(returns):
     """
@@ -32,7 +35,7 @@ def compund_return(returns):
 def deannualized(annualized_return, nperiods=252):
     """
 
-    :param rf:
+    :param annualized_return:
     :param nperiods:
     :return:
     """
@@ -152,12 +155,14 @@ def aggregate_returns(returns, period=None, compounded=True):
 def drawdown(net_value: pd.Series):
     rolling_max = net_value.rolling(min_periods=1, window=len(net_value), center=False).max()
     drawdown = net_value - rolling_max
-    drawdown_percent = (drawdown / rolling_max) * 100
+    drawdown_percent = (drawdown / rolling_max)
     return drawdown, drawdown_percent
+
 
 def remove_outliers(returns, quantile=.95):
     """ returns series of returns without the outliers """
     return returns[returns < returns.quantile(quantile)]
+
 
 def drawdown_details(drawdown):
     """
@@ -165,6 +170,7 @@ def drawdown_details(drawdown):
     duration, max drawdown and max dd for 99% of the dd period
     for every drawdown period
     """
+
     def _drawdown_details(drawdown):
         # mark no drawdown
         no_dd = drawdown == 0
@@ -198,29 +204,24 @@ def drawdown_details(drawdown):
             clean_dd = -remove_outliers(-dd, .99)
             data.append((starts[i], dd.idxmin(), ends[i],
                          (ends[i] - starts[i]).days,
-                         dd.min() * 100, clean_dd.min() * 100))
+                         dd.min(), clean_dd.min()))
 
         df = pd.DataFrame(data=data,
-                           columns=('start', 'valley', 'end', 'days',
-                                    'max drawdown',
-                                    '99% max drawdown'))
+                          columns=('start', 'valley', 'end', 'days',
+                                   'max drawdown',
+                                   '99% max drawdown'))
         df['days'] = df['days'].astype(int)
         df['max drawdown'] = df['max drawdown'].astype(float)
         df['99% max drawdown'] = df['99% max drawdown'].astype(float)
 
-        df['start'] = df['start'].dt.strftime('%Y-%m-%d %h:%M:%s')
-        df['end'] = df['end'].dt.strftime('%Y-%m-%d %h:%M:%s')
-        df['valley'] = df['valley'].dt.strftime('%Y-%m-%d %h:%M:%s')
+        df['start'] = df['start'].dt.strftime('%Y-%m-%d %H:%M:%S')
+        df['end'] = df['end'].dt.strftime('%Y-%m-%d %H:%M:%S')
+        df['valley'] = df['valley'].dt.strftime('%Y-%m-%d %H:%M:%S')
 
         return df
 
-    if isinstance(drawdown, pd.DataFrame):
-        _dfs = {}
-        for col in drawdown.columns:
-            _dfs[col] = _drawdown_details(drawdown[col])
-        return pd.concat(_dfs, axis=1)
-
     return _drawdown_details(drawdown)
+
 
 def best(returns, aggregate=None, compounded=True):
     """
@@ -236,34 +237,46 @@ def worst(returns, aggregate=None, compounded=True):
     return aggregate_returns(returns, aggregate, compounded).min()
 
 
-def win_rate(returns, aggregate=None, compounded=True):
-    """ calculates the win ratio for a period """
-    pass
-def avg_win(returns):
-    """
-        calculates the average winning
-        return/trade return for a period
-        """
-    pass
+def get_traded_pnl(traded: pd.DataFrame) -> pd.DataFrame:
+    traded_ = traded.copy()  # type: pd.DataFrame
+    traded_['cum_pos'] = traded_['dealt_qty'].cumsum()
+    traded_['pair_id'] = np.where(traded_['cum_pos'] == 0, traded_.index, np.nan)
+    traded_['pair_id'] = traded_['pair_id'].bfill()
+    # traded_.set_index('order_time', inplace=True)
+    traded_pnl = traded_.groupby('pair_id').agg({'cash_inflow': 'sum', 'order_time': 'last'})
+    return traded_pnl
 
-def avg_loss(returns, aggregate=None, compounded=True):
+
+def win_rate(traded_pnl: pd.DataFrame, aggregate=None, compounded=True):
+    """ calculates the win ratio for a period """
+    return len(traded_pnl[traded_pnl['cash_inflow'] > 0]) / len(traded_pnl)
+
+
+def avg_win(traded_pnl: pd.DataFrame):
+    """
+    calculates the average winning
+    return/trade return for a period
+    """
+    return traded_pnl['cash_inflow'][traded_pnl['cash_inflow'] > 0].dropna().mean()
+
+
+def avg_loss(traded_pnl: pd.DataFrame):
     """
     calculates the average low if
     return/trade return for a period
     """
-    if aggregate:
-        returns = aggregate_returns(returns, aggregate, compounded)
-    return returns[returns < 0].dropna().mean()
+    return traded_pnl['cash_inflow'][traded_pnl['cash_inflow'] < 0].dropna().mean()
 
-def payoff_ratio(returns):
+
+def payoff_ratio(traded_pnl):
     """ measures the payoff ratio (average win/average loss) """
-    return avg_win(returns) / abs(avg_loss(returns))
+    return avg_win(traded_pnl) / abs(avg_loss(traded_pnl))
 
-def kelly(returns):
-    win_loss_ratio = payoff_ratio(returns)
-    win_prob = win_rate(returns)
+
+def kelly(traded_pnl):
+    win_loss_ratio = payoff_ratio(traded_pnl)
+    win_prob = win_rate(traded_pnl)
     lose_prob = 1 - win_prob
-
     return ((win_loss_ratio * win_prob) - lose_prob) / win_loss_ratio
 
 
@@ -276,9 +289,10 @@ def value_at_risk(returns, sigma=1, confidence=0.95):
     sigma *= returns.std()
 
     if confidence > 1:
-        confidence = confidence/100
+        confidence = confidence / 100
 
-    return norm.ppf(1-confidence, mu, sigma)
+    return norm.ppf(1 - confidence, mu, sigma)
+
 
 if __name__ == '__main__':
     # traded = pd.read_csv('traded_group_sample.csv')
@@ -291,11 +305,13 @@ if __name__ == '__main__':
     # print(compund_return(df['equity']))
     # print(sharpe_ratio(df['equity'], 0.01, ))
     # net_value = df['equity'].add(1).cumprod()
-    np.random.seed(0)
-    returns = np.random.randn(10000) / 100
-    returns[0] = 0
-    net_value = (1 + returns).cumprod()
-    net_value = pd.Series(net_value, index=pd.date_range(start='2020/01/01', periods=10000, freq='min'))
-    dd, ddp = drawdown(net_value)
-    ans = drawdown_details(dd)
-    print(ans)
+    # np.random.seed(0)
+    # returns = np.random.randn(10000) / 100
+    # returns[0] = 0
+    # net_value = (1 + returns).cumprod()
+    # net_value = pd.Series(net_value, index=pd.date_range(start='2020/01/01', periods=10000, freq='min'))
+    # dd, ddp = drawdown(net_value)
+    # ans = drawdown_details(dd)
+    # print(ans)
+    traded = pd.read_csv('traded_sample.csv')
+    traded_pnl = get_traded_pnl(traded)
