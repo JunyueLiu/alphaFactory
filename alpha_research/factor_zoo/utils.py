@@ -88,6 +88,15 @@ def covariance(x: pd.Series, y: pd.Series, d) -> pd.Series:
     """
     return x.rolling(window=d).cov(y)
 
+def delta(x: pd.Series, d: int) -> pd.Series:
+    """
+
+    :param x:
+    :param d:
+    :return:
+    """
+    assert d > 0
+    return x - x.shift(d)
 
 def scale(x: pd.Series, a: int = 1) -> pd.Series:
     """
