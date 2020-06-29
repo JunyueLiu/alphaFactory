@@ -48,11 +48,12 @@ def entry_and_exit_plot(ohlc_df, traded: pd.DataFrame, symbol: str, ohlc_graph=T
     short_dot = entry_exit_dot(short['update_time'], short['dealt_price'], False)
     fig.add_trace(long_dot)
     fig.add_trace(short_dot)
-    fig.update_layout(showlegend=False)
-    # todo the y axis scale is wired. change needed. https://community.plotly.com/t/y-axis-autoscaling-with-x-range-sliders/10245
+    fig.update_layout(showlegend=False, yaxis=dict(
+        autorange=True,
+        fixedrange=False
+    ))
 
     return fig
-
 
 
 if __name__ == '__main__':
@@ -60,7 +61,6 @@ if __name__ == '__main__':
     net_value = pd.read_csv('net_value_sample.csv', squeeze=True, index_col=0)
     traded = pd.read_csv('traded_sample.csv')
     traded = traded[-100:]
-
 
     net_value.index = pd.to_datetime(net_value.index)
     benchmark = pd.read_csv(r'../HK.999010_2019-06-01 00:00:00_2020-05-30 03:00:00_K_1M_qfq.csv')

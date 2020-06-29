@@ -41,5 +41,5 @@ def entry_exit_dot(traded_time: pd.Series, traded_price, long=True):
                          mode='markers', name='long', marker_color='#000080')
     else:
         dot = go.Scatter(x=traded_time, y=traded_price,
-                         mode='markers', name='long', marker_color='#FF0000')
+                         mode='markers', name='short', marker_color='#FF0000')
     return dot
