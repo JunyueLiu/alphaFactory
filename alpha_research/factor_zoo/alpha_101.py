@@ -25,7 +25,10 @@ def alpha_2(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    _volume = df['volume']
+    _close = df['close']
+    _open = df['open']
+    return (-1 * correlation(rank(delta(np.log(_volume), 2)),rank(((_close - _open) / _open)), 6))
 
 
 def alpha_3(df: pd.DataFrame):
@@ -34,7 +37,9 @@ def alpha_3(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    _open = df['open']
+    _volume = df['volume']
+    return (-1 * correlation(rank(_open), rank(_volume), 10))
 
 
 def alpha_4(df: pd.DataFrame):
@@ -43,7 +48,8 @@ def alpha_4(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    _low = df['low']
+    return (-1 * ts_rank(rank(_low), 9))
 
 
 def alpha_5(df: pd.DataFrame):
@@ -52,7 +58,11 @@ def alpha_5(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    _volume = df['volume']
+    _open = df['open']
+    _close = df['close']
+    _vwap = vwap(_close, _volume)
+    return (rank((_open - (sum(_vwap, 10) / 10))) * ( - 1 * np.abs(rank((_close - _vwap)))))
 
 
 def alpha_6(df: pd.DataFrame, time_lag=10):
@@ -73,7 +83,7 @@ def alpha_7(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    factor = np.where(adv(df['close'], df['volume'], 20) < df['volume'], -1 * ts_rank(np.abs(delta(df['close'], 7)), 60)) * np.sign(delta(df['close'], 7), -1)
 
 
 def alpha_8(df: pd.DataFrame):
@@ -83,8 +93,10 @@ def alpha_8(df: pd.DataFrame):
     :param df:
     :return:
     """
+    _open = df['open']
+    _ret = returns(df['close'])
+    return ( - 1 * rank(((sum(_open, 5) * sum(_ret, 5)) - delay((sum(_open, 5) * sum(_ret, 5)), 10))))
 
-    pass
 
 
 def alpha_9(df: pd.DataFrame, time_shift=1, rolling_windows=5):
@@ -109,7 +121,9 @@ def alpha_10(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    condition = ts_min(delta(df['close'], 1), 4)
+    factor = np.where(condition > 0, delta(df['close'], 1), np.where(ts_max(delta(df['close'], 1), 4) < 0, delta(df['close'], 1), - 1 * delta(df['close'], 1)))
+    return factor
 
 
 def alpha_11(df: pd.DataFrame):
@@ -118,7 +132,7 @@ def alpha_11(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    return ((rank(ts_max((vwap(df['close'], df['volume']) - df['close']), 3)) + rank(ts_min((vwap(df['close'], df['volume']) - df['close']), 3))) * rank(delta(df['volume'], 3)))
 
 
 def alpha_12(df: pd.DataFrame, time_lag=1):
@@ -142,7 +156,8 @@ def alpha_13(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    factor = -1 * rank(covariance(rank(df['close']), rank(df['volume']), 5))
+    return factor
 
 
 def alpha_14(df: pd.DataFrame):
@@ -151,7 +166,8 @@ def alpha_14(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    factor = (-1 * rank(delta(returns(df['close']), 3))) * correlation(df['open'], df['volume'], 10)
+    return factor
 
 
 def alpha_15(df: pd.DataFrame):
@@ -160,8 +176,8 @@ def alpha_15(df: pd.DataFrame):
     :param df:
     :return:
     """
-
-    pass
+    factor = -1 * sum(rank(correlation(rank(df['high']), rank(df['volume']), 3)), 3)
+    return factor
 
 
 def alpha_16(df: pd.DataFrame):
@@ -170,7 +186,8 @@ def alpha_16(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    factor = -1 * rank(covariance(rank(df['high']), rank(df['volume']), 5))
+    return factor
 
 
 def alpha_17(df: pd.DataFrame):
@@ -179,8 +196,8 @@ def alpha_17(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
-
+    factor = ((-1 * rank(ts_rank(df['close'], 10))) * rank(delta(delta(df['close'], 1), 1))) * rank(ts_rank((df['volume'] / adv(df['close'], df['volume'], 20)), 5))
+    return factor
 
 def alpha_18(df: pd.DataFrame):
     """
@@ -188,7 +205,8 @@ def alpha_18(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    factor = -1 * rank(((stddev(np.abs((df['close'] - df['open'])), 5) + (df['close'] - df['open'])) + correlation(df['close'], df['open'], 10)))
+    return factor
 
 
 def alpha_19(df: pd.DataFrame):
@@ -197,7 +215,8 @@ def alpha_19(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    factor = (-1 * np.sign(((df['close'] - delay(df['close'], 7)) + delta(df['close'], 7)))) * (1 + rank((1 + sum(returns(df['close']), 250))))
+    return factor
 
 
 def alpha_20(df: pd.DataFrame):
@@ -207,8 +226,8 @@ def alpha_20(df: pd.DataFrame):
     :param df:
     :return:
     """
+    return (((-1 * rank((df['open'] - delay(df['high'], 1)))) * rank((df['open'] - delay(df['close'], 1)))) * rank((df['open'] - delay(df['low'], 1))))
 
-    pass
 
 
 def alpha_21(df: pd.DataFrame):
@@ -235,7 +254,8 @@ def alpha_22(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    factor = -1 * (delta(correlation(df['high'], df['volume'], 5), 5) * rank(stddev(df['close'], 20)))
+    return factor
 
 
 def alpha_23(df: pd.DataFrame, time_lag=20):
@@ -272,8 +292,8 @@ def alpha_25(df: pd.DataFrame):
     :param df:
     :return:
     """
-
-    pass
+    factor = rank(((((-1 * returns(df['close'])) * adv(df['close'], df['volume'], 20)) * vwap(df['close'], df['volume'])) * (df['high'] - df['close'])))
+    return factor
 
 
 def alpha_26(df: pd.DataFrame):
@@ -282,7 +302,7 @@ def alpha_26(df: pd.DataFrame):
     :param df:
     :return:
     """
-    factor = []
+    factor = -1 * ts_max(correlation(ts_rank(df['volume'], 5), ts_rank(df['high'], 5), 5), 3)
     return factor
 
 
@@ -292,7 +312,9 @@ def alpha_27(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    condition = rank((sum(correlation(rank(df['volume']), rank(vwap(df['close'], df['volume'])), 6), 2) / 2.0))
+    factor = np.where(condition > 0.5, -1, 1)
+    return factor
 
 
 def alpha_28(df: pd.DataFrame):
@@ -301,8 +323,7 @@ def alpha_28(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
-    factor = []
+    factor = scale(((correlation(adv(df['close'], df['volume'], 20), df['low'], 5) + ((df['high'] + df['low']) / 2)) - df['close']))
     return factor
 
 
@@ -313,8 +334,7 @@ def alpha_29(df: pd.DataFrame):
     :param df:
     :return:
     """
-
-    pass
+    return (min(product(rank(rank(scale(np.log(sum(ts_min(rank(rank((-1 * rank(delta((df['close'] - 1), 5))))), 2), 1))))), 1), 5) + ts_rank(delay((-1 * returns(df['close'])), 6), 5))
 
 
 def alpha_30(df: pd.DataFrame):
@@ -324,8 +344,8 @@ def alpha_30(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
-
+    factor = (((1.0 - rank(((np.sign((df['close'] - delay(df['close'], 1))) + np.sign((delay(df['close'], 1) - delay(df['close'], 2)))) + np.sign((delay(df['close'], 2) - delay(df['close'], 3)))))) * sum(df['volume'], 5)) / sum(df['volume'], 20))
+    return factor
 
 def alpha_31(df: pd.DataFrame):
     """
@@ -333,7 +353,8 @@ def alpha_31(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    factor = (rank(rank(rank(decay_linear((-1 * rank(rank(delta(df['close'], 10)))), 10)))) + rank((-1 * delta(df['close'], 3)))) + np.sign(scale(correlation(adv(df['close'], df['volume'], 20), df['low'], 12)))
+    return factor
 
 
 def alpha_32(df: pd.DataFrame):
@@ -343,7 +364,7 @@ def alpha_32(df: pd.DataFrame):
     :param df:
     :return:
     """
-    factor = []
+    factor = scale(((sum(df['close'], 7) / 7) - df['close'])) + (20 * scale(correlation(vwap(df['close'], df['volume']), delay(df['close'], 5), 230)))
     return factor
 
 
@@ -353,7 +374,8 @@ def alpha_33(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    factor = rank((-1 * ((1 - (df['open'] / df['close']))^1)))
+    return factor
 
 
 def alpha_34(df: pd.DataFrame):
@@ -362,7 +384,7 @@ def alpha_34(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    return rank(((1 - rank((stddev(returns(df['close']), 2) / stddev(returns(df['close']), 5)))) + (1 - rank(delta(df['close'], 1)))))
 
 
 def alpha_35(df: pd.DataFrame):
@@ -371,7 +393,7 @@ def alpha_35(df: pd.DataFrame):
     :param df:
     :return:
     """
-    factor = []
+    factor = (ts_rank(df['volume'], 32) * (1 - ts_rank(((df['close'] + df['high']) - df['low']), 16))) * (1 - ts_rank(returns(df['close']), 32))
     return factor
 
 
@@ -381,7 +403,8 @@ def alpha_36(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    factor = ((((2.21 * rank(correlation((df['close'] - df['open']), delay(df['volume'], 1), 15))) + (0.7 * rank((df['open'] - df['close'])))) + (0.73 * rank(ts_rank(delay((-1 * returns), 6), 5)))) + rank(abs(correlation(vwap(df['close'], df['volume']), adv(df['close'], df['volume'], 20), 6)))) + (0.6 * rank((((sum(df['close'], 200) / 200) - df['open']) * (df['close'] - df['open']))))
+    return factor
 
 
 def alpha_37(df: pd.DataFrame):
@@ -391,7 +414,8 @@ def alpha_37(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    factor = rank(correlation(delay((df['open'] - df['close']), 1), df['close'], 200)) + rank((df['open'] - df['close']))
+    return factor
 
 
 def alpha_38(df: pd.DataFrame):
@@ -400,7 +424,8 @@ def alpha_38(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    factor = (-1 * rank(ts_rank(df['close'], 10))) * rank((df['close'] / df['open']))
+    return factor
 
 
 def alpha_39(df: pd.DataFrame):
@@ -409,7 +434,8 @@ def alpha_39(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    factor = ((-1 * rank((delta(df['close'], 7) * (1 - rank(decay_linear((df['volume'] / adv(df['close'], df['volume'], 20)), 9)))))) * (1 + rank(sum(returns(df['close']), 250))))
+    return factor
 
 
 def alpha_40(df: pd.DataFrame):
@@ -418,7 +444,8 @@ def alpha_40(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    factor = (-1 * rank(stddev(df['high'], 10))) * correlation(df['high'], df['volume'], 10)
+    return factor
 
 
 def alpha_41(df: pd.DataFrame):
@@ -449,11 +476,8 @@ def alpha_43(df: pd.DataFrame):
     :param df:
     :return:
     """
-    # todo
-    pass
-    tmp1 = df['volume'] / df['volume'].rolling(20).mean()
-    rank1 = tmp1.rank()
-    rank2 = -1 * (df['close'] - df['close'].shift(7)).rank()
+    factor = (ts_rank((df['volume'] / adv(df['close'], df['volume'], 20)), 20) * ts_rank((-1 * delta(df['close'], 7)), 8))
+    return factor
 
 
 def alpha_44(df: pd.DataFrame):
@@ -463,7 +487,8 @@ def alpha_44(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    factor = (-1 * correlation(df['high'], rank(df['volume']), 5))
+    return factor
 
 
 def alpha_45(df: pd.DataFrame):
@@ -472,7 +497,8 @@ def alpha_45(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    factor = (-1 * ((rank((sum(delay(df['close'], 5), 20) / 20)) * correlation(df['close'], df['volume'], 2)) * rank(correlation(sum(df['close'], 5), sum(df['close'], 20), 2))))
+    return factor
 
 
 def alpha_46(df: pd.DataFrame):
@@ -493,7 +519,8 @@ def alpha_47(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    factor = ((((rank((1 / df['close'])) * df['volume']) / adv(df['close'], df['volume'], 20)) * ((df['high'] * rank((df['high'] - df['close']))) / (sum(df['high'], 5) / 5))) - rank((vwap(df['close'], df['volume']) - delay(vwap(df['close'], df['volume']), 5))))
+    return factor
 
 
 def alpha_48(df: pd.DataFrame):
@@ -502,7 +529,9 @@ def alpha_48(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    #todo
+    factor = (indneutralize(((correlation(delta(df['close'], 1), delta(delay(df['close'], 1), 1), 250) * delta(df['close'], 1)) / df['close']), IndClass.subindustry) / sum(((delta(df['close'], 1) / delay(df['close'], 1))^2), 250))
+    return factor
 
 
 def alpha_49(df: pd.DataFrame):
@@ -524,7 +553,8 @@ def alpha_50(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    factor = (-1 * ts_max(rank(correlation(rank(df['volume']), rank(vwap(df['close'], df['volume'])), 5)), 5))
+    return factor
 
 
 def alpha_51(df: pd.DataFrame):
@@ -546,7 +576,8 @@ def alpha_52(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    factor = ((((-1 * ts_min(df['low'], 5)) + delay(ts_min(df['low'], 5), 5)) * rank(((sum(returns(df['close']), 240) - sum(returns(df['close']), 20)) / 220))) * ts_rank(df['volume'], 5))
+    return factor
 
 
 def alpha_53(df: pd.DataFrame):
@@ -580,7 +611,8 @@ def alpha_55(df: pd.DataFrame):
     :return:
     """
 
-    pass
+    factor = (-1 * correlation(rank(((df['close'] - ts_min(df['low'], 12)) / (ts_max(df['high'], 12) - ts_min(df['low'], 12)))), rank(df['volume']), 6))
+    return factor
 
 
 def alpha_56(df: pd.DataFrame):
@@ -589,8 +621,10 @@ def alpha_56(df: pd.DataFrame):
     :param df:
     :return:
     """
+    #todo
 
-    pass
+    factor = (0 - (1 * (rank((sum(returns(df['close']), 10) / sum(sum(returns(df['close']), 2), 3))) * rank((returns * cap)))))
+    return factor
 
 
 def alpha_57(df: pd.DataFrame):
@@ -600,7 +634,8 @@ def alpha_57(df: pd.DataFrame):
     :return:
     """
 
-    pass
+    factor = (0 - (1 * ((df['close'] - vwap(df['close'], df['volume'])) / decay_linear(rank(ts_argmax(df['close'], 30)), 2))))
+    return factor
 
 
 def alpha_58(df: pd.DataFrame):
@@ -611,8 +646,10 @@ def alpha_58(df: pd.DataFrame):
     :param df:
     :return:
     """
+    #todo
 
-    pass
+    factor = (-1 * ts_rank(decay_linear(correlation(indneutralize(vwap(df['close'], df['volume']), IndClass.sector), df['volume'], 3.92795), 7.89291), 5.50322))
+    return factor
 
 
 def alpha_59(df: pd.DataFrame):
@@ -621,7 +658,8 @@ def alpha_59(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    factor = (-1 * ts_rank(decay_linear(correlation(indneutralize(((vwap(df['close'], df['volume']) * 0.728317) + (vwap(df['close'], df['volume']) * (1 - 0.728317))), IndClass.industry), df['volume'], 4.25197), 16.2289), 8.19648))
+    return factor
 
 
 def alpha_60(df: pd.DataFrame):
@@ -630,7 +668,8 @@ def alpha_60(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    factor = (0 - (1 * ((2 * scale(rank(((((df['close'] - df['low']) - (df['high'] - df['close'])) / (df['high'] - df['low'])) * df['volume'])))) - scale(rank(ts_argmax(df['close'], 10))))))
+    return factor
 
 
 def alpha_61(df: pd.DataFrame):
@@ -639,8 +678,10 @@ def alpha_61(df: pd.DataFrame):
     :param df:
     :return:
     """
+    #todo
 
-    pass
+    factor = []
+    return factor
 
 
 def alpha_62(df: pd.DataFrame):
@@ -649,8 +690,10 @@ def alpha_62(df: pd.DataFrame):
     :param df:
     :return:
     """
+    #todo
 
-    pass
+    factor = []
+    return factor
 
 
 def alpha_63(df: pd.DataFrame):
@@ -660,8 +703,10 @@ def alpha_63(df: pd.DataFrame):
     :param df:
     :return:
     """
+    #todo
 
-    pass
+    factor = ((rank(decay_linear(delta(indneutralize(df['close'], IndClass.industry), 2.25164), 8.22237)) - rank(decay_linear(correlation(((vwap(df['close'], df['volume']) * 0.318108) + (df['open'] * (1 - 0.318108))), sum(adv(df['close'], df['volume'], 180), 37.2467), 13.557), 12.2883))) * -1)
+    return factor
 
 
 def alpha_64(df: pd.DataFrame):
@@ -671,7 +716,9 @@ def alpha_64(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    #todo
+    factor = []
+    return factor
 
 
 def alpha_65(df: pd.DataFrame):
@@ -680,7 +727,9 @@ def alpha_65(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    #todo
+    factor = []
+    return factor
 
 
 def alpha_66(df: pd.DataFrame):
@@ -689,7 +738,8 @@ def alpha_66(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    factor = ((rank(decay_linear(delta(vwap(df['close'], df['volume']), 3.51013), 7.23052)) + ts_rank(decay_linear(((((df['low'] * 0.96633) + (df['low'] * (1 - 0.96633))) - vwap(df['close'], df['volume'])) / (df['open'] - ((df['high'] + df['low']) / 2))), 11.4157), 6.72611)) * -1)
+    return factor
 
 
 def alpha_67(df: pd.DataFrame):
@@ -699,8 +749,10 @@ def alpha_67(df: pd.DataFrame):
     :param df:
     :return:
     """
+    #todo
 
-    pass
+    factor = ((rank((df['high'] - ts_min(df['high'], 2.14593)))^rank(correlation(indneutralize(vwap, IndClass.sector), indneutralize(adv(df['close'], df['volume'], 20), IndClass.subindustry), 6.02936))) * -1)
+    return factor
 
 
 def alpha_68(df: pd.DataFrame):
@@ -709,7 +761,9 @@ def alpha_68(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    #todo
+    factor = []
+    return factor
 
 
 def alpha_69(df: pd.DataFrame):
@@ -718,8 +772,10 @@ def alpha_69(df: pd.DataFrame):
     :param df:
     :return:
     """
-    # SignedPower(Ts_Rank((vwap - ts_max(vwap, 15.3217)), 20.7127), delta(close, 4.96796))
-    return
+    #todo
+    #SignedPower(Ts_Rank((vwap - ts_max(vwap, 15.3217)), 20.7127), delta(close, 4.96796))
+    factor = ((rank(ts_max(delta(indneutralize(vwap(df['close'], df['volume']), IndClass.industry), 2.72412), 4.79344))^ts_rank(correlation(((df['close'] * 0.490655) + (vwap(df['close'], df['volume']) * (1 - 0.490655))), adv(df['close'], df['volume'], 20), 4.92416), 9.0615)) * -1)
+    return factor
 
 
 def alpha_70(df: pd.DataFrame):
@@ -729,7 +785,9 @@ def alpha_70(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    #todo
+    factor = ((rank(delta(vwap(df['close'], df['volume']), 1.29456))^ts_rank(correlation(indneutralize(df['close'], IndClass.industry), adv(df['close'], df['volume'], 50), 17.8256), 17.9171)) * -1)
+    return factor
 
 
 def alpha_71(df: pd.DataFrame):
@@ -738,7 +796,8 @@ def alpha_71(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    factor = max(ts_rank(decay_linear(correlation(ts_rank(df['close'], 3.43976), ts_rank(adv(df['close'], df['volume'], 180), 12.0647), 18.0175), 4.20501), 15.6948), ts_rank(decay_linear((rank(((df['low'] + df['open']) - (vwap(df['close'], df['volume']) + vwap(df['close'], df['volume']))))^2), 16.4662), 4.4388))
+    return factor
 
 
 def alpha_72(df: pd.DataFrame):
@@ -748,7 +807,8 @@ def alpha_72(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    factor = (rank(decay_linear(correlation(((df['high'] + df['low']) / 2), adv(df['close'], df['volume'], 40), 8.93345), 10.1519)) / rank(decay_linear(correlation(ts_rank(vwap(df['close'], df['volume']), 3.72469), ts_rank(df['volume'], 18.5188), 6.86671), 2.95011)))
+    return factor
 
 
 def alpha_73(df: pd.DataFrame):
@@ -757,7 +817,8 @@ def alpha_73(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    factor = (max(rank(decay_linear(delta(vwap(df['close'], df['volume']), 4.72775), 2.91864)), ts_rank(decay_linear(((delta(((df['open'] * 0.147155) + (df['low'] * (1 - 0.147155))), 2.03608) / ((df['open'] * 0.147155) + (df['low'] * (1 - 0.147155)))) * -1), 3.33829), 16.7411)) * -1)
+    return factor
 
 
 def alpha_74(df: pd.DataFrame):
@@ -766,7 +827,9 @@ def alpha_74(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    #todo
+    factor = []
+    return factor
 
 
 def alpha_75(df: pd.DataFrame):
@@ -777,7 +840,9 @@ def alpha_75(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    #todo
+    factor = []
+    return factor
 
 
 def alpha_76(df: pd.DataFrame):
@@ -787,7 +852,9 @@ def alpha_76(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    #todo
+    factor = (max(rank(decay_linear(delta(vwap(df['close'], df['volume']), 1.24383), 11.8259)), ts_rank(decay_linear(ts_rank(correlation(indneutralize(df['low'], IndClass.sector), adv(df['close'], df['volume'], 81), 8.14941), 19.569), 17.1543), 19.383)) * -1)
+    return factor
 
 
 def alpha_77(df: pd.DataFrame):
@@ -797,7 +864,8 @@ def alpha_77(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    factor = min(rank(decay_linear(((((df['high'] + df['low']) / 2) + df['high']) - (vwap(df['close'], df['volume']) + df['high'])), 20.0451)), rank(decay_linear(correlation(((df['high'] + df['low']) / 2), adv(df['close'], df['volume'], 40), 3.1614), 5.64125)))
+    return factor
 
 
 def alpha_78(df: pd.DataFrame):
@@ -806,7 +874,8 @@ def alpha_78(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    factor = (rank(correlation(sum(((df['low'] * 0.352233) + (df['volume'] * (1 - 0.352233))), 19.7428), sum(adv(df['close'], df['volume'], 40), 19.7428), 6.83313))^rank(correlation(rank(vwap(df['close'], df['volume'])), rank(df['volume']), 5.77492)))
+    return factor
 
 
 def alpha_79(df: pd.DataFrame):
@@ -816,7 +885,9 @@ def alpha_79(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    #todo
+    factor = []
+    return factor
 
 
 def alpha_80(df: pd.DataFrame):
@@ -826,7 +897,9 @@ def alpha_80(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    #todo
+    factor = ((rank(np.Sign(delta(indneutralize(((df['open'] * 0.868128) + (df['high'] * (1 - 0.868128))), IndClass.industry), 4.04545)))^ts_rank(correlation(df['high'], adv(df['close'], df['volume'], 10), 5.11456), 5.53756)) * -1)
+    return factor
 
 
 def alpha_81(df: pd.DataFrame):
@@ -836,7 +909,9 @@ def alpha_81(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    #todo
+    factor = []
+    return factor
 
 
 def alpha_82(df: pd.DataFrame):
@@ -845,7 +920,9 @@ def alpha_82(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    #todo
+    factor = []
+    return factor
 
 
 def alpha_83(df: pd.DataFrame):
@@ -854,7 +931,8 @@ def alpha_83(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    factor = ((rank(delay(((df['high'] - df['low']) / (sum(df['close'], 5) / 5)), 2)) * rank(rank(df['volume']))) / (((df['high'] - df['low']) / (sum(df['close'], 5) / 5)) / (vwap(df['close'], df['volume']) - df['close'])))
+    return factor
 
 
 def alpha_84(df: pd.DataFrame):
@@ -864,7 +942,8 @@ def alpha_84(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    factor = signedpower(ts_rank((vwap(df['close'], df['volume']) - ts_max(vwap(df['close'], df['volume']), 15.3217)), 20.7127), delta(df['close'], 4.96796))
+    return factor
 
 
 def alpha_85(df: pd.DataFrame):
@@ -873,7 +952,8 @@ def alpha_85(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    factor = (rank(correlation(((df['high'] * 0.876703) + (df['close'] * (1 - 0.876703))), adv(df['close'], df['volume'], 30), 9.61331))^rank(correlation(ts_rank(((df['high'] + df['low']) / 2), 3.70596), ts_rank(df['volume'], 10.1595), 7.11408)))
+    return factor
 
 
 def alpha_86(df: pd.DataFrame):
@@ -882,7 +962,9 @@ def alpha_86(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    #todo
+    factor = []
+    return factor
 
 
 def alpha_87(df: pd.DataFrame):
@@ -891,7 +973,9 @@ def alpha_87(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    #todo
+    factor = (max(rank(decay_linear(delta(((df['close'] * 0.369701) + (vwap(df['close'], df['volume']) * (1 - 0.369701))), 1.91233), 2.65461)), ts_rank(decay_linear(np.abs(correlation(indneutralize(adv(df['close'], df['volume'], 81), IndClass.industry), df['close'], 13.4132)), 4.89768), 14.4535)) * -1)
+    return factor
 
 
 def alpha_88(df: pd.DataFrame):
@@ -900,7 +984,8 @@ def alpha_88(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    factor = min(rank(decay_linear(((rank(df['open']) + rank(df['low'])) - (rank(df['high']) + rank(df['close']))), 8.06882)), ts_rank(decay_linear(correlation(ts_rank(df['close'], 8.44728), ts_rank(adv(df['close'], df['volume'], 60), 20.6966), 8.01266), 6.65053), 2.61957))
+    return factor
 
 
 def alpha_89(df: pd.DataFrame):
@@ -910,7 +995,9 @@ def alpha_89(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    #todo
+    factor = (ts_rank(decay_linear(correlation(((df['low'] * 0.967285) + (df['low'] * (1 - 0.967285))), adv(df['close'], df['volume'], 10), 6.94279), 5.51607), 3.79744) - ts_rank(decay_linear(delta(indneutralize(vwap(df['close'], df['volume']), IndClass.industry), 3.48158), 10.1466), 15.3012))
+    return factor
 
 
 def alpha_90(df: pd.DataFrame):
@@ -919,7 +1006,9 @@ def alpha_90(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    #todo
+    factor = ((rank((df['close'] - ts_max(df['close'], 4.66719)))^ts_rank(correlation(indneutralize(adv(df['close'], df['volume'], 40), IndClass.subindustry), df['low'], 5.38375), 3.21856)) * -1)
+    return factor
 
 
 def alpha_91(df: pd.DataFrame):
@@ -928,7 +1017,9 @@ def alpha_91(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    #todo
+    factor = ((ts_rank(decay_linear(decay_linear(correlation(indneutralize(df['close'], IndClass.industry), df['volume'], 9.74928), 16.398), 3.83219), 4.8667) - rank(decay_linear(correlation(vwap(df['close'], df['volume']), adv(df['close'], df['volume'], 30), 4.01303), 2.6809))) * -1)
+    return factor
 
 
 def alpha_92(df: pd.DataFrame):
@@ -938,8 +1029,9 @@ def alpha_92(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
-
+    #todo
+    factor = []
+    return factor
 
 def alpha_93(df: pd.DataFrame):
     """
@@ -948,7 +1040,9 @@ def alpha_93(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    #todo
+    factor = (ts_rank(decay_linear(correlation(indneutralize(vwap(df['close'], df['volume']), IndClass.industry), adv(df['close'], df['volume'], 81), 17.4193), 19.848), 7.54455) / rank(decay_linear(delta(((df['close'] * 0.524434) + (vwap(df['close'], df['volume']) * (1 - 0.524434))), 2.77377), 16.2664)))
+    return factor
 
 
 def alpha_94(df: pd.DataFrame):
@@ -957,7 +1051,8 @@ def alpha_94(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    factor = ((rank((vwap(df['close'], df['volume']) - ts_min(vwap(df['close'], df['volume']), 11.5783)))^ts_rank(correlation(ts_rank(vwap(df['close'], df['volume']), 19.6462), ts_rank(adv(df['close'], df['volume'], 60), 4.02992), 18.0926), 2.70756)) * -1)
+    return factor
 
 
 def alpha_95(df: pd.DataFrame):
@@ -967,7 +1062,8 @@ def alpha_95(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    factor = []
+    return factor
 
 
 def alpha_96(df: pd.DataFrame):
@@ -976,7 +1072,8 @@ def alpha_96(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    factor = (max(ts_rank(decay_linear(correlation(rank(vwap(df['close'], df['volume'])), rank(df['volume']), 3.83878), 4.16783), 8.38151), ts_rank(decay_linear(ts_argmax(correlation(ts_rank(df['close'], 7.45404), ts_rank(adv(df['close'], df['volume'], 60), 4.13242), 3.65459), 12.6556), 14.0365), 13.4143)) * -1)
+    return factor
 
 
 def alpha_97(df: pd.DataFrame):
@@ -985,8 +1082,9 @@ def alpha_97(df: pd.DataFrame):
     :param df:
     :return:
     """
-
-    pass
+    #todo
+    factor = ((rank(decay_linear(delta(indneutralize(((df['low'] * 0.721001) + (vwap(df['close'], df['volume']) * (1 - 0.721001))), IndClass.industry), 3.3705), 20.4523)) - ts_rank(decay_linear(ts_rank(correlation(ts_rank(df['low'], 7.87871), ts_rank(adv(df['close'], df['volume'], 60), 17.255), 4.97547), 18.5925), 15.7152), 6.71659)) * -1)
+    return factor
 
 
 def alpha_98(df: pd.DataFrame):
@@ -996,7 +1094,8 @@ def alpha_98(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    factor = (rank(decay_linear(correlation(vwap(df['close'], df['volume']), sum(adv(df['close'], df['volume'], 5), 26.4719), 4.58418), 7.18088)) - rank(decay_linear(ts_rank(ts_argmin(correlation(rank(df['open']), rank(adv(df['close'], df['volume'], 15)), 20.8187), 8.62571), 6.95668), 8.07206)))
+    return factor
 
 
 def alpha_99(df: pd.DataFrame):
@@ -1007,8 +1106,9 @@ def alpha_99(df: pd.DataFrame):
     :param df:
     :return:
     """
-
-    pass
+    #todo
+    factor = []
+    return factor
 
 
 def alpha_100(df: pd.DataFrame):
@@ -1017,7 +1117,9 @@ def alpha_100(df: pd.DataFrame):
     :param df:
     :return:
     """
-    pass
+    #todo
+    factor = 0 - (1 * (((1.5 * scale(indneutralize(indneutralize(rank(((((df['close'] - df['low']) - (df['high'] - df['close'])) / (df['high'] - df['low'])) * df['volume'])), IndClass.subindustry), IndClass.subindustry))) - scale(indneutralize((correlation(df['close'], rank(adv(df['close'], df['volume'], 20)), 5) - rank(ts_argmin(df['close'], 30))), IndClass.subindustry))) * (df['volume'] / adv(df['close'], df['volume'], 20))))
+    return factor
 
 
 def alpha_101(df: pd.DataFrame):
