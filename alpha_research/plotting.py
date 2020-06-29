@@ -1,6 +1,6 @@
-import numpy
 import numpy as np
 from plotly import figure_factory as ff
+import dash_table
 from scipy import stats
 from graph.factor_component import *
 import plotly.graph_objects as go
@@ -105,6 +105,7 @@ def overlaid_factor_distribution_plot(in_sample_factor: pd.Series, out_sample_fa
     fig = go.Figure()
     fig.add_trace(histogram(in_sample_factor))
     fig.add_trace(histogram(out_sample_factor))
+    fig.update_layout(barmode='overlay')
     return fig
 
 
@@ -287,3 +288,10 @@ def monthly_ic_heatmap_plot(mean_monthly_ic):
     )
 
     return fig
+
+def df_to_dash_table(df:pd.DataFrame, id:str):
+    return dash_table.DataTable(
+        id=id,
+        columns=[{"name": i, "id": i} for i in df.columns],
+        data=df.to_dict('records'),
+    )
