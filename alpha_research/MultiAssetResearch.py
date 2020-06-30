@@ -1,4 +1,8 @@
 import dash
+import dash_core_components as dcc
+import dash_html_components as html
+from dash.dependencies import Input, Output, State
+
 import pandas as pd
 import numpy as np
 from IPython.core.display import display
@@ -154,7 +158,7 @@ class MultiAssetResearch(AlphaResearch):
         fig = cumulative_return_plot(cumulative_returns, benchmark=self.benchmark, factor_name=self.factor_name)
         fig.show()
 
-        # turnover analysis
+        ## turnover analysis
         turnover = position_turnover(position)
         display(turnover_analysis(turnover))
         # position graph
@@ -164,52 +168,94 @@ class MultiAssetResearch(AlphaResearch):
         fig = turnover_plot(turnover)
         fig.show()
 
-        # Return analysis
+        ## Return analysis
         # return by factor bin
         factor_quantile = quantize_factor(merged_data, self.factor_quantile_list, self.factor_bin_num) # type: pd.Series
         merged_data['factor_quantile'] = factor_quantile
         quantile_ret_ts, mean_ret, std_error_ret = mean_return_by_quantile(merged_data)
         display(mean_ret)
-        # todo return by quantile graph
+
+        # returns by quantile bar
         fig = returns_by_quantile_bar_plot(mean_ret)
         fig.show()
-        # todo return by quantile heatmap
+        # return by quantile heatmap
         fig = returns_by_quantile_heatmap_plot(mean_ret)
         fig.show()
-        # todo quantile ret distribution
+        # quantile ret distribution
         fig = returns_by_quantile_distplot(quantile_ret_ts)
         fig.show()
-        # todo cumulative return by quantile
-
+        # cumulative return by quantile
+        cum_ret_by_qt = calculate_cumulative_returns_by_quantile(quantile_ret_ts)
+        fig = cumulative_returns_by_quantile_plot(cum_ret_by_qt['1_period_return'])
+        fig.show()
         # todo by user defined group
         # print(factor_quantile)
 
 
-        # maybe will change to another implementation
-        # lowers_uppers = np.linspace(0, 1, self.factor_bin_num)
-        # quantile_factor_returns = pd.DataFrame(index=self.in_sample.index.get_level_values(0))
-        # quantile_factor_cumulative_returns = pd.DataFrame(index=self.in_sample.index.get_level_values(0))
-        # for i in range(len(lowers_uppers) - 1):
-        #     quantile_factor = calculate_quantile_returns(self.factor, lowers_uppers[i], lowers_uppers[i + 1])
-        #     qf_pos = self.alpha_position_func(quantile_factor)
-        #     quantile_factor_returns[str(i + 1) + '_quantile'] = calculate_cross_section_factor_returns(self.in_sample,
-        #                                                                                                qf_pos,
-        #                                                                                                factor_name=str(
-        #                                                                                                    i + 1) + '_quantile')
-        #     # todo bug wired graph here
-        #     quantile_factor_cumulative_returns[str(i + 1) + '_quantile'] = calculate_cumulative_returns(
-        #         quantile_factor_returns[str(i + 1) + '_quantile'], 1)
-        # fig = returns_plot(quantile_factor_returns, factor_name=self.factor_name)
-        # fig.show()
-        # fig = cumulative_return_plot(quantile_factor_cumulative_returns, benchmark=self.benchmark,
-        #                              factor_name=self.factor_name)
-        # fig.show()
-
-        #
-
     def get_evaluation_dash_app(self):
         external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
         app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
+        app.layout = html.Div(children=[
+            html.H1(children=self.factor_name + ' evaluation',
+                    style={'font-weight': 'normal', 'text-align': 'center', 'display': 'block',
+                           'fontFamily': 'helvetica neue', 'margin': '100px auto'}),
+            html.Div([
+                html.Div([
+                    html.Div(id='forward-returns-period'),
+                    # add forward returns
+                    html.Div(children='Enter a value to add or remove forward return value'),
+                    dcc.Input(
+                        id='forwards-periods-input',
+                        type='text',
+                        value='1, 2, 5, 10'
+                    ),
+                    html.Button('Update', id='UpdateButton'), ]
+                    , style={'margin-left': '100px', 'width:': '400px', 'float': 'left'}),
+                # change parameter
+                html.Div([
+                    html.Div(children='Factor Parameter'),
+                    html.Div(para_dcc_list, id='alpha_paras'),
+                    html.Button('Submit', id='AlphaButton'),
+                    html.Div(id="current-parameter"),
+                ], style={'margin-left': '400px', 'display': 'inline-block'}),
+
+            ]),
+
+            html.Div([
+                dcc.RadioItems(
+                    id='in-out-sample',
+                    options=[{'label': i, 'value': i} for i in ['In sample', 'Out ot the sample']],
+                    value='In sample',
+                    labelStyle={'display': 'inline-block'}
+                )
+            ], style={'display': 'block', 'margin': '0px 100px 50px 100px'}),
+            html.Div([html.H5(children='Factor Distribution', style={'text-align': 'center', 'margin': 'auto'}),
+                      dcc.Graph(id='distribution')],
+                     style={'width': '49%', 'display': 'inline-block', 'margin-bottom': '50px'}),
+
+            html.Div([html.H5(children='Q-Q plot ', style={'text-align': 'center', 'margin': 'auto'}),
+                      dcc.Graph(id='qqplot')],
+                     style={'width': '49%', 'display': 'inline-block', 'margin-bottom': '50px'}),
+
+            html.Div([html.H5(children='Factor IC', style={'text-align': 'center', 'margin': 'auto'}),
+                      dcc.Graph(id='ic_heatmap')],
+                     style={'width': '100%', 'display': 'inline-block', 'margin-bottom': '50px'}),
+
+            html.Div([html.H5(children='Price Factor', style={'text-align': 'center', 'margin': 'auto'}),
+                      dcc.Graph(id='price_factor')],
+                     style={'width': '100%', 'display': 'inline-block', 'margin-bottom': '50px'}),
+            html.Div([html.H5(children='Factor Return', style={'text-align': 'center', 'margin': 'auto'}),
+                      dcc.Graph(id='factor-returns')],
+                     style={'width': '100%', 'display': 'inline-block', 'margin-bottom': '50px'}),
+            html.Div([html.H5(children='Factor Backtesting', style={'text-align': 'center', 'margin': 'auto'}),
+                      dcc.Graph(id='factor-backtest')],
+                     style={'width': '100%', 'display': 'inline-block', 'margin-bottom': '50px'}),
+            html.Div(children=self.factor.to_json(orient='split'), id='in_sample_factor',
+                     style={'display': 'none'}),
+            html.Div(id='out_sample_factor', style={'display': 'none'}),
+            html.Div(children=json.dumps([1, 2, 5, 10]), id='forward_returns_period_saved', style={'display': 'none'}),
+            html.Div(id='forward_str', style={'display': 'none'}),
+        ], style={'margin': '20px'})
         return app
 
 if __name__ == '__main__':

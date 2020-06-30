@@ -50,6 +50,22 @@ def calculate_cumulative_returns(returns, starting_value=0, out=None):
     return out
 
 
+def calculate_cumulative_returns_by_quantile(quantile_ret_ts: pd.DataFrame):
+    #                             1_period_return  5_period_return  10_period_return
+    # factor_quantile Date
+    # 1               2010-06-17         0.002230         0.021172         -0.014775
+    #                 2010-06-18         0.036203         0.017436         -0.016843
+    #                 2010-06-21        -0.004873        -0.017346         -0.035416
+    #                 2010-06-22        -0.000315        -0.036443         -0.046313
+    #                 2010-06-23        -0.010813        -0.039430         -0.039475
+    # ...                                     ...              ...               ...
+    quantile_ret_ts_ = quantile_ret_ts.copy().add(1)  # type: pd.DataFrame
+    # todo period larger than 1 is not right cumulative return
+    cumulative_ret_by_group = quantile_ret_ts_.groupby(level=0).cumprod()
+    return cumulative_ret_by_group
+
+
+
 def calculate_position(factor: pd.Series):
     """
     The position of cross sectional alpha is calculated by

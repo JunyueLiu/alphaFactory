@@ -227,6 +227,14 @@ def returns_by_quantile_distplot(quantile_ret_ts: pd.DataFrame):
     return fig
 
 
+def cumulative_returns_by_quantile_plot(cum_ret_by_qt_ts: pd.Series):
+    strftime_format = generate_strftime_format(cum_ret_by_qt_ts.index.get_level_values(1))
+    fig = go.Figure()
+    for g in cum_ret_by_qt_ts.groupby(level=0):
+        fig.add_trace(line(g[1], timestamp=g[1].index.get_level_values(1), name=g[0], strftime_format=strftime_format))
+    return fig
+
+
 def monthly_ic_heatmap_plot(mean_monthly_ic):
     mean_monthly_ic = mean_monthly_ic.copy()
 
@@ -289,7 +297,16 @@ def monthly_ic_heatmap_plot(mean_monthly_ic):
 
     return fig
 
-def df_to_dash_table(df:pd.DataFrame, id:str):
+
+def pd_to_dash_table(data: pd.DataFrame or pd.Series, id: str or None = None):
+    if isinstance(data, pd.Series):
+        df = pd.DataFrame(data, index=data.index, columns=data.name)
+    else:
+        df = data.copy()
+    df = df.reset_index()
+    # print(df)
+    df = df.round(decimals=3)
+    # df.rename(index={'index': ' '}, inplace=True)
     return dash_table.DataTable(
         id=id,
         columns=[{"name": i, "id": i} for i in df.columns],
