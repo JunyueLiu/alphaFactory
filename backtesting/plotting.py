@@ -1,11 +1,10 @@
-from graph.backtesting_component import net_value_line, returns_distribution, entry_exit_dot
+from graph.backtesting_component import net_value_line, returns_distribution, entry_exit_dot, entrust_dot
 from plotly import graph_objects as go
 from graph.bar_component import ohlc, candlestick
 import plotly.figure_factory as ff
 import pandas as pd
 import plotly.io as pio
 
-from order.Order import Order
 
 pio.renderers.default = "browser"
 
@@ -19,14 +18,16 @@ def net_value_plot(strategy_net_value: pd.Series, benchmark: pd.Series or None =
 
 
 def returns_distribution_plot(returns: pd.Series, strategy_name='strategy'):
-    # fig = ff.create_distplot([returns.dropna().values], [strategy_name], bin_size=0.001)
-    # return fig
     fig = go.Figure()
     fig.add_trace(returns_distribution(returns))
     return fig
 
 
-def entry_and_exit_plot(ohlc_df, traded: pd.DataFrame, symbol: str, ohlc_graph=True, price_key='close', ohlc_key=None):
+def entry_and_exit_plot(ohlc_df, traded: pd.DataFrame, symbol: str, ohlc_graph=True, price_key='close', ohlc_key=None,
+                        entrust=False):
+    # traded columns:
+    # code,order_time,order_price,order_qty,order_type,dealt_price,dealt_qty,order_direction,order_status,update_time,
+    # exchange_order_id,order_id,cash_inflow
     fig = go.Figure()
 
     # filter out unrelated trade
@@ -37,17 +38,19 @@ def entry_and_exit_plot(ohlc_df, traded: pd.DataFrame, symbol: str, ohlc_graph=T
     if ohlc_graph:
         candles = candlestick(ohlc_df, ohlc_key=ohlc_key, symbol=symbol)
         fig.add_trace(candles)
-        # fig.add_annotation(
-        #     x=2,
-        #     y=5,
-        #     text="dict Text")
     else:
-        pass
+        prices = net_value_line(ohlc_df[price_key], color='#FFA500', name=symbol)
+        fig.add_trace(prices)
 
-    long_dot = entry_exit_dot(long['update_time'], long['dealt_price'], True)
-    short_dot = entry_exit_dot(short['update_time'], short['dealt_price'], False)
+    long_dot = entry_exit_dot(long, True)
+    short_dot = entry_exit_dot(short, False)
     fig.add_trace(long_dot)
     fig.add_trace(short_dot)
+    if entrust:
+        entrust_long = entrust_dot(long, True)
+        entrust_short = entrust_dot(short, False)
+        fig.add_trace(entrust_long)
+        fig.add_trace(entrust_short)
     fig.update_layout(showlegend=False, yaxis=dict(
         autorange=True,
         fixedrange=False
@@ -68,12 +71,12 @@ if __name__ == '__main__':
     benchmark.set_index('time_key', inplace=True)
     benchmark = benchmark[benchmark.index >= net_value.index[0]]
     benchmark = benchmark[benchmark.index <= net_value.index[-1]]
-    benchmark = benchmark[-5000:]
+    benchmark = benchmark[-1000:]
     # returns['time_key'] = pd.to_datetime(returns['time_key'])
     # returns.set_index('time_key', inplace=True)
 
     # fig = returns_distribution_plot(traded_pnl['cash_inflow'])
 
     # fig = net_value_plot(net_value, benchmark['close'])
-    fig = entry_and_exit_plot(benchmark, traded, 'HK_FUTURE.999010')
+    fig = entry_and_exit_plot(benchmark, traded, 'HK_FUTURE.999010', False, entrust=True)
     fig.show()
