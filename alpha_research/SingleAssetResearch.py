@@ -147,8 +147,12 @@ class SingleAssetResearch(AlphaResearch):
             ))
 
         app.layout = html.Div(children=[
-            html.H1(children=self.factor_name + ' evaluation',style={'font-weight':'normal','text-align':'center','display':'block','fontFamily': 'helvetica neue','margin':'100px auto'}),
+            html.H1(children=self.factor_name + ' evaluation',
+                    style={'font-weight': 'normal', 'text-align': 'center', 'display': 'block',
+                           'fontFamily': 'helvetica neue', 'margin': '100px auto'}),
+
             html.Div([
+                # change forward returns
                 html.Div([
                     html.Div(id='forward-returns-period'),
                     # add forward returns
@@ -159,14 +163,14 @@ class SingleAssetResearch(AlphaResearch):
                         value='1, 2, 5, 10'
                     ),
                     html.Button('Update', id='UpdateButton'), ]
-                    , style={'margin-left':'100px','width:': '400px','float':'left'}),
+                    , style={'margin-left': '100px', 'width:': '400px', 'float': 'left'}),
                 # change parameter
                 html.Div([
                     html.Div(children='Factor Parameter'),
                     html.Div(para_dcc_list, id='alpha_paras'),
                     html.Button('Submit', id='AlphaButton'),
                     html.Div(id="current-parameter"),
-                ],style={'margin-left':'400px','display':'inline-block'}),
+                ], style={'margin-left': '400px', 'display': 'inline-block'}),
 
             ]),
 
@@ -177,32 +181,50 @@ class SingleAssetResearch(AlphaResearch):
                     value='In sample',
                     labelStyle={'display': 'inline-block'}
                 )
-            ],style={'display':'block','margin':'0px 100px 50px 100px'}),
-            html.Div([html.H5(children='Factor Distribution',style={'text-align':'center','margin':'auto'}), dcc.Graph(id='distribution')],
-                     style={'width': '49%', 'display': 'inline-block','margin-bottom':'50px'}),
+            ], style={'display': 'block', 'margin': '0px 100px 50px 100px'}),
+            # todo 拯救一下我的表格布局吧，冇眼睇
 
-            html.Div([html.H5(children='Q-Q plot ',style={'text-align':'center','margin':'auto'}), dcc.Graph(id='qqplot')],
-                     style={'width': '49%', 'display': 'inline-block','margin-bottom':'50px'}),
+            # summary table
+            html.Div([html.H5(children='Factor Summary Table', style={'width': '49%'}),
+                      html.Table(id='summary-table', style={'width': '49%', 'display': 'inline-block'}), ]),
 
-            html.Div([html.H5(children='Factor IC',style={'text-align':'center','margin':'auto'}),
+            # ic_table
+            html.Div([html.H5(children='Factor IC Table', style={'width': '49%'}),
+                      html.Table(id='ic-table',
+                                 style={'width': '49%', 'display': 'inline-block'}),
+                      ]),
+
+            # beta table
+            html.Div([html.H5(children='Factor Beta')
+                         , html.Table(id='beta-table', style={'width': '100%', 'display': 'inline-block'})]),
+
+            html.Div([html.H5(children='Factor Distribution', style={'text-align': 'center', 'margin': 'auto'}),
+                      dcc.Graph(id='distribution')],
+                     style={'width': '49%', 'display': 'inline-block', 'margin-bottom': '50px'}),
+
+            html.Div([html.H5(children='Q-Q plot ', style={'text-align': 'center', 'margin': 'auto'}),
+                      dcc.Graph(id='qqplot')],
+                     style={'width': '49%', 'display': 'inline-block', 'margin-bottom': '50px'}),
+
+            html.Div([html.H5(children='Factor IC', style={'text-align': 'center', 'margin': 'auto'}),
                       dcc.Graph(id='ic_heatmap')],
-                     style={'width': '100%', 'display': 'inline-block','margin-bottom':'50px'}),
+                     style={'width': '100%', 'display': 'inline-block', 'margin-bottom': '50px'}),
 
-            html.Div([html.H5(children='Price Factor',style={'text-align':'center','margin':'auto'}),
+            html.Div([html.H5(children='Price Factor', style={'text-align': 'center', 'margin': 'auto'}),
                       dcc.Graph(id='price_factor')],
-                     style={'width': '100%', 'display': 'inline-block','margin-bottom':'50px'}),
-            html.Div([html.H5(children='Factor Return',style={'text-align':'center','margin':'auto'}),
+                     style={'width': '100%', 'display': 'inline-block', 'margin-bottom': '50px'}),
+            html.Div([html.H5(children='Factor Return', style={'text-align': 'center', 'margin': 'auto'}),
                       dcc.Graph(id='factor-returns')],
-                     style={'width': '100%', 'display': 'inline-block','margin-bottom':'50px'}),
-            html.Div([html.H5(children='Factor Backtesting',style={'text-align':'center','margin':'auto'}),
+                     style={'width': '100%', 'display': 'inline-block', 'margin-bottom': '50px'}),
+            html.Div([html.H5(children='Factor Backtesting', style={'text-align': 'center', 'margin': 'auto'}),
                       dcc.Graph(id='factor-backtest')],
-                     style={'width': '100%', 'display': 'inline-block','margin-bottom':'50px'}),
+                     style={'width': '100%', 'display': 'inline-block', 'margin-bottom': '50px'}),
             html.Div(children=self.factor.to_json(orient='split'), id='in_sample_factor',
                      style={'display': 'none'}),
             html.Div(id='out_sample_factor', style={'display': 'none'}),
             html.Div(children=json.dumps([1, 2, 5, 10]), id='forward_returns_period_saved', style={'display': 'none'}),
             html.Div(id='forward_str', style={'display': 'none'}),
-        ],style={'margin':'20px'})
+        ], style={'margin': '20px'})
 
         # make input parameter into dict
         def _get_alpha_parameter_from_div(alpha_paras):
@@ -265,6 +287,9 @@ class SingleAssetResearch(AlphaResearch):
             Output('price_factor', 'figure'),
             Output('factor-returns', 'figure'),
             Output('factor-backtest', 'figure'),
+            Output('summary-table', 'children'),
+            Output('ic-table', 'children'),
+            Output('beta-table', 'children'),
         ], [Input("UpdateButton", "n_clicks"),
             Input('in-out-sample', 'value'),
             Input('forward_returns_period_saved', 'children'),
@@ -292,9 +317,16 @@ class SingleAssetResearch(AlphaResearch):
                 benchmark = self.in_sample['close'] / self.in_sample['close'][0]
                 update_factor_plot_figure2 = cumulative_return_plot(cumulative_returns, benchmark=benchmark,
                                                                     factor_name=self.factor_name)
+                # tables
+                factor_table = pd_to_dash_table(factor_summary(factor))
+                ic_table = pd_to_dash_table(pd.DataFrame(calculate_ts_information_coefficient(factor, returns),
+                                                         columns=[self.factor_name]))
+                ols_table = pd_to_dash_table(factor_ols_regression(factor, returns))
+
                 return update_distribution_figure, update_heatmap_figure, \
                        update_qqplot_figure, update_factor_plot_figure, \
-                       update_factor_plot_figure1, update_factor_plot_figure2
+                       update_factor_plot_figure1, update_factor_plot_figure2, \
+                       factor_table, ic_table, ols_table
             else:
                 # out of sample的情况还没搞好
                 out_factor = pd.read_json(out_alpha_json, orient='split', typ='series')
@@ -319,11 +351,20 @@ class SingleAssetResearch(AlphaResearch):
                                                                     factor_name=self.factor_name)
                 # for out of sample data onlye
                 in_out_distplot = overlaid_factor_distribution_plot(factor, out_factor)
-                inout_qqplot = observed_qq_plot(factor, out_factor) # todo bug here
+                inout_qqplot = observed_qq_plot(factor, out_factor)
                 # inout_qqplot.show()
+
+                factor_table = pd_to_dash_table(factor_summary(out_factor))
+                ic_table = pd_to_dash_table(pd.DataFrame(calculate_ts_information_coefficient(out_factor, returns),
+                                                         columns=[self.factor_name]))
+                ols_table = pd_to_dash_table(factor_ols_regression(out_factor, returns))
+
+
                 return in_out_distplot, update_heatmap_figure, \
                        inout_qqplot, update_factor_plot_figure, \
-                       update_factor_plot_figure1, update_factor_plot_figure2
+                       update_factor_plot_figure1, update_factor_plot_figure2,\
+                       factor_table, ic_table, ols_table
+
         return app
 
 
