@@ -50,7 +50,7 @@ class SingleAssetResearch(AlphaResearch):
     def set_factor_name(self, factor_name):
         self.factor_name = factor_name
 
-    def calculate_factor(self, func, **kwargs):
+    def calculate_factor(self, func, **kwargs) -> pd.DataFrame:
         self.alpha_func = func
         self.alpha_func_paras = kwargs
         if kwargs is not None:
@@ -65,6 +65,7 @@ class SingleAssetResearch(AlphaResearch):
                 self.factor = factor
             else:
                 self.factor = pd.Series(factor, index=self.in_sample.index)
+        return self.factor
 
     def evaluate_alpha(self, forward_return_lag: list = None):
 
@@ -332,7 +333,7 @@ class DemoSingleAssetFactor(SingleAssetResearch):
 
 
 if __name__ == '__main__':
-    data_path = r'../HK.999010_2019-06-01 00:00:00_2020-05-30 03:00:00_K_1M_qfq.csv'
+    data_path = r'HK.999010_2019-06-01 00:00:00_2020-05-30 03:00:00_K_1M_qfq.csv'
 
     df = pd.read_csv(data_path)
     df['time_key'] = pd.to_datetime(df['time_key'])

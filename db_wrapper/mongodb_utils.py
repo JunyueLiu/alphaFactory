@@ -57,8 +57,10 @@ class MongoConnection:
 
 if __name__ == '__main__':
 
-
+    #connect mangodb
     con = MongoConnection('120.55.45.12', 27017, 'root', 'AlphaFactory2020')
+
+
     # cursor = con.client['test']['0001_HKEX_1d'].find()
     #
     # print(pd.DataFrame(list(cursor)))
@@ -70,7 +72,10 @@ if __name__ == '__main__':
     # df = merge_single_asset(paths)
     # con.insert_from_dataframe('test', '0001_HKEX_1d', df)
 
-    df = con.read_mongo_df('quant', 'hsi_1_min', {}, {'_id': False})
+    # 1 是读的时候选了这列，0不选这列，也可以用True or False表示
+
+    df = con.read_mongo_df('quant', 'hsi_1_min', {}, {'time_key': 1, 'close': 1, 'open': 1,
+                                                      'high': 1, 'low': 1, 'turnover': 1})
     print(df)
 
 # df = con.get_ohlc_dataframe('quant', 'hsi_futures_1_min', {"time_key": {"$gt": "2020-05-01"}})
