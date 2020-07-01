@@ -333,7 +333,7 @@ class MultiAssetResearch(AlphaResearch):
         quantile_div = html.Div(children=[html.Div([
             # add forward returns
             html.Div([
-                html.Div(id='forward-returns-period'),
+                html.Div(id='forward-returns-period_1'),
                 html.Div(children='Enter a value to add or remove forward return value'),
                 dcc.Input(
                     id='forwards-periods-input_1',
@@ -348,17 +348,16 @@ class MultiAssetResearch(AlphaResearch):
                 ),
 
                 html.Div(id='quantile parameter'),
-                html.Div(children='Enter a value to change quantile or bin'),
+                html.Div(children='Enter a value to change quantile or bin (Quantile has priority)'),
                 # todo quantile selection
                 dcc.Input(
                     id='quantile',
                     type='text',
-                    value='0, 20, 40, 60, 80, 100', debounce=True
+                    debounce=True
                 ),
                 dcc.Input(
                     id='bin',
                     type='number',
-                    value='5',
                     min='1',
                     debounce=True
                 ),
@@ -388,11 +387,14 @@ class MultiAssetResearch(AlphaResearch):
             html.Div([html.H5(children='Quantile heatmap', style={'text-align': 'center', 'margin': 'auto'}),
                       dcc.Graph(id='quantile-heatmap')],
                      style={'width': '100%', 'display': 'inline-block', 'margin-bottom': '50px'}),
-            html.Div([html.H5(children='Returns by Displot', style={'text-align': 'center', 'margin': 'auto'}),
+            html.Div([html.H5(children='Returns Displot', style={'text-align': 'center', 'margin': 'auto'}),
                       dcc.Graph(id='quantile-displot')],
                      style={'width': '100%', 'display': 'inline-block', 'margin-bottom': '50px'}),
+            html.Div([html.H5(children='Cumulative Returns by quantile', style={'text-align': 'center', 'margin': 'auto'}),
+                      dcc.Graph(id='quantile-cumulative')],
+                     style={'width': '100%', 'display': 'inline-block', 'margin-bottom': '50px'}),
 
-            # todo hidden data
+            #  hidden data
             html.Div(children=json.dumps(list(self.factor.index.names)),
                      id='factor_index_name_saved_1',
                      style={'display': 'none'}),
@@ -401,12 +403,17 @@ class MultiAssetResearch(AlphaResearch):
             html.Div(id='out_sample_factor_1', style={'display': 'none'}),
             html.Div(children=json.dumps([1, 2, 5, 10]), id='forward_returns_period_saved_1',
                      style={'display': 'none'}),
+            html.Div(children=json.dumps(self.factor_quantile_list), id='quantile_list_1',
+                     style={'display': 'none'}),
+            html.Div(children=self.factor_bin_num, id='bin_1',
+                     style={'display': 'none'}),
 
         ]
 
         )
 
         group_div = html.Div(children=[
+            # todo group div and analysis
 
         ])
 
@@ -506,13 +513,15 @@ class MultiAssetResearch(AlphaResearch):
             Input('in_sample_factor', 'children'),
             Input('out_sample_factor', 'children'),
             Input('factor_index_name_saved', 'children'),
+            Input('alpha-universe', 'value')
             ])
         def update_forward_returns(n_clicks,
                                    value,
                                    forward_period,
                                    in_alpha_json,
                                    out_alpha_json,
-                                   factor_index_name_saved
+                                   factor_index_name_saved,
+                                   universe
                                    ):
             forward_returns_period = json.loads(forward_period)
             factor_index_ = json.loads(factor_index_name_saved)
@@ -607,6 +616,102 @@ class MultiAssetResearch(AlphaResearch):
                 return in_out_distplot, inout_qqplot, \
                        update_factor_plot_figure1, update_factor_plot_figure2, \
                        factor_table, ic_table, ols_table, turnover_ts, pos_graph
+
+        # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        # ++++++++++++++++++ for factor quantile analysis page  ++++++++++++++++++++++++
+        # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        # for update change of parameter in the quantile analysis page
+        @app.callback(Output('in_sample_factor_1', 'children'),
+                      [
+                          Input('AlphaButton_1', 'n_clicks'),
+                          Input('alpha_paras_1', 'children')])
+        def update_alpha_insample_1(n_clicks, alpha_paras):
+            paras = _get_alpha_parameter_from_div(alpha_paras)
+            self.calculate_factor(self.alpha_func, **paras)
+            in_sample_factor = self.factor  # type: pd.Series
+            return in_sample_factor.reset_index().to_json()
+
+        @app.callback(Output('out_sample_factor_1', 'children'),
+                      [
+                          Input('AlphaButton_1', 'n_clicks'),
+                          Input('alpha_paras_1', 'children')])
+        def update_alpha_out_of_sample_1(n_clicks, alpha_paras):
+
+            paras = _get_alpha_parameter_from_div(alpha_paras)
+            self.calculate_factor(self.alpha_func, **paras)
+
+            out_of_sample_factor = self.alpha_func(self.out_of_sample, **paras)  # type: pd.Series
+            out_of_sample_factor.name = self.factor_name
+            # more generally, this line would be
+            # json.dumps(cleaned_df)
+            return out_of_sample_factor.reset_index().to_json()
+
+        @app.callback([Output('forward_returns_period_saved_1', 'children'),
+                       Output("forward-returns-period_1", "children")],
+                      [Input("UpdateButton_1", "n_clicks")],
+                      [State("forwards-periods-input_1", "value")])
+        def update_forward_return_1(n_clicks, value):
+            fr = list(set([int(p) for p in value.split(',')]))
+            fr.sort()
+            forward_str = str(fr).replace('[', '').replace(']', '')
+            return json.dumps(fr), 'Forward return list: ' + forward_str
+
+
+        @app.callback([
+            Output('quantile-bar', 'figure'),
+            Output('quantile-heatmap', 'figure'),
+            Output('quantile-displot', 'figure'),
+            Output('quantile-cumulative', 'figure'),
+        ], [Input("UpdateButton_1", "n_clicks"),
+            Input('in-out-sample_1', 'value'),
+            Input('forward_returns_period_saved_1', 'children'),
+            Input('in_sample_factor_1', 'children'),
+            Input('out_sample_factor', 'children'),
+            Input('factor_index_name_saved_1', 'children'),
+            Input('quantile', 'value'),
+            Input('bin', 'value'),
+            Input('alpha-universe_1', 'value')
+            ])
+        def update_quantile_page(n_clicks,
+                                 in_out_sample,
+                                 forward_period,
+                                 in_alpha_json,
+                                 out_of_sample_factor,
+                                 factor_index_name_saved,
+                                 quantile,
+                                 bin,
+                                 universe
+                                 ):
+            forward_returns_period = json.loads(forward_period)
+            factor_index_ = json.loads(factor_index_name_saved)
+            factor = pd.read_json(in_alpha_json)
+            factor.set_index(factor_index_, inplace=True)
+            # todo factor selection by universe list
+            factor = factor[self.factor_name]
+            if in_out_sample == 'In sample':
+                # --------- calculation first ---------
+                returns = calculate_forward_returns(self.in_sample, forward_returns_period)
+                position = self.alpha_position_func(factor)
+                merged_data = pd.DataFrame(index=factor.index)
+                merged_data['factor'] = factor
+                factor_quantile_list = get_valid_quantile(quantile)
+                factor_bin_num = int(bin)
+                factor_quantile = quantize_factor(merged_data, factor_quantile_list,
+                                                  factor_bin_num)
+                merged_data['factor_quantile'] = factor_quantile
+                quantile_ret_ts, mean_ret, std_error_ret = mean_return_by_quantile(merged_data)
+                cum_ret_by_qt = calculate_cumulative_returns_by_quantile(quantile_ret_ts)
+
+                # todo table to show
+                # display(mean_ret)
+                qt_bar = returns_by_quantile_bar_plot(mean_ret)
+                qt_heatmap = returns_by_quantile_heatmap_plot(mean_ret)
+                qt_displot = returns_by_quantile_distplot(quantile_ret_ts)
+                qt_cum = cumulative_returns_by_quantile_plot(cum_ret_by_qt['1_period_return'])
+                return qt_bar, qt_heatmap, qt_displot, qt_cum
+            else:
+                # todo out of sample
+                pass
 
         return app
 

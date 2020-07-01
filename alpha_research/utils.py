@@ -65,7 +65,6 @@ def calculate_cumulative_returns_by_quantile(quantile_ret_ts: pd.DataFrame):
     return cumulative_ret_by_group
 
 
-
 def calculate_position(factor: pd.Series):
     """
     The position of cross sectional alpha is calculated by
@@ -234,3 +233,14 @@ def generate_strftime_format(index):
         return '%Y/%m/%d %H:%M:%S'
     else:
         return '%Y/%m/%d'
+
+
+def get_valid_quantile(quantile_str: str):
+    ll = list(set([float(q) for q in quantile_str.split(',')]))
+    ll.sort()
+    if ll[0] > 0:
+        ll.insert(0, 0)
+    if ll[-1] < 100:
+        ll.append(100)
+    return ll
+
