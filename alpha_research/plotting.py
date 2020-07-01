@@ -48,6 +48,9 @@ def cumulative_return_plot(cumulative_factor_returns, benchmark=None, factor_nam
         fig.add_trace(
             line(cumulative_factor_returns[col], name=factor_name + '_' + col, strftime_format=strftime_format))
     if benchmark is not None:
+
+
+
         fig.add_trace(line(benchmark, name=benchmark_name, color='#008000', strftime_format=strftime_format))
     return fig
 

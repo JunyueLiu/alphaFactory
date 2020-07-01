@@ -100,7 +100,7 @@ class MultiAssetResearch(AlphaResearch):
             assert np.array_equal(factor.index, self.in_sample.index)
             assert factor.values.shape[0] == self.in_sample.shape[0]
         else:
-            factor = func(self.in_sample) # type:pd.Series
+            factor = func(self.in_sample)  # type:pd.Series
             assert type(factor) == pd.Series
             assert np.array_equal(factor.index, self.in_sample.index)
             assert factor.values.shape[0] == self.in_sample.shape[0]
@@ -309,10 +309,10 @@ class MultiAssetResearch(AlphaResearch):
                       dcc.Graph(id='factor-backtest')],
                      style={'width': '100%', 'display': 'inline-block', 'margin-bottom': '50px'}),
 
-            html.Div([html.H5(children='Positions', style={'text-align': 'center', 'margin': 'auto'}),
+            html.Div([html.H2(children='Turnover Analysis', style={'text-align': 'center', 'margin': 'auto'}),
+                      html.H5(children='Positions', style={'text-align': 'center', 'margin': 'auto'}),
                       dcc.Graph(id='position-ts')],
                      style={'width': '100%', 'display': 'inline-block', 'margin-bottom': '50px'}),
-
 
             html.Div([html.H5(children='Turnover', style={'text-align': 'center', 'margin': 'auto'}),
                       dcc.Graph(id='turnover-ts')],
@@ -333,10 +333,10 @@ class MultiAssetResearch(AlphaResearch):
         quantile_div = html.Div(children=[html.Div([
             # add forward returns
             html.Div([
-                html.Div(id='forward-returns-period_1'),
+                html.Div(id='forward-returns-period'),
                 html.Div(children='Enter a value to add or remove forward return value'),
                 dcc.Input(
-                    id='forwards-periods-input',
+                    id='forwards-periods-input_1',
                     type='text',
                     value='1, 2, 5, 10'
                 ),
@@ -345,6 +345,22 @@ class MultiAssetResearch(AlphaResearch):
                     options=[{'label': i, 'value': i} for i in ['In sample', 'Out ot the sample']],
                     value='In sample',
                     labelStyle={'display': 'inline-block'}
+                ),
+
+                html.Div(id='quantile parameter'),
+                html.Div(children='Enter a value to change quantile or bin'),
+                # todo quantile selection
+                dcc.Input(
+                    id='quantile',
+                    type='text',
+                    value='0, 20, 40, 60, 80, 100', debounce=True
+                ),
+                dcc.Input(
+                    id='bin',
+                    type='number',
+                    value='5',
+                    min='1',
+                    debounce=True
                 ),
                 html.Button('Update', id='UpdateButton_1'), ]
                 , style={'margin-left': '100px', 'width:': '400px', 'float': 'left'}),
@@ -362,12 +378,29 @@ class MultiAssetResearch(AlphaResearch):
                       # todo 位置需要调一下
                       dcc.Checklist(id='alpha-universe_1',
                                     options=[{'label': i, 'value': i} for i in self.alpha_universe],
-                                    value=self.alpha_universe, labelStyle={'display': 'inline-block'},
+                                    value=self.alpha_universe,
+                                    labelStyle={'display': 'inline-block'},
                                     )], style={'width': '100%', 'display': 'block', }),
 
-            # todo quantile selection
+            html.Div([html.H5(children='Returns by Quantile Bar', style={'text-align': 'center', 'margin': 'auto'}),
+                      dcc.Graph(id='quantile-bar')],
+                     style={'width': '100%', 'display': 'inline-block', 'margin-bottom': '50px'}),
+            html.Div([html.H5(children='Quantile heatmap', style={'text-align': 'center', 'margin': 'auto'}),
+                      dcc.Graph(id='quantile-heatmap')],
+                     style={'width': '100%', 'display': 'inline-block', 'margin-bottom': '50px'}),
+            html.Div([html.H5(children='Returns by Displot', style={'text-align': 'center', 'margin': 'auto'}),
+                      dcc.Graph(id='quantile-displot')],
+                     style={'width': '100%', 'display': 'inline-block', 'margin-bottom': '50px'}),
 
             # todo hidden data
+            html.Div(children=json.dumps(list(self.factor.index.names)),
+                     id='factor_index_name_saved_1',
+                     style={'display': 'none'}),
+            html.Div(children=self.factor.reset_index().to_json(), id='in_sample_factor_1',
+                     style={'display': 'none'}),
+            html.Div(id='out_sample_factor_1', style={'display': 'none'}),
+            html.Div(children=json.dumps([1, 2, 5, 10]), id='forward_returns_period_saved_1',
+                     style={'display': 'none'}),
 
         ]
 
@@ -411,7 +444,6 @@ class MultiAssetResearch(AlphaResearch):
                         v = float(v)
                     paras[k] = v
             return paras
-
 
         # for update change of parameter in the general page
         @app.callback(Output('in_sample_factor', 'children'),
@@ -457,6 +489,7 @@ class MultiAssetResearch(AlphaResearch):
             forward_str = str(fr).replace('[', '').replace(']', '')
             return json.dumps(fr), 'Forward return list: ' + forward_str
 
+        # todo maybe table could move out to get faster table calculation?
         @app.callback([
             Output('distribution', 'figure'),
             Output('qqplot', 'figure'),
@@ -482,20 +515,17 @@ class MultiAssetResearch(AlphaResearch):
                                    factor_index_name_saved
                                    ):
             forward_returns_period = json.loads(forward_period)
-            # todo bug to be fixed and
-            # print(alpha_json)
             factor_index_ = json.loads(factor_index_name_saved)
             factor = pd.read_json(in_alpha_json)
             factor.set_index(factor_index_, inplace=True)
-            # print(factor)
+            # todo factor selection by universe list
             factor = factor[self.factor_name]
-            # print(factor)
             if value == 'In sample':
                 # --------- calculation first ---------
                 returns = calculate_forward_returns(self.in_sample, forward_returns_period)
                 position = self.alpha_position_func(factor)
-
-                merged_data = self.merged_data.join(returns)  # type: pd.DataFrame
+                merged_data = pd.DataFrame(index=factor.index)
+                merged_data['factor'] = factor
 
                 factor_returns = calculate_cross_section_factor_returns(self.in_sample, position)
                 cumulative_returns = calculate_cumulative_returns(factor_returns, 1)
@@ -504,38 +534,24 @@ class MultiAssetResearch(AlphaResearch):
                 update_distribution_figure = factor_distribution_plot(factor)
                 update_qqplot_figure = qq_plot(factor)
 
-
                 # --------- factor returns ---------
                 update_factor_plot_figure1 = returns_plot(factor_returns, self.factor_name)
 
-                update_factor_plot_figure2 = cumulative_return_plot(cumulative_returns, benchmark=self.benchmark, factor_name=self.factor_name)
+                update_factor_plot_figure2 = cumulative_return_plot(cumulative_returns, benchmark=self.benchmark,
+                                                                    factor_name=self.factor_name)
 
                 # --------- turnover analysis ---------
                 turnover = position_turnover(position)
                 # display(turnover_analysis(turnover))
                 # position graph
                 pos_graph = position_plot(position)
-                # fig.show()
                 # turnover time series graph
                 turnover_ts = turnover_plot(turnover)
-                # fig.show()
-
-
 
                 # ic_heatmap = get_monthly_ic(returns, factor, forward_returns_period)
                 # update_heatmap_figure = monthly_ic_heatmap_plot(ic_heatmap)
 
-
-                # update_factor_plot_figure = price_factor_plot(self.in_sample, factor)
-
-                # factor_returns = calculate_cross_section_factor_returns(self.in_sample, factor, forward_returns_period)
-                # update_factor_plot_figure1 = returns_plot(factor_returns, self.factor_name)
-
-                # cumulative_returns = calculate_cumulative_returns(factor_returns, 1)
-                # benchmark = self.in_sample['close'] / self.in_sample['close'][0]
-                # update_factor_plot_figure2 = cumulative_return_plot(cumulative_returns, benchmark=benchmark,
-                #                                                     factor_name=self.factor_name)
-                # tables
+                # -------- tables --------
                 factor_table = pd_to_dash_table(factor_summary(factor), 'summary')
 
                 ic = calculate_cs_information_coefficient(merged_data)
@@ -546,47 +562,51 @@ class MultiAssetResearch(AlphaResearch):
                 ols_table = pd_to_dash_table(factor_ols_regression(factor, returns), 'ols')
 
                 return update_distribution_figure, update_qqplot_figure, \
-                       update_factor_plot_figure1, update_factor_plot_figure2,\
-                       factor_table,  ic_table, ols_table, turnover_ts, pos_graph
+                       update_factor_plot_figure1, update_factor_plot_figure2, \
+                       factor_table, ic_table, ols_table, turnover_ts, pos_graph
             else:
-                pass
-                # out of sample的情况还没搞好
                 out_factor = pd.read_json(out_alpha_json)
                 out_factor.set_index(factor_index_, inplace=True)
                 out_factor = out_factor[self.factor_name]
+
+                returns = calculate_forward_returns(self.out_of_sample, forward_returns_period)
+                position = self.alpha_position_func(out_factor)
+                merged_data = pd.DataFrame(index=factor.index)
+                merged_data['factor'] = factor
+
+                factor_returns = calculate_cross_section_factor_returns(self.out_of_sample, position)
+                cumulative_returns = calculate_cumulative_returns(factor_returns, 1)
+
                 # update_distribution_figure = factor_distribution_plot(out_factor)
 
                 returns = calculate_forward_returns(self.out_of_sample, forward_returns_period)
 
-                ic_heatmap = get_monthly_ic(returns, out_factor, forward_returns_period)
-                update_heatmap_figure = monthly_ic_heatmap_plot(ic_heatmap)
-
-                # update_qqplot_figure = qq_plot(out_factor)
-
-                update_factor_plot_figure = price_factor_plot(self.out_of_sample, out_factor)
-
-                factor_returns = calculate_ts_factor_returns(self.out_of_sample, out_factor, forward_returns_period)
-                update_factor_plot_figure1 = returns_plot(factor_returns, self.factor_name)
-
-                factor_returns = calculate_ts_factor_returns(self.out_of_sample, out_factor, forward_returns_period)
-                cumulative_returns = calculate_cumulative_returns(factor_returns, 1)
-                benchmark = self.out_of_sample['close'] / self.out_of_sample['close'][0]
-                update_factor_plot_figure2 = cumulative_return_plot(cumulative_returns, benchmark=benchmark,
-                                                                    factor_name=self.factor_name)
                 # for out of sample data onlye
                 in_out_distplot = overlaid_factor_distribution_plot(factor, out_factor)
                 inout_qqplot = observed_qq_plot(factor, out_factor)
-                # inout_qqplot.show()
 
-                factor_table = pd_to_dash_table(factor_summary(out_factor))
+                # --------- factor returns ---------
+                update_factor_plot_figure1 = returns_plot(factor_returns, self.factor_name)
+
+                update_factor_plot_figure2 = cumulative_return_plot(cumulative_returns, benchmark=self.benchmark,
+                                                                    factor_name=self.factor_name)
+
+                # --------- turnover analysis ---------
+                turnover = position_turnover(position)
+                # display(turnover_analysis(turnover))
+                # position graph
+                pos_graph = position_plot(position)
+                # turnover time series graph
+                turnover_ts = turnover_plot(turnover)
+
+                factor_table = pd_to_dash_table(factor_summary(out_factor), 'table')
                 ic_table = pd_to_dash_table(pd.DataFrame(calculate_ts_information_coefficient(out_factor, returns),
-                                                         columns=[self.factor_name]))
-                ols_table = pd_to_dash_table(factor_ols_regression(out_factor, returns))
+                                                         columns=[self.factor_name]), 'ic')
+                ols_table = pd_to_dash_table(factor_ols_regression(out_factor, returns), 'ols')
 
-                return in_out_distplot, update_heatmap_figure, \
-                       inout_qqplot, update_factor_plot_figure, \
+                return in_out_distplot, inout_qqplot, \
                        update_factor_plot_figure1, update_factor_plot_figure2, \
-                       factor_table, ic_table, ols_table
+                       factor_table, ic_table, ols_table, turnover_ts, pos_graph
 
         return app
 
