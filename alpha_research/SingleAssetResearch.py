@@ -323,10 +323,10 @@ class SingleAssetResearch(AlphaResearch):
                 update_factor_plot_figure2 = cumulative_return_plot(cumulative_returns, benchmark=benchmark,
                                                                     factor_name=self.factor_name)
                 # tables
-                factor_table = pd_to_dash_table(factor_summary(factor))
+                factor_table = pd_to_dash_table(factor_summary(factor), 'summary')
                 ic_table = pd_to_dash_table(pd.DataFrame(calculate_ts_information_coefficient(factor, returns),
-                                                         columns=[self.factor_name]))
-                ols_table = pd_to_dash_table(factor_ols_regression(factor, returns))
+                                                         columns=[self.factor_name]), 'ic')
+                ols_table = pd_to_dash_table(factor_ols_regression(factor, returns), 'ols')
 
                 return update_distribution_figure, update_heatmap_figure, \
                        update_qqplot_figure, update_factor_plot_figure, \
@@ -380,7 +380,7 @@ class DemoSingleAssetFactor(SingleAssetResearch):
 
 
 if __name__ == '__main__':
-    data_path = r'../data.csv'
+    data_path = r'../HK.999010_2019-06-01 00:00:00_2020-05-30 03:00:00_K_1M_qfq.csv'
 
     df = pd.read_csv(data_path)
     df['time_key'] = pd.to_datetime(df['time_key'])
