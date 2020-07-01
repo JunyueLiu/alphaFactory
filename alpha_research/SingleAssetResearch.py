@@ -72,33 +72,36 @@ class SingleAssetResearch(AlphaResearch):
             forward_return_lag = [1, 5, 10]
         returns = calculate_forward_returns(self.in_sample, forward_return_lag)
         # in sample
-        # factor summary
+        # --------- factor summary ---------
         summary = factor_summary(self.factor, self.factor_name)
         pd.set_option('display.float_format', lambda x: '{:.3f}'.format(x))
         display(summary)
 
-        # ic table
+        # --------- ic table ---------
         ic_table = calculate_ts_information_coefficient(self.factor, returns)
         pd.set_option('display.float_format', lambda x: '{:.5f}'.format(x))
         display(pd.DataFrame(ic_table, columns=[self.factor_name]))
 
-        # factor beta table
+        # --------- factor beta table ---------
         pd.set_option('display.float_format', None)
         ols_table = factor_ols_regression(self.factor, returns)
         display(ols_table)
 
-        # factor distribution plot
+        # ---------  factor distribution plot ---------
         fig = factor_distribution_plot(self.factor)
         fig.show()
         fig = qq_plot(self.factor)
         fig.show()
 
-        # ic heatmap
+        # ---------  ic heatmap ---------
         ic_heatmap = get_monthly_ic(returns, self.factor, forward_return_lag)
         fig = monthly_ic_heatmap_plot(ic_heatmap)
         fig.show()
 
-        # factor backtesting
+        # todo factor value verus forward return bubble
+        # fig = bubble_chart(self.factor, )
+
+        # --------- factor backtesting ---------
         fig = price_factor_plot(self.in_sample, self.factor)
         fig.show()
         factor_returns = calculate_ts_factor_returns(self.in_sample, self.factor, forward_return_lag)
@@ -108,7 +111,7 @@ class SingleAssetResearch(AlphaResearch):
         benchmark = self.in_sample['close'] / self.in_sample['close'][0]
         fig = cumulative_return_plot(cumulative_returns, benchmark=benchmark, factor_name=self.factor_name)
         fig.show()
-        # percentile entry and exit
+        # --------- percentile entry and exit ---------
         per_factor = percentile_factor(self.factor, self.factor_percentile_entry)
         fig = entry_and_exit_plot(self.in_sample, per_factor)
         fig.show()
@@ -117,9 +120,11 @@ class SingleAssetResearch(AlphaResearch):
         # self.factor是insample的 self.outofsamplefactor是outofsample的
 
         self.out_of_sample_factor = self.alpha_func(self.out_of_sample, **self.alpha_func_paras)
-
+        # test whether the two time have same distribution
         t_stat, pvalue = in_out_sample_factor_t_test(self.out_of_sample_factor,
                                                      self.factor[-len(self.out_of_sample_factor):])
+
+
 
         # print(t_stat, pvalue)
         fig = overlaid_factor_distribution_plot(self.factor, self.out_of_sample_factor)
