@@ -353,11 +353,13 @@ class MultiAssetResearch(AlphaResearch):
                 dcc.Input(
                     id='quantile',
                     type='text',
+                    value=str(self.factor_quantile_list).replace('[', '').replace(']', ''),
                     debounce=True
                 ),
                 dcc.Input(
                     id='bin',
                     type='number',
+                    value=self.factor_bin_num,
                     min='1',
                     debounce=True
                 ),
@@ -390,9 +392,10 @@ class MultiAssetResearch(AlphaResearch):
             html.Div([html.H5(children='Returns Displot', style={'text-align': 'center', 'margin': 'auto'}),
                       dcc.Graph(id='quantile-displot')],
                      style={'width': '100%', 'display': 'inline-block', 'margin-bottom': '50px'}),
-            html.Div([html.H5(children='Cumulative Returns by quantile', style={'text-align': 'center', 'margin': 'auto'}),
-                      dcc.Graph(id='quantile-cumulative')],
-                     style={'width': '100%', 'display': 'inline-block', 'margin-bottom': '50px'}),
+            html.Div(
+                [html.H5(children='Cumulative Returns by quantile', style={'text-align': 'center', 'margin': 'auto'}),
+                 dcc.Graph(id='quantile-cumulative')],
+                style={'width': '100%', 'display': 'inline-block', 'margin-bottom': '50px'}),
 
             #  hidden data
             html.Div(children=json.dumps(list(self.factor.index.names)),
@@ -656,6 +659,11 @@ class MultiAssetResearch(AlphaResearch):
             forward_str = str(fr).replace('[', '').replace(']', '')
             return json.dumps(fr), 'Forward return list: ' + forward_str
 
+        # todo update quantile and bin in the hidden data
+
+
+
+
 
         @app.callback([
             Output('quantile-bar', 'figure'),
@@ -666,10 +674,10 @@ class MultiAssetResearch(AlphaResearch):
             Input('in-out-sample_1', 'value'),
             Input('forward_returns_period_saved_1', 'children'),
             Input('in_sample_factor_1', 'children'),
-            Input('out_sample_factor', 'children'),
+            Input('out_sample_factor_1', 'children'),
             Input('factor_index_name_saved_1', 'children'),
-            Input('quantile', 'value'),
-            Input('bin', 'value'),
+            Input('quantile_list_1', 'children'),
+            Input('bin_1', 'children'),
             Input('alpha-universe_1', 'value')
             ])
         def update_quantile_page(n_clicks,
@@ -694,8 +702,10 @@ class MultiAssetResearch(AlphaResearch):
                 position = self.alpha_position_func(factor)
                 merged_data = pd.DataFrame(index=factor.index)
                 merged_data['factor'] = factor
+                merged_data = merged_data.join(returns)
                 factor_quantile_list = get_valid_quantile(quantile)
                 factor_bin_num = int(bin)
+                # print(factor_bin_num)
                 factor_quantile = quantize_factor(merged_data, factor_quantile_list,
                                                   factor_bin_num)
                 merged_data['factor_quantile'] = factor_quantile
