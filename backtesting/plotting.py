@@ -20,7 +20,7 @@ def net_value_plot(strategy_net_value: pd.Series, benchmark: pd.Series or None =
     return fig
 
 
-def returns_distribution_plot(returns: pd.Series, strategy_name='strategy'):
+def returns_distribution_plot(returns: pd.Series):
     fig = go.Figure()
     fig.add_trace(returns_distribution(returns))
     fig.update_layout(
