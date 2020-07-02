@@ -236,6 +236,9 @@ def generate_strftime_format(index):
 
 
 def get_valid_quantile(quantile_str: str):
+    if quantile_str is None or 'None':
+        return None
+
     ll = list(set([float(q) for q in quantile_str.split(',')]))
     ll.sort()
     if ll[0] > 0:
