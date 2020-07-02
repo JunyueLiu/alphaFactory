@@ -13,13 +13,18 @@ def net_value_plot(strategy_net_value: pd.Series, benchmark: pd.Series or None =
     fig = go.Figure()
     fig.add_trace(net_value_line(strategy_net_value / strategy_net_value[0], name=strategy_name), )
     if benchmark is not None:
-        fig.add_trace(net_value_line(benchmark / benchmark[0], color='#FFCC00', name='benchmark'))
+        # todo benchmark fit with the strategy net value
+        benchmark_copy = benchmark[(benchmark.index >= net_value.index[0]) & (benchmark.index <= net_value.index[-1])]
+        # benchmark_copy = benchmark_copy[benchmark_copy.index <= net_value.index[-1]]
+        fig.add_trace(net_value_line(benchmark_copy / benchmark_copy[0], color='#FFCC00', name='benchmark'))
     return fig
 
 
 def returns_distribution_plot(returns: pd.Series, strategy_name='strategy'):
     fig = go.Figure()
     fig.add_trace(returns_distribution(returns))
+    fig.update_layout(
+        title="Return Distribution",)
     return fig
 
 
@@ -69,14 +74,14 @@ if __name__ == '__main__':
     benchmark = pd.read_csv(r'../HK.999010_2019-06-01 00:00:00_2020-05-30 03:00:00_K_1M_qfq.csv')
     benchmark['time_key'] = pd.to_datetime(benchmark['time_key'])
     benchmark.set_index('time_key', inplace=True)
-    benchmark = benchmark[benchmark.index >= net_value.index[0]]
-    benchmark = benchmark[benchmark.index <= net_value.index[-1]]
-    benchmark = benchmark[-1000:]
+    # benchmark = benchmark[benchmark.index >= net_value.index[0]]
+    # benchmark = benchmark[benchmark.index <= net_value.index[-1]]
+    # benchmark = benchmark[-1000:]
     # returns['time_key'] = pd.to_datetime(returns['time_key'])
     # returns.set_index('time_key', inplace=True)
 
     # fig = returns_distribution_plot(traded_pnl['cash_inflow'])
 
-    # fig = net_value_plot(net_value, benchmark['close'])
-    fig = entry_and_exit_plot(benchmark, traded, 'HK_FUTURE.999010', False, entrust=True)
+    fig = net_value_plot(net_value, benchmark['close'])
+    # fig = entry_and_exit_plot(benchmark, traded, 'HK_FUTURE.999010', False, entrust=True)
     fig.show()

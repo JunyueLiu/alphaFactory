@@ -173,12 +173,16 @@ class BacktestingBase:
         self.backtesting_result['kelly'] = kelly(traded_pnl)
         self.backtesting_result['value_at_risk'] = value_at_risk(returns)
 
-        # monthly analysis
+        # todo daily analysis if the average holding time is less than a day
+
+        # todo monthly analysis
+
+        # todo yearly analysis
 
         # returns.to_csv('sample_returns.csv')
         # qs.reports.html(returns, title=self.strategy.strategy_name, output='report.html')
-
-    def get_dash_report(self):
+    @staticmethod
+    def get_dash_report(self, backtesting_result):
         # from self.backtesting_result data generate report
         pass
 

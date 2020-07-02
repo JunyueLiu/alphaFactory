@@ -48,7 +48,7 @@ def cumulative_return_plot(cumulative_factor_returns, benchmark=None, factor_nam
         fig.add_trace(
             line(cumulative_factor_returns[col], name=factor_name + '_' + col, strftime_format=strftime_format))
     if benchmark is not None:
-
+        # todo filter the benchmark to make benchmark have same start and end
 
 
         fig.add_trace(line(benchmark, name=benchmark_name, color='#008000', strftime_format=strftime_format))
@@ -57,7 +57,7 @@ def cumulative_return_plot(cumulative_factor_returns, benchmark=None, factor_nam
 
 def factor_forward_return_plot(factor: pd.Series, forward_returns: pd.DataFrame):
     fig = go.Figure()
-    # todo
+    # todo bubble? by quantile?
     # fig.add_trace(go.Scatter())
     pass
 
