@@ -5,13 +5,14 @@ import plotly.figure_factory as ff
 import pandas as pd
 import plotly.io as pio
 
-
 pio.renderers.default = "browser"
 
 
-def net_value_plot(strategy_net_value: pd.Series, benchmark: pd.Series or None = None, strategy_name='strategy'):
+def net_value_plot(strategy_net_value: pd.Series,
+                   benchmark: pd.Series or None = None,
+                   strategy_name='strategy', fill=None):
     fig = go.Figure()
-    fig.add_trace(net_value_line(strategy_net_value / strategy_net_value[0], name=strategy_name), )
+    fig.add_trace(net_value_line(strategy_net_value / strategy_net_value[0], name=strategy_name, fill=fill))
     if benchmark is not None:
         # todo benchmark fit with the strategy net value
         benchmark_copy = benchmark[(benchmark.index >= net_value.index[0]) & (benchmark.index <= net_value.index[-1])]
@@ -24,7 +25,7 @@ def returns_distribution_plot(returns: pd.Series):
     fig = go.Figure()
     fig.add_trace(returns_distribution(returns))
     fig.update_layout(
-        title="Return Distribution",)
+        title="Return Distribution", )
     return fig
 
 
@@ -61,6 +62,12 @@ def entry_and_exit_plot(ohlc_df, traded: pd.DataFrame, symbol: str, ohlc_graph=T
         fixedrange=False
     ))
 
+    return fig
+
+
+def maximum_drawdown_plot(drawdown_percent: pd.Series):
+    fig = go.Figure()
+    fig.add_trace(net_value_line(drawdown_percent,color= '#73B839',name='underwater', fill='tozeroy'), )
     return fig
 
 

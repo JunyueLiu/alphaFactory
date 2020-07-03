@@ -24,8 +24,8 @@ def get_backtesting_report_dash_app(backtesting_result: dict):
         html.Br(),
         dcc.Link('Trading history', href='/history'),
         html.Br(),
-        html.Div(id='page-content')
-    ])
+        html.Div(id='page-content'),
+    ], style={'margin': '30px'})
 
     index_page = html.Div([
         # todo 行情profile
