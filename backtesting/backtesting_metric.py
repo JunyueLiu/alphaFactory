@@ -118,6 +118,22 @@ def cagr(net_value, rf=0., compounded=True):
     return res
 
 
+def returns_volatility(returns: pd.Series):
+    return returns.std()
+
+
+def returns_skew(returns: pd.Series):
+    return returns.skew()
+
+
+def returns_kurt(returns: pd.Series):
+    return returns.kurt()
+
+
+def calmar(cagr_ratio, max_dd):
+    return cagr_ratio / abs(max_dd)
+
+
 def group_returns(returns, groupby, compounded):
     """
 
@@ -294,7 +310,6 @@ def value_at_risk(returns, sigma=1, confidence=0.95):
         confidence = confidence / 100
 
     return norm.ppf(1 - confidence, mu, sigma)
-
 
 
 # related to benchmark backtesting metric

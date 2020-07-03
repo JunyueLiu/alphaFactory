@@ -20,13 +20,13 @@ def _infer_strftime_format(data: pd.DatetimeIndex):
         return '%Y/%m/%d'
 
 
-def net_value_line(net_value: pd.Series, color='#00477D', name='net value'):
+def net_value_line(net_value: pd.Series, color='#00477D', name='net value', fill=None):
     strftime_format = _infer_strftime_format(net_value.index)
     timestamp = net_value.index  # type:pd.DatetimeIndex
     timestamp = timestamp.strftime(strftime_format)
     return go.Scatter(x=timestamp, y=net_value.values,
                       mode='lines', line_color=color,
-                      name=name)
+                      name=name, fill=fill)
 
 
 def returns_distribution(returns: pd.DataFrame or pd.Series):
