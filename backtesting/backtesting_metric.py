@@ -12,11 +12,13 @@ pd.set_option('max_rows', 300)
 def first_last_trade_time(traded: pd.DataFrame, time_key='time_key'):
     """
 
+    :param time_key:
     :param traded:
     :return:
     """
-    time_list = traded[time_key].sort_values().values
-    return time_list[0].astype(str), time_list[-1].astype(str)
+    time_list = traded[time_key].sort_values().to_list()
+    return time_list[0].strftime('%Y-%m-%d %H:%M:%S.%f'), \
+           time_list[-1].strftime('%Y-%m-%d %H:%M:%S.%f')
 
 
 def num_trade(traded: pd.DataFrame):
@@ -155,7 +157,7 @@ def aggregate_returns(returns, period=None, compounded=True):
 def drawdown(net_value: pd.Series):
     rolling_max = net_value.rolling(min_periods=1, window=len(net_value), center=False).max()
     drawdown = net_value - rolling_max
-    drawdown_percent = (drawdown / rolling_max)
+    drawdown_percent = (net_value / rolling_max) - 1
     return drawdown, drawdown_percent
 
 
