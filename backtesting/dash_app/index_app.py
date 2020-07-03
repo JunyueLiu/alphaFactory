@@ -45,11 +45,11 @@ def get_backtesting_report_dash_app(backtesting_result: dict):
         if pathname == '/btPerformance':
             return dash_report.get_layout(backtesting_result)
         elif pathname == '/monthlyAnalysis':
-            return monthly_analysis.layout
+            return monthly_analysis.get_layout(backtesting_result)
         elif pathname == '/details':
-            return entry_exit_analysis.layout
+            return entry_exit_analysis.get_layout(backtesting_result)
         elif pathname == 'history':
-            return trading_history.layout
+            return trading_history.get_layout(backtesting_result)
         else:
             return index_page
     return app

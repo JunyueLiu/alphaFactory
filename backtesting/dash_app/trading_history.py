@@ -3,10 +3,11 @@ import dash_html_components as html
 from dash.dependencies import Input, Output, State
 from backtesting.dash_app.app import app
 
-
-layout = html.Div([
-    # todo trading history
-    #
-    # todo 回测类型
-    #
-])
+def get_layout(backtesting_result: dict):
+    layout = html.Div([
+        # todo trading history
+        #
+        # todo 回测类型
+        #
+    ])
+    return layout

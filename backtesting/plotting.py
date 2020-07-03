@@ -68,6 +68,8 @@ def entry_and_exit_plot(ohlc_df, traded: pd.DataFrame, symbol: str, ohlc_graph=T
 def maximum_drawdown_plot(drawdown_percent: pd.Series):
     fig = go.Figure()
     fig.add_trace(net_value_line(drawdown_percent,color= '#73B839',name='underwater', fill='tozeroy'), )
+    fig.update_layout(
+        title="Underwater", )
     return fig
 
 

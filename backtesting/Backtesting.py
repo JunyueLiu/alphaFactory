@@ -28,6 +28,7 @@ class BacktestingBase:
         self.start = start
         self.end = end
         self.initial_capital = initial_capital
+        self.risk_free_rate = 0
         self.backtesting_setting = backtesting_setting
         self.backtesting_result = {}
 
@@ -162,16 +163,28 @@ class BacktestingBase:
             'parameter': self.strategy.strategy_parameters
 
         }
-        self.backtesting_result['risk free rate'] = 0
+        self.backtesting_result['risk free rate'] = self.risk_free_rate
         self.backtesting_result['first_traded'] = first_traded
         self.backtesting_result['last_traded'] = last_traded
         self.backtesting_result['trade_list'] = traded
         self.backtesting_result['num_trade'] = num_trade(traded)
+        self.backtesting_result['time_in_market'] = exposure(returns)
         self.backtesting_result['win_rate'] = win_rate(traded_pnl)
         self.backtesting_result['avg_win'] = avg_win(traded_pnl)
         self.backtesting_result['avg_loss'] = avg_loss(traded_pnl)
         self.backtesting_result['payoff_ratio'] = payoff_ratio(traded_pnl)
+        self.backtesting_result['cagr'] = cagr(net_value / self.initial_capital)
+        self.backtesting_result['cumulative_return'] = (net_value[-1] - net_value[0]) / net_value[0]
+        self.backtesting_result['sharpe'] = sharpe_ratio(returns,
+                                                         self.risk_free_rate)
+        self.backtesting_result['sortino'] = sortino(returns)
+        self.backtesting_result['volatility'] = returns_volatility(returns)
+        self.backtesting_result['skew'] = returns_skew(returns)
+        self.backtesting_result['Kurtosis'] = returns_kurt(returns)
 
+
+
+        # data here is pandas Series, save for future use
         self.backtesting_result['net_value'] = net_value
         self.backtesting_result['rate of return'] = returns
         self.backtesting_result['drawdown_value'] = drawdown_metric
@@ -188,7 +201,7 @@ class BacktestingBase:
         # todo yearly analysis
 
         # returns.to_csv('sample_returns.csv')
-        qs.reports.html(returns, title=self.strategy.strategy_name, output='report.html')
+        # qs.reports.html(returns, title=self.strategy.strategy_name, output='report.html')
 
     @staticmethod
     def get_dash_report(self, backtesting_result):
