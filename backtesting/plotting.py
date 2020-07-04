@@ -67,9 +67,44 @@ def entry_and_exit_plot(ohlc_df, traded: pd.DataFrame, symbol: str, ohlc_graph=T
 
 def maximum_drawdown_plot(drawdown_percent: pd.Series):
     fig = go.Figure()
-    fig.add_trace(net_value_line(drawdown_percent,color= '#73B839',name='underwater', fill='tozeroy'), )
+    fig.add_trace(net_value_line(drawdown_percent, color='#73B839', name='underwater', fill='tozeroy'), )
     fig.update_layout(
         title="Underwater", )
+    return fig
+
+
+def aggregate_returns_heatmap(agg_ret: pd.Series, period):
+    row_level = ''
+    if period == 'day':
+        row_level = 'SM'
+    elif period == 'week':
+        row_level = 'BQ'
+    elif period == 'month':
+        row_level = 'BM'
+    elif period == 'quarter':
+        row_level = 'BQ'
+    elif period == 'year':
+        row_level = ''
+
+    z = []
+    x = []
+    y = []
+    for g in agg_ret.groupby(pd.Grouper(freq=row_level)):
+        if row_level == 'SM':
+            y.append(str(g[0].year) + ' ' + str(g[0].weekofyear))
+
+
+            for index, row in g[1].iterrows():
+                if index.weekday == 0:
+                    # todo
+                    pass
+
+
+    fig = go.Figure(data=go.Heatmap(
+        z=z,
+        x=x,
+        y=y,
+        hoverongaps=False))
     return fig
 
 
