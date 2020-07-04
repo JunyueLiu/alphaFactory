@@ -4,6 +4,7 @@ import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output
 
+from backtesting.backtesting_metric import aggregate_returns
 from backtesting.dash_app import entry_exit_analysis
 from backtesting.dash_app import monthly_analysis
 from backtesting.dash_app import trading_history
@@ -17,6 +18,7 @@ def get_backtesting_report_dash_app(backtesting_result: dict):
         html.H2('Backtesting Result'),
         dcc.Location(id='url', refresh=False),
         dcc.Link('General Performance', href='/btPerformance'),
+        # dcc.Tab(),
         html.Br(),
         dcc.Link('Monthly Analysis', href='/monthlyAnalysis'),
         html.Br(),
@@ -24,6 +26,14 @@ def get_backtesting_report_dash_app(backtesting_result: dict):
         html.Br(),
         dcc.Link('Trading history', href='/history'),
         html.Br(),
+        # dcc.Tabs(id='tabs', value='tab', children=[
+        #     dcc.Tab(label='General Performance', value='tab-1'),
+        #     dcc.Tab(label='Monthly Analysis', value='tab-2'),
+        #     dcc.Tab(label='Entry and exit Detail', value='tab-3'),
+        #     dcc.Tab(label='Trading history', value='tab-4'),
+        #     # dcc.Tab(label='Tab two', value='tab-2'),
+        # ]),
+
         html.Div(id='page-content'),
     ], style={'margin': '30px'})
 
@@ -52,6 +62,22 @@ def get_backtesting_report_dash_app(backtesting_result: dict):
             return trading_history.get_layout(backtesting_result)
         else:
             return index_page
+
+    @app.callback(Output('title', 'children'), [Input('dropdown', 'value')])
+    def change_selection(value):
+        if value == 'D':
+            agg_ret = aggregate_returns(backtesting_result['rate of return'], 'day')
+
+            return 'Daily Analysis'
+        elif value == 'W':
+            aggregate_returns(backtesting_result['rate of return'], 'week')
+            return 'Weekly Analysis'
+        elif value == 'M':
+            aggregate_returns(backtesting_result['rate of return'], 'month')
+            return 'Monthly Analysis'
+        elif value == 'Q':
+            aggregate_returns(backtesting_result['rate of return'], 'quarter')
+            return 'Monthly Analysis'
     return app
 
 

@@ -4,6 +4,7 @@ from dash.dependencies import Input, Output, State
 from backtesting.dash_app.app import app
 
 def get_layout(backtesting_result: dict):
+    # todo https://dash.plotly.com/interactive-graphing
 
     layout = html.Div([
         # todo 进出场图配合一下hover什么的
