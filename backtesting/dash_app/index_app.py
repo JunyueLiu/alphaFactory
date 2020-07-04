@@ -11,6 +11,7 @@ from backtesting.dash_app import trading_history
 from backtesting.dash_app import dash_report
 
 from backtesting.dash_app.app import app
+from backtesting.plotting import aggregate_returns_heatmap, returns_distribution_plot
 
 
 def get_backtesting_report_dash_app(backtesting_result: dict):
@@ -63,21 +64,32 @@ def get_backtesting_report_dash_app(backtesting_result: dict):
         else:
             return index_page
 
-    @app.callback(Output('title', 'children'), [Input('dropdown', 'value')])
+    @app.callback([Output('title', 'children'),
+                   Output('return-heatmap', 'figure'),
+                   Output('returns-distribution', 'figure')
+                   ], [Input('dropdown', 'value')])
     def change_selection(value):
         if value == 'D':
             agg_ret = aggregate_returns(backtesting_result['rate of return'], 'day')
-
-            return 'Daily Analysis'
+            heatmap = aggregate_returns_heatmap(agg_ret, 'day')
+            displot = returns_distribution_plot(agg_ret)
+            return 'Daily Analysis', heatmap, displot
         elif value == 'W':
-            aggregate_returns(backtesting_result['rate of return'], 'week')
-            return 'Weekly Analysis'
+            agg_ret = aggregate_returns(backtesting_result['rate of return'], 'week')
+            heatmap = aggregate_returns_heatmap(agg_ret, 'week')
+            displot = returns_distribution_plot(agg_ret)
+            return 'Weekly Analysis', heatmap, displot
         elif value == 'M':
-            aggregate_returns(backtesting_result['rate of return'], 'month')
-            return 'Monthly Analysis'
+            agg_ret = aggregate_returns(backtesting_result['rate of return'], 'month')
+            heatmap = aggregate_returns_heatmap(agg_ret, 'month')
+            displot = returns_distribution_plot(agg_ret)
+            return 'Monthly Analysis', heatmap, displot
         elif value == 'Q':
-            aggregate_returns(backtesting_result['rate of return'], 'quarter')
-            return 'Monthly Analysis'
+            agg_ret = aggregate_returns(backtesting_result['rate of return'], 'quarter')
+            heatmap = aggregate_returns_heatmap(agg_ret, 'quarter')
+            displot = returns_distribution_plot(agg_ret)
+            return 'Quarter Analysis', heatmap, displot
+
     return app
 
 
