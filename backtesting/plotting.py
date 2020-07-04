@@ -2,8 +2,15 @@ from graph.backtesting_component import net_value_line, returns_distribution, en
 from plotly import graph_objects as go
 from graph.bar_component import ohlc, candlestick
 import plotly.figure_factory as ff
+import plotly.express as px
+import numpy as np
+
+import calendar
+
+calendar.setfirstweekday(calendar.SUNDAY)
 import pandas as pd
 import plotly.io as pio
+from plotly.subplots import make_subplots
 
 pio.renderers.default = "browser"
 
@@ -73,39 +80,149 @@ def maximum_drawdown_plot(drawdown_percent: pd.Series):
     return fig
 
 
+def daily_heatmap(agg_ret: pd.Series) -> go.Figure:
+    num_of_months = len(agg_ret.index.to_period('M').unique())
+    num_of_rows = (num_of_months // 3) + 1 if num_of_months % 3 != 0 else (num_of_months // 3)
+    fig = make_subplots(rows=num_of_rows, cols=3,
+                        # shared_xaxes=True,
+                        subplot_titles=agg_ret.index.to_period('M').unique().to_native_types(),
+                        vertical_spacing=0.1,
+                        horizontal_spacing=0.01
+                        )
+    row = 1
+    col = 1
+    agg_ret_ = agg_ret.copy().replace(0, np.NAN)
+    agg_ret_ = (agg_ret_ - agg_ret_.min()) / (agg_ret_.max() - agg_ret_.min())
+
+    for g in agg_ret_.groupby(pd.Grouper(freq='M')):
+        x = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+        cal = calendar.monthcalendar(g[0].year, g[0].month)
+        y = ['Week ' + str(i) for i in range(1, len(cal) + 1)]
+        # data g[1]
+        z = []
+        z_text = []
+        i = 0
+        for week in cal:
+            wl = []
+            wl_text = []
+            for wd in week:
+                if wd == 0:
+                    wl.append(np.NAN)
+                    wl_text.append('')
+                elif g[1].index[i].day == wd:
+                    wl.append(g[1][i])
+                    wl_text.append('{:.3f} %'.format(100 * agg_ret[i]))
+                    i += 1
+                else:
+                    wl.append(np.NAN)
+                    wl_text.append('')
+
+            z.append(wl)
+            z_text.append(wl_text)
+        colorscale = [[0, 'red'], [0.5, 'yellow'], [1, 'green']]
+        # todo Annotations
+        fig1 = go.Heatmap(z=z, x=x, y=y,
+                          colorscale=colorscale,
+                          # xgap=3,  # this
+                          # ygap=3,  # and this is used to make the grid-like apperance
+                          # text=z_text,
+                          hovertext=z_text,
+                          showscale=False,
+                          )
+
+        fig.add_trace(fig1, row=row, col=col)
+        # print(row, col)
+        if col == 3:
+            row += 1
+            col = 0
+        col = (col + 1) % 4
+
+    layout = dict(plot_bgcolor=('#fff'))
+    for i in range(1, num_of_months + 1):
+        if i % 3 == 1:
+            layout['yaxis' + str(i)] = dict(
+                showline=False, showgrid=False, zeroline=False, autorange="reversed"
+            )
+        else:
+            layout['yaxis' + str(i)] = dict(
+                showline=False, showgrid=False, zeroline=False, visible=False, autorange="reversed"
+            )
+        if i >= num_of_months - 2:
+            layout['xaxis' + str(i)] = dict(showline=False, showgrid=False, zeroline=False)
+        else:
+            layout['xaxis' + str(i)] = dict(showline=False, showgrid=False, zeroline=False, visible=False)
+
+    fig.update_layout(
+        layout
+    )
+
+    return fig
+
+
+def weekly_heatmap(agg_ret: pd.Series) -> go.Figure:
+    fig = go.Figure()
+    # num_of_months = len(agg_ret.index.to_period('M').unique())
+
+
+    agg_ret_ = agg_ret.copy().replace(0, np.NAN)
+    agg_ret_ = (agg_ret_ - agg_ret_.min()) / (agg_ret_.max() - agg_ret_.min())
+    y = agg_ret_.index.to_period('M').unique().strftime('%Y-%m')
+
+    # for
+    # cal = calendar.monthcalendar(g[0].year, g[0].month)
+    x = ['Week ' + str(i) for i in range(1, 6)]
+    z = []
+    i = 0
+    for month in y:
+        z1 = []
+        for w in x:
+            if i < len(agg_ret_) and agg_ret.index[i].strftime('%Y-%m') == month:
+                z1.append(agg_ret[i])
+                i += 1
+            else:
+                z1.append(None)
+        z.append(z1)
+    colorscale = [[0, 'red'], [0.5, 'yellow'], [1, 'green']]
+    # todo Annotations
+    heatmap = go.Heatmap(z=z, x=x, y=y,
+                      colorscale=colorscale,
+                      # xgap=3,  # this
+                      # ygap=3,  # and this is used to make the grid-like apperance
+                      # text=z_text,
+                      # hovertext=z_text,
+                      showscale=False,
+                      )
+    layout = dict(plot_bgcolor=('#fff'))
+    layout['yaxis'] = dict(
+        showline=False, showgrid=False, zeroline=False, autorange="reversed"
+    )
+    layout['xaxis'] = dict(
+        showline=False, showgrid=False, zeroline=False)
+    fig.add_trace(heatmap)
+    fig.update_layout(layout)
+    return fig
+
+
+def monthly_heatmap(agg_ret: pd.Series) -> go.Figure:
+    pass
+
+
+def quarter_heatmap(agg_ret: pd.Series) -> go.Figure:
+    pass
+
+
+
 def aggregate_returns_heatmap(agg_ret: pd.Series, period):
-    row_level = ''
     if period == 'day':
-        row_level = 'SM'
+        return daily_heatmap(agg_ret)
     elif period == 'week':
-        row_level = 'BQ'
+        return weekly_heatmap(agg_ret)
     elif period == 'month':
         row_level = 'BM'
     elif period == 'quarter':
         row_level = 'BQ'
     elif period == 'year':
         row_level = ''
-
-    z = []
-    x = []
-    y = []
-    for g in agg_ret.groupby(pd.Grouper(freq=row_level)):
-        if row_level == 'SM':
-            y.append(str(g[0].year) + ' ' + str(g[0].weekofyear))
-
-
-            for index, row in g[1].iterrows():
-                if index.weekday == 0:
-                    # todo
-                    pass
-
-
-    fig = go.Figure(data=go.Heatmap(
-        z=z,
-        x=x,
-        y=y,
-        hoverongaps=False))
-    return fig
 
 
 if __name__ == '__main__':
