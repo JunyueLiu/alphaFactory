@@ -14,7 +14,7 @@ def get_layout(backtesting_result: dict):
                 {'label': 'Week', 'value': 'W'},
                 {'label': 'Month', 'value': 'M'},
                 {'label': 'Quarter', 'value': 'Q'},
-                {'label': 'Month', 'value': 'Y'},
+                {'label': 'Year', 'value': 'Y'},
             ],
             value='D',
             clearable=False,
@@ -36,6 +36,7 @@ def get_layout(backtesting_result: dict):
                  }),
         # dcc.Graph('')
         html.Div(id='right', children=[
+            dcc.Markdown(id='key_period')
             # number of trade?
             # best month
             # worst

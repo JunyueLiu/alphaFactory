@@ -14,6 +14,8 @@ from backtesting.dash_app.app import app
 from backtesting.plotting import aggregate_returns_heatmap, returns_distribution_plot
 
 backtesting_result = None
+
+
 def get_backtesting_report_dash_app(backtesting_result: dict):
     app.layout = html.Div([
         html.H2('Backtesting Result'),
@@ -66,14 +68,25 @@ def get_backtesting_report_dash_app(backtesting_result: dict):
 
     @app.callback([Output('title', 'children'),
                    Output('return-heatmap', 'figure'),
-                   Output('returns-distribution', 'figure')
+                   Output('returns-distribution', 'figure'),
+                   Output('key_period', 'children')
                    ], [Input('dropdown', 'value')])
     def change_selection(value):
         if value == 'D':
-            agg_ret = aggregate_returns(backtesting_result['rate of return'], 'day')
+            agg_ret = aggregate_returns(backtesting_result['rate of return'], 'day')  # type: pd.Series
             heatmap = aggregate_returns_heatmap(agg_ret, 'day')
             displot = returns_distribution_plot(agg_ret)
-            return 'Daily Analysis', heatmap, displot
+
+            period_performance = {
+                'Best Day': agg_ret.index[agg_ret.argmax()].date(),
+                'Best Day Return': agg_ret.max(),
+                'Worst Day': agg_ret.index[agg_ret.argmin()].date(),
+                'Worst Day Return': agg_ret.min(),
+
+            }
+
+            return 'Daily Analysis', heatmap, displot, pd.Series(period_performance,
+                                                                 name='Daily Key Performance').to_markdown()
         elif value == 'W':
             agg_ret = aggregate_returns(backtesting_result['rate of return'], 'week')
             heatmap = aggregate_returns_heatmap(agg_ret, 'week')
@@ -85,23 +98,26 @@ def get_backtesting_report_dash_app(backtesting_result: dict):
             displot = returns_distribution_plot(agg_ret)
             return 'Monthly Analysis', heatmap, displot
         elif value == 'Q':
-
             agg_ret = aggregate_returns(backtesting_result['rate of return'], 'quarter')
             heatmap = aggregate_returns_heatmap(agg_ret, 'quarter')
             displot = returns_distribution_plot(agg_ret)
             return 'Quarter Analysis', heatmap, displot
+        elif value == 'Y':
+            agg_ret = aggregate_returns(backtesting_result['rate of return'], 'year')
+            heatmap = aggregate_returns_heatmap(agg_ret, 'year')
+            displot = returns_distribution_plot(agg_ret)
+            return 'Year Analysis', heatmap, displot
 
     @app.callback(
         Output('table', 'data'),
-        [Input('date-picker-from', 'date'),Input('date-picker-to', 'date')])
+        [Input('date-picker-from', 'date'), Input('date-picker-to', 'date')])
     def update_output(date_from, date_to):
         if date_from > date_to:
             raise Exception('Invalid Time Period')
         df = backtesting_result['trade_list']
-        df_ = df[(df['order_time']>=pd.to_datetime(date_from)) & (df['order_time']<=pd.to_datetime(date_to))]
+        df_ = df[(df['order_time'] >= pd.to_datetime(date_from)) & (df['order_time'] <= pd.to_datetime(date_to))]
         return df_.to_dict('records')
 
-      
     return app
 
 

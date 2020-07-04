@@ -137,7 +137,7 @@ def daily_heatmap(agg_ret: pd.Series) -> go.Figure:
             col = 0
         col = (col + 1) % 4
 
-    layout = dict(plot_bgcolor=('#fff'))
+    layout = dict(plot_bgcolor='#fff', width=700, height=700,)
     for i in range(1, num_of_months + 1):
         if i % 3 == 1:
             layout['yaxis' + str(i)] = dict(
@@ -163,7 +163,6 @@ def weekly_heatmap(agg_ret: pd.Series) -> go.Figure:
     fig = go.Figure()
     # num_of_months = len(agg_ret.index.to_period('M').unique())
 
-
     agg_ret_ = agg_ret.copy().replace(0, np.NAN)
     agg_ret_ = (agg_ret_ - agg_ret_.min()) / (agg_ret_.max() - agg_ret_.min())
     y = agg_ret_.index.to_period('M').unique().strftime('%Y-%m')
@@ -176,8 +175,8 @@ def weekly_heatmap(agg_ret: pd.Series) -> go.Figure:
     for month in y:
         z1 = []
         for w in x:
-            if i < len(agg_ret_) and agg_ret.index[i].strftime('%Y-%m') == month:
-                z1.append(agg_ret[i])
+            if i < len(agg_ret_) and agg_ret_.index[i].strftime('%Y-%m') == month:
+                z1.append(agg_ret_[i])
                 i += 1
             else:
                 z1.append(None)
@@ -185,14 +184,14 @@ def weekly_heatmap(agg_ret: pd.Series) -> go.Figure:
     colorscale = [[0, 'red'], [0.5, 'yellow'], [1, 'green']]
     # todo Annotations
     heatmap = go.Heatmap(z=z, x=x, y=y,
-                      colorscale=colorscale,
-                      # xgap=3,  # this
-                      # ygap=3,  # and this is used to make the grid-like apperance
-                      # text=z_text,
-                      # hovertext=z_text,
-                      showscale=False,
-                      )
-    layout = dict(plot_bgcolor=('#fff'))
+                         colorscale=colorscale,
+                         # xgap=3,  # this
+                         # ygap=3,  # and this is used to make the grid-like apperance
+                         # text=z_text,
+                         # hovertext=z_text,
+                         showscale=False,
+                         )
+    layout = dict(plot_bgcolor='#fff', width=700, height=700,)
     layout['yaxis'] = dict(
         showline=False, showgrid=False, zeroline=False, autorange="reversed"
     )
@@ -204,12 +203,129 @@ def weekly_heatmap(agg_ret: pd.Series) -> go.Figure:
 
 
 def monthly_heatmap(agg_ret: pd.Series) -> go.Figure:
-    pass
+    fig = go.Figure()
+
+    agg_ret_ = agg_ret.copy().replace(0, np.NAN)
+    agg_ret_ = (agg_ret_ - agg_ret_.min()) / (agg_ret_.max() - agg_ret_.min())
+    y = agg_ret_.index.to_period('Y').unique().strftime('%Y').to_list()
+
+    # for
+    # cal = calendar.monthcalendar(g[0].year, g[0].month)
+    x = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    z = []
+    i = 0
+    for y_ in y:
+        z1 = []
+        for w in x:
+            if i < len(agg_ret_) and agg_ret_.index[i].month - 1 == len(z1):
+                z1.append(agg_ret_[i])
+                i += 1
+            else:
+                z1.append(None)
+        z.append(z1)
+    colorscale = [[0, 'red'], [0.5, 'yellow'], [1, 'green']]
+    # todo Annotations
+    heatmap = go.Heatmap(z=z, x=x, y=y,
+                         colorscale=colorscale,
+                         # xgap=3,  # this
+                         # ygap=3,  # and this is used to make the grid-like apperance
+                         # text=z_text,
+                         # hovertext=z_text,
+                         showscale=False,
+                         )
+    layout = dict(plot_bgcolor='#fff', width=700, height=700,)
+    layout['yaxis'] = dict(
+        showline=False, showgrid=False, zeroline=False, autorange="reversed", type='category'
+    )
+    layout['xaxis'] = dict(
+        showline=False, showgrid=False, zeroline=False)
+    fig.add_trace(heatmap)
+    fig.update_layout(layout)
+    return fig
 
 
 def quarter_heatmap(agg_ret: pd.Series) -> go.Figure:
-    pass
+    fig = go.Figure()
 
+    agg_ret_ = agg_ret.copy().replace(0, np.NAN)
+    agg_ret_ = (agg_ret_ - agg_ret_.min()) / (agg_ret_.max() - agg_ret_.min())
+    y = agg_ret_.index.to_period('Y').unique().strftime('%Y').to_list()
+
+    x = ['Q1', 'Q2', 'Q3', 'Q4']
+    z = []
+    i = 0
+    for y_ in y:
+        z1 = []
+        for w in x:
+            if i < len(agg_ret_) and agg_ret_.index[i].quarter - 1 == len(z1):
+                z1.append(agg_ret_[i])
+                i += 1
+            else:
+                z1.append(None)
+        z.append(z1)
+    colorscale = [[0, 'red'], [0.5, 'yellow'], [1, 'green']]
+    # todo Annotations
+    heatmap = go.Heatmap(z=z, x=x, y=y,
+                         colorscale=colorscale,
+                         # xgap=3,  # this
+                         # ygap=3,  # and this is used to make the grid-like apperance
+                         # text=z_text,
+                         # hovertext=z_text,
+                         showscale=False,
+                         )
+    layout = dict(plot_bgcolor=('#fff'))
+    layout['yaxis'] = dict(
+        showline=False, showgrid=False, zeroline=False, autorange="reversed", type='category'
+    )
+    layout['xaxis'] = dict(
+        showline=False, showgrid=False, zeroline=False)
+    fig.add_trace(heatmap)
+    fig.update_layout(layout)
+    return fig
+
+
+def year_heatmap(agg_ret: pd.Series) -> go.Figure:
+    """
+
+    :param agg_ret:
+    :return:
+    """
+    # todo have bug
+    fig = go.Figure()
+    agg_ret_ = agg_ret.copy().replace(0, np.NAN)
+    agg_ret_ = (agg_ret_ - agg_ret_.min()) / (agg_ret_.max() - agg_ret_.min())
+    print(agg_ret)
+    y = agg_ret_.index.to_period('Y').unique().strftime('%Y').to_list()
+
+    z = []
+    x = [0]
+    i = 0
+    for y_ in y:
+        if i < len(agg_ret_) and agg_ret_.index[i].year == int(y_):
+            z.append(agg_ret_[i])
+            i += 1
+        else:
+            z.append(None)
+    colorscale = [[0, 'red'], [0.5, 'yellow'], [1, 'green']]
+    # todo Annotations
+    print(z)
+    heatmap = go.Heatmap(z=[z], y=y, x=x,
+                         colorscale=colorscale,
+                         # xgap=3,  # this
+                         # ygap=3,  # and this is used to make the grid-like apperance
+                         # text=z_text,
+                         # hovertext=z_text,
+                         showscale=False,
+                         )
+    layout = dict(plot_bgcolor='#fff')
+    layout['yaxis'] = dict(
+        showline=False, showgrid=False, zeroline=False, autorange="reversed", type='category'
+    )
+    layout['xaxis'] = dict(
+        showline=False, showgrid=False, zeroline=False)
+    fig.add_trace(heatmap)
+    fig.update_layout(layout)
+    return fig
 
 
 def aggregate_returns_heatmap(agg_ret: pd.Series, period):
@@ -218,11 +334,11 @@ def aggregate_returns_heatmap(agg_ret: pd.Series, period):
     elif period == 'week':
         return weekly_heatmap(agg_ret)
     elif period == 'month':
-        row_level = 'BM'
+        return monthly_heatmap(agg_ret)
     elif period == 'quarter':
-        row_level = 'BQ'
+        return quarter_heatmap(agg_ret)
     elif period == 'year':
-        row_level = ''
+        return year_heatmap(agg_ret)
 
 
 if __name__ == '__main__':
