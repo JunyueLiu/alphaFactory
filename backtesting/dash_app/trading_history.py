@@ -15,19 +15,12 @@ def get_layout(backtesting_result: dict):
     layout = html.Div([
         ### history
         html.H1("History"),
-        dcc.DatePickerSingle(
-            id='date-picker-from',
+        dcc.DatePickerRange(
+            id='date-picker-range',
             min_date_allowed=start,
             max_date_allowed=end,
             initial_visible_month=start,
-            date=str(start)
-        ),
-        dcc.DatePickerSingle(
-            id='date-picker-to',
-            min_date_allowed=start,
-            max_date_allowed=end,
-            initial_visible_month=start,
-            date=str(start)
+            end_date=end.date()
         ),
         dash_table.DataTable(
             id='table',

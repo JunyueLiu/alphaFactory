@@ -93,10 +93,10 @@ def get_backtesting_report_dash_app(backtesting_result: dict):
 
     @app.callback(
         Output('table', 'data'),
-        [Input('date-picker-from', 'date'),Input('date-picker-to', 'date')])
+        [Input('date-picker-range', 'start_date'),Input('date-picker-range', 'end_date')])
     def update_output(date_from, date_to):
-        if date_from > date_to:
-            raise Exception('Invalid Time Period')
+        if date_to is None or date_from is None:
+            return
         df = backtesting_result['trade_list']
         df_ = df[(df['order_time']>=pd.to_datetime(date_from)) & (df['order_time']<=pd.to_datetime(date_to))]
         return df_.to_dict('records')
@@ -110,4 +110,4 @@ if __name__ == '__main__':
     with open(r'../backtesting_result_sample.pickle', 'rb') as f:
         backtesting_result = pickle.load(f)
     _app = get_backtesting_report_dash_app(backtesting_result)
-    _app.run_server(host='127.0.0.1', debug=True)
+    _app.run_server(host='127.0.0.1', debug=True,port=8005)
