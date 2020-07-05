@@ -157,6 +157,7 @@ class SingleAssetResearch(AlphaResearch):
                     style={'font-weight': 'normal', 'text-align': 'center', 'display': 'block',
                            'fontFamily': 'helvetica neue', 'margin': '100px auto'}),
 
+
             html.Div([
                 # change forward returns
                 html.Div([
@@ -191,18 +192,17 @@ class SingleAssetResearch(AlphaResearch):
             # todo 拯救一下我的表格布局吧，冇眼睇
 
             # summary table
-            html.Div([html.H5(children='Factor Summary Table', style={'width': '49%'}),
-                      html.Table(id='summary-table', style={'width': '49%', 'display': 'inline-block'}), ]),
+            html.Div([ html.H5(children='Factor Summary Table',style={'text-align':'center','margin-bottom':'20px'}),
+                      html.Table(id='summary-table', style={'width:': '40%', 'float': 'left','font-size':'20px'})],style={'margin-left': '100px','display': 'inline-block'}),
 
             # ic_table
-            html.Div([html.H5(children='Factor IC Table', style={'width': '49%'}),
-                      html.Table(id='ic-table',
-                                 style={'width': '49%', 'display': 'inline-block'}),
-                      ]),
+            html.Div([html.H5(children='Factor IC Table',style={'display':'block','text-align':'center','margin-bottom':'20px'}),
+                      html.Table(id='ic-table',style={'width:': '40%','font-size':'20px'}),
+                      ],style={'margin-left': '300px','display':'inline-block'}),
 
             # beta table
-            html.Div([html.H5(children='Factor Beta')
-                         , html.Table(id='beta-table', style={'width': '100%', 'display': 'inline-block'})]),
+            html.Div([html.H5(children='Factor Beta',style={'text-align':'center','margin-bottom':'20px'})
+                         , html.Table(id='beta-table', style={'width': '100%','font-size':'20px'})],style={'display':'block','margin':'20px auto 60px'}),
 
             html.Div([html.H5(children='Factor Distribution', style={'text-align': 'center', 'margin': 'auto'}),
                       dcc.Graph(id='distribution')],
@@ -381,7 +381,7 @@ class DemoSingleAssetFactor(SingleAssetResearch):
 
 
 if __name__ == '__main__':
-    data_path = r'HK.999010_2019-06-01 00:00:00_2020-05-30 03:00:00_K_1M_qfq.csv'
+    data_path = r'../data.csv'
 
     df = pd.read_csv(data_path)
     df['time_key'] = pd.to_datetime(df['time_key'])
