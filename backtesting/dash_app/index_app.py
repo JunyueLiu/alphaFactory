@@ -1,5 +1,6 @@
+import json
 import pickle
-import dash
+import dash_table
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output
@@ -11,9 +12,11 @@ from backtesting.dash_app import trading_history
 from backtesting.dash_app import dash_report
 
 from backtesting.dash_app.app import app
-from backtesting.plotting import aggregate_returns_heatmap, returns_distribution_plot
+from backtesting.plotting import aggregate_returns_heatmap, returns_distribution_plot, entry_and_exit_plot
 
 backtesting_result = None
+
+
 def get_backtesting_report_dash_app(backtesting_result: dict):
     app.layout = html.Div([
         html.H2('Backtesting Result'),
@@ -66,30 +69,136 @@ def get_backtesting_report_dash_app(backtesting_result: dict):
 
     @app.callback([Output('title', 'children'),
                    Output('return-heatmap', 'figure'),
-                   Output('returns-distribution', 'figure')
+                   Output('returns-distribution', 'figure'),
+                   Output('key_period', 'children')
                    ], [Input('dropdown', 'value')])
     def change_selection(value):
         if value == 'D':
-            agg_ret = aggregate_returns(backtesting_result['rate of return'], 'day')
+            agg_ret = aggregate_returns(backtesting_result['rate of return'], 'day')  # type: pd.Series
+            # todo trade statistics
+            # trade_group = backtesting_result['trade_list'].groupby('order_time')
+
             heatmap = aggregate_returns_heatmap(agg_ret, 'day')
             displot = returns_distribution_plot(agg_ret)
-            return 'Daily Analysis', heatmap, displot
+            consec_win = agg_ret.groupby((agg_ret > 0).cumsum())
+            consec_loss = agg_ret.groupby((agg_ret < 0).cumsum())
+            period_performance = {
+                'Best Day': agg_ret.index[agg_ret.argmax()].date(),
+                'Best Day Return': "{:.2f} %".format(100 * agg_ret.max()),
+                'Worst Day': agg_ret.index[agg_ret.argmin()].date(),
+                'Worst Day Return': "{:.2f} %".format(100 * agg_ret.min()),
+                'Days of Consecutive Win': consec_win.cumcount().max(),
+                'Days of Consecutive Losses': consec_loss.cumcount().max(),
+                'Avg Daily Return %': "{:.2f} %".format(100 * agg_ret.mean()),
+                'Daily Return Vol %': "{:.2f} %".format(100 * agg_ret.std()),
+                'Daily Return Skew': "{:.2f} ".format(agg_ret.skew()),
+                'Daily Return Kurt': "{:.2f} ".format(agg_ret.kurt()),
+            }
+
+            return 'Daily Analysis', heatmap, displot, pd.Series(period_performance,
+                                                                 name='Daily Key Performance').to_markdown()
         elif value == 'W':
             agg_ret = aggregate_returns(backtesting_result['rate of return'], 'week')
             heatmap = aggregate_returns_heatmap(agg_ret, 'week')
             displot = returns_distribution_plot(agg_ret)
-            return 'Weekly Analysis', heatmap, displot
+            consec_win = agg_ret.groupby((agg_ret > 0).cumsum())
+            consec_loss = agg_ret.groupby((agg_ret < 0).cumsum())
+            period_performance = {
+                'Best Week': agg_ret.index[agg_ret.argmax()].date(),
+                'Best Week Return': "{:.2f} %".format(100 * agg_ret.max()),
+                'Worst Week': agg_ret.index[agg_ret.argmin()].date(),
+                'Worst Week Return': "{:.2f} %".format(100 * agg_ret.min()),
+                'Weeks of Consecutive Win': consec_win.cumcount().max(),
+                'Weeks of Consecutive Losses': consec_loss.cumcount().max(),
+                'Avg Weekly Return %': "{:.2f} %".format(100 * agg_ret.mean()),
+                'Weekly Return Vol %': "{:.2f} %".format(100 * agg_ret.std()),
+                'Weekly Return Skew': "{:.2f} ".format(agg_ret.skew()),
+                'Weekly Return Kurt': "{:.2f} ".format(agg_ret.kurt()),
+
+            }
+
+            return 'Weekly Analysis', heatmap, displot, pd.Series(period_performance,
+                                                                  name='Week Key Performance').to_markdown()
         elif value == 'M':
             agg_ret = aggregate_returns(backtesting_result['rate of return'], 'month')
             heatmap = aggregate_returns_heatmap(agg_ret, 'month')
             displot = returns_distribution_plot(agg_ret)
-            return 'Monthly Analysis', heatmap, displot
-        elif value == 'Q':
+            consec_win = agg_ret.groupby((agg_ret > 0).cumsum())
+            consec_loss = agg_ret.groupby((agg_ret < 0).cumsum())
+            period_performance = {
+                'Best Month': agg_ret.index[agg_ret.argmax()].date(),
+                'Best Month Return': "{:.2f} %".format(100 * agg_ret.max()),
+                'Worst Month': agg_ret.index[agg_ret.argmin()].date(),
+                'Worst Month Return': "{:.2f} %".format(100 * agg_ret.min()),
+                'Months of Consecutive Win': consec_win.cumcount().max(),
+                'Months of Consecutive Losses': consec_loss.cumcount().max(),
+                'Avg Monthly Return %': "{:.2f} %".format(100 * agg_ret.mean()),
+                'Monthly Return Vol %': "{:.2f} %".format(100 * agg_ret.std()),
+                'Monthly Return Skew': "{:.2f} ".format(agg_ret.skew()),
+                'Monthly Return Kurt': "{:.2f} ".format(agg_ret.kurt()),
 
+            }
+
+            return 'Monthly Analysis', heatmap, displot, pd.Series(period_performance,
+                                                                   name='Monthly Key Performance').to_markdown()
+        elif value == 'Q':
             agg_ret = aggregate_returns(backtesting_result['rate of return'], 'quarter')
             heatmap = aggregate_returns_heatmap(agg_ret, 'quarter')
             displot = returns_distribution_plot(agg_ret)
             return 'Quarter Analysis', heatmap, displot
+        elif value == 'Y':
+            agg_ret = aggregate_returns(backtesting_result['rate of return'], 'year')
+            heatmap = aggregate_returns_heatmap(agg_ret, 'year')
+            displot = returns_distribution_plot(agg_ret)
+            return 'Year Analysis', heatmap, displot
+
+    @app.callback(Output('timeframe', 'options'),
+                  [Input('asset-selection', 'value')])
+    def change_display(value):
+        return [{'label': i, 'value': i} for i in backtesting_result['data'][value].keys()]
+
+    @app.callback(
+        [Output('entry-exit', 'figure'),
+         Output('trade_table', 'data'),
+         Output('trade_table', 'style_data_conditional')],
+
+        [Input('my-date-picker-range', 'start_date'),
+         Input('my-date-picker-range', 'end_date'),
+         Input('asset-selection', 'value'),
+         Input('timeframe', 'value'),
+         Input('ohlc-line', 'value'),
+         Input('entrust', 'value'),
+         Input('trade_table', 'selected_rows'),
+         Input('submit', 'n_clicks')])
+    def update_entry_exit(start_date, end_date, symbol, timeframe, line, entrust, selected_rows, n_clicks):
+        data = backtesting_result['data'][symbol][timeframe]  # type: pd.DataFrame
+        data = data[(data.index >= pd.to_datetime(start_date)) & (data.index <= pd.to_datetime(end_date))]
+        trade = backtesting_result['trade_list']
+        trade = trade[
+            (trade['order_time'] >= pd.to_datetime(start_date)) & (trade['order_time'] <= pd.to_datetime(end_date))]
+        ohlc_graph = True
+        # print(entrust)
+        if len(selected_rows) > 0:
+            trade_graph = trade.iloc[selected_rows]
+            selected_cond = [{
+                'if': {'row_index': i},
+                'background_color': '#D2F3FF'
+            } for i in selected_rows]
+
+        else:
+            trade_graph = trade
+            selected_cond = []
+
+        if line == 'line':
+            ohlc_graph = False
+        e = False
+        if entrust is None or len(entrust) == 0:
+            e = False
+        else:
+            e = True
+
+        return entry_and_exit_plot(data, trade_graph, symbol, ohlc_graph, entrust=e), \
+               trade.to_dict('records'), selected_cond
 
     @app.callback(
         Output('table', 'data'),
@@ -98,10 +207,9 @@ def get_backtesting_report_dash_app(backtesting_result: dict):
         if date_to is None or date_from is None:
             return
         df = backtesting_result['trade_list']
-        df_ = df[(df['order_time']>=pd.to_datetime(date_from)) & (df['order_time']<=pd.to_datetime(date_to))]
+        df_ = df[(df['order_time'] >= pd.to_datetime(date_from)) & (df['order_time'] <= pd.to_datetime(date_to))]
         return df_.to_dict('records')
 
-      
     return app
 
 

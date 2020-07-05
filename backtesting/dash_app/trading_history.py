@@ -6,6 +6,7 @@ from datetime import datetime as dt
 import dash_table
 import re
 
+
 def get_layout(backtesting_result: dict):
     df = backtesting_result['trade_list']
     orderTime = df['order_time'].tolist()
@@ -30,7 +31,7 @@ def get_layout(backtesting_result: dict):
             data=df.to_dict('records'),
             style_data_conditional=[
                 {
-                    'if':{
+                    'if': {
                         'filter_query': '{order_direction} contains "LONG"',
                     },
                     'backgroundColor': '#d9ffcc'
@@ -45,4 +46,3 @@ def get_layout(backtesting_result: dict):
         )
     ])
     return layout
-
