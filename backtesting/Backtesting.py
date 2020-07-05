@@ -185,6 +185,7 @@ class BacktestingBase:
 
 
         # data here is pandas Series, save for future use
+        self.backtesting_result['data'] = self.data
         self.backtesting_result['net_value'] = net_value
         self.backtesting_result['rate of return'] = returns
         self.backtesting_result['drawdown_value'] = drawdown_metric

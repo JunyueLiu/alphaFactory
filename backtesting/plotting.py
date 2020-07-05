@@ -126,7 +126,7 @@ def daily_heatmap(agg_ret: pd.Series) -> go.Figure:
                           # xgap=3,  # this
                           # ygap=3,  # and this is used to make the grid-like apperance
                           # text=z_text,
-                          hovertext=z_text,
+                          # hovertext=z_text,
                           showscale=False,
                           )
 

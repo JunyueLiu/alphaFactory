@@ -34,7 +34,7 @@ def returns_distribution(returns: pd.DataFrame or pd.Series):
 
 
 def entry_exit_dot(traded: pd.DataFrame, long=True, long_marker='#3283FE', short_marker='#FF0000'):
-    traded_time = traded['update_time'].apply(lambda x: x.replace('-', '/'))
+    traded_time = traded['update_time'].apply(lambda x: x.strftime('%Y/%m/%d %H:%M:%S'))
     traded_price = traded['dealt_price']
     if 'remarks' in traded.columns:
         hover_text = traded.apply(lambda x: 'deal time: {} <br>deal price: {} <br>deal qty: {} <br>'
@@ -58,7 +58,7 @@ def entry_exit_dot(traded: pd.DataFrame, long=True, long_marker='#3283FE', short
 
 
 def entrust_dot(traded: pd.DataFrame, long=True, long_marker='#30D5C8', short_marker='#FF0DA6'):
-    order_time = traded['order_time'].apply(lambda x: x.replace('-', '/'))
+    order_time = traded['order_time'].apply(lambda x: x.strftime('%Y/%m/%d %H:%M:%S'))
     order_price = traded['order_price']
     if 'remarks' in traded.columns:
         hover_text = traded.apply(lambda x: 'order time: {} <br>order price: {} <br>order qty: {} <br>'
