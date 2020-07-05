@@ -8,23 +8,26 @@ import re
 
 def get_layout(backtesting_result: dict):
     df = backtesting_result['trade_list']
-    print("entering...")
+    orderTime = df['order_time'].tolist()
+    orderTime.sort()
+    start = orderTime[0].to_pydatetime()
+    end = orderTime[-1].to_pydatetime()
     layout = html.Div([
         ### history
         html.H1("History"),
         dcc.DatePickerSingle(
             id='date-picker-from',
-            min_date_allowed=dt(2019, 7, 2),
-            max_date_allowed=dt(2020, 4, 29),
-            initial_visible_month=dt(2019, 7, 2),
-            date=str(dt(2019, 7, 2, 10, 59, 0))
+            min_date_allowed=start,
+            max_date_allowed=end,
+            initial_visible_month=start,
+            date=str(start)
         ),
         dcc.DatePickerSingle(
             id='date-picker-to',
-            min_date_allowed=dt(2019, 7, 2),
-            max_date_allowed=dt(2020, 4, 29),
-            initial_visible_month=dt(2019, 7, 2),
-            date=str(dt(2019, 7, 2, 10, 59, 0))
+            min_date_allowed=start,
+            max_date_allowed=end,
+            initial_visible_month=start,
+            date=str(start)
         ),
         dash_table.DataTable(
             id='table',
