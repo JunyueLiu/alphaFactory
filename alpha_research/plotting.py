@@ -21,7 +21,10 @@ def price_factor_plot(data: pd.DataFrame, factor: pd.Series, price_key='close', 
         title_text=""
     )
     # Set x-axis title
-    fig.update_xaxes(title_text="time")
+    x_axis = fig.data[0].x
+    tick_value = [x_axis[i] for i in range(0, len(x_axis), len(x_axis) // 5)]
+    tick_text = [x_axis[i][0:10] for i in range(0, len(x_axis), len(x_axis) // 5)]
+    fig.update_xaxes(ticktext=tick_text, tickvals=tick_value, title_text="time")
 
     # Set y-axes titles
     fig.update_yaxes(title_text=price_name,
@@ -38,6 +41,11 @@ def returns_plot(factor_returns, factor_name='factor'):
     for col in factor_returns.columns:
         fig.add_trace(line(factor_returns[col], name=factor_name + '_' + col, strftime_format=strftime_format))
     # fig.update_layout(yaxis_tickformat='g')
+    x_axis = fig.data[0].x
+    tick_value = [x_axis[i] for i in range(0, len(x_axis), len(x_axis) // 5)]
+    tick_text = [x_axis[i][0:10] for i in range(0, len(x_axis), len(x_axis) // 5)]
+    fig.update_xaxes(ticktext=tick_text, tickvals=tick_value, title_text="time")
+
     return fig
 
 
@@ -52,6 +60,12 @@ def cumulative_return_plot(cumulative_factor_returns, benchmark=None, factor_nam
 
 
         fig.add_trace(line(benchmark, name=benchmark_name, color='#008000', strftime_format=strftime_format))
+
+    x_axis = fig.data[0].x
+    tick_value = [x_axis[i] for i in range(0, len(x_axis), len(x_axis) // 5)]
+    tick_text = [x_axis[i][0:10] for i in range(0, len(x_axis), len(x_axis) // 5)]
+    fig.update_xaxes(ticktext=tick_text, tickvals=tick_value, title_text="time")
+
     return fig
 
 
@@ -79,6 +93,11 @@ def entry_and_exit_plot(data: pd.DataFrame, factor, price_key='close'):
     fig.add_trace(line(short, name='short', color='red', strftime_format=strftime_format))
 
     fig.update_layout(yaxis_tickformat='g')
+    x_axis = fig.data[0].x
+    tick_value = [x_axis[i] for i in range(0, len(x_axis), len(x_axis) // 5)]
+    tick_text = [x_axis[i][0:10] for i in range(0, len(x_axis), len(x_axis) // 5)]
+    fig.update_xaxes(ticktext=tick_text, tickvals=tick_value, title_text="time")
+
     return fig
 
 
@@ -149,6 +168,11 @@ def position_plot(position: pd.Series) -> go.Figure:
         fig.add_trace(
             line(asset_ts[1], timestamp=asset_ts[1].index.get_level_values(0), name=asset_ts[0],
                  strftime_format=strftime_format))
+    x_axis = fig.data[0].x
+    tick_value = [x_axis[i] for i in range(0, len(x_axis), len(x_axis) // 5)]
+    tick_text = [x_axis[i][0:10] for i in range(0, len(x_axis), len(x_axis) // 5)]
+    fig.update_xaxes(ticktext=tick_text, tickvals=tick_value, title_text="time")
+
     return fig
 
 
@@ -161,6 +185,11 @@ def turnover_plot(turnover: pd.Series) -> go.Figure:
     fig = go.Figure()
     strftime_format = generate_strftime_format(turnover.index)
     fig.add_trace(line(turnover, strftime_format=strftime_format))
+    x_axis = fig.data[0].x
+    tick_value = [x_axis[i] for i in range(0, len(x_axis), len(x_axis) // 5)]
+    tick_text = [x_axis[i][0:10] for i in range(0, len(x_axis), len(x_axis) // 5)]
+    fig.update_xaxes(ticktext=tick_text, tickvals=tick_value, title_text="time")
+
     return fig
 
 

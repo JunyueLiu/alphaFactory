@@ -52,7 +52,7 @@ def get_backtesting_report_dash_app(backtesting_result: dict):
         # todo 回测类型
         #
     ]),
-
+    # --------------- index page callback ---------------
     @app.callback(Output('page-content', 'children'),
                   [Input('url', 'pathname')])
     def display_page(pathname):
@@ -67,6 +67,7 @@ def get_backtesting_report_dash_app(backtesting_result: dict):
         else:
             return index_page
 
+    # --------------- monthly page callback ---------------
     @app.callback([Output('title', 'children'),
                    Output('return-heatmap', 'figure'),
                    Output('returns-distribution', 'figure'),
@@ -152,6 +153,8 @@ def get_backtesting_report_dash_app(backtesting_result: dict):
             displot = returns_distribution_plot(agg_ret)
             return 'Year Analysis', heatmap, displot
 
+
+    # --------------- entry exit page callback ---------------
     @app.callback(Output('timeframe', 'options'),
                   [Input('asset-selection', 'value')])
     def change_display(value):
@@ -200,6 +203,7 @@ def get_backtesting_report_dash_app(backtesting_result: dict):
         return entry_and_exit_plot(data, trade_graph, symbol, ohlc_graph, entrust=e), \
                trade.to_dict('records'), selected_cond
 
+    # --------------- trade list page callback ---------------
     @app.callback(
         Output('table', 'data'),
         [Input('date-picker-range', 'start_date'),Input('date-picker-range', 'end_date')])
