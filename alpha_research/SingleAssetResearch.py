@@ -125,8 +125,6 @@ class SingleAssetResearch(AlphaResearch):
         t_stat, pvalue = in_out_sample_factor_t_test(self.out_of_sample_factor,
                                                      self.factor[-len(self.out_of_sample_factor):])
 
-
-
         # print(t_stat, pvalue)
         fig = overlaid_factor_distribution_plot(self.factor, self.out_of_sample_factor)
         fig.show()
@@ -156,7 +154,6 @@ class SingleAssetResearch(AlphaResearch):
             html.H1(children=self.factor_name + ' evaluation',
                     style={'font-weight': 'normal', 'text-align': 'center', 'display': 'block',
                            'fontFamily': 'helvetica neue', 'margin': '100px auto'}),
-
 
             html.Div([
                 # change forward returns
@@ -192,17 +189,20 @@ class SingleAssetResearch(AlphaResearch):
             # todo 拯救一下我的表格布局吧，冇眼睇
 
             # summary table
-            html.Div([ html.H5(children='Factor Summary Table',style={'text-align':'center','margin-bottom':'20px'}),
-                      html.Table(id='summary-table', style={'width:': '40%', 'float': 'left','font-size':'20px'})],style={'margin-left': '100px','display': 'inline-block'}),
+            html.Div([html.H5(children='Factor Summary Table', style={'text-align': 'center', 'margin-bottom': '20px'}),
+                      html.Table(id='summary-table', style={'width:': '40%', 'float': 'left', 'font-size': '20px'})],
+                     style={'margin-left': '100px', 'display': 'inline-block'}),
 
             # ic_table
-            html.Div([html.H5(children='Factor IC Table',style={'display':'block','text-align':'center','margin-bottom':'20px'}),
-                      html.Table(id='ic-table',style={'width:': '40%','font-size':'20px'}),
-                      ],style={'margin-left': '300px','display':'inline-block'}),
+            html.Div([html.H5(children='Factor IC Table',
+                              style={'display': 'block', 'text-align': 'center', 'margin-bottom': '20px'}),
+                      html.Table(id='ic-table', style={'width:': '40%', 'font-size': '20px'}),
+                      ], style={'margin-left': '300px', 'display': 'inline-block'}),
 
             # beta table
-            html.Div([html.H5(children='Factor Beta',style={'text-align':'center','margin-bottom':'20px'})
-                         , html.Table(id='beta-table', style={'width': '100%','font-size':'20px'})],style={'display':'block','margin':'20px auto 60px'}),
+            html.Div([html.H5(children='Factor Beta', style={'text-align': 'center', 'margin-bottom': '20px'})
+                         , html.Table(id='beta-table', style={'width': '100%', 'font-size': '20px'})],
+                     style={'display': 'block', 'margin': '20px auto 60px'}),
 
             html.Div([html.H5(children='Factor Distribution', style={'text-align': 'center', 'margin': 'auto'}),
                       dcc.Graph(id='distribution')],
@@ -360,15 +360,14 @@ class SingleAssetResearch(AlphaResearch):
                 inout_qqplot = observed_qq_plot(factor, out_factor)
                 # inout_qqplot.show()
 
-                factor_table = pd_to_dash_table(factor_summary(out_factor))
+                factor_table = pd_to_dash_table(factor_summary(out_factor), 'summary')
                 ic_table = pd_to_dash_table(pd.DataFrame(calculate_ts_information_coefficient(out_factor, returns),
-                                                         columns=[self.factor_name]))
-                ols_table = pd_to_dash_table(factor_ols_regression(out_factor, returns))
-
+                                                         columns=[self.factor_name]), 'ic')
+                ols_table = pd_to_dash_table(factor_ols_regression(out_factor, returns), 'ols')
 
                 return in_out_distplot, update_heatmap_figure, \
                        inout_qqplot, update_factor_plot_figure, \
-                       update_factor_plot_figure1, update_factor_plot_figure2,\
+                       update_factor_plot_figure1, update_factor_plot_figure2, \
                        factor_table, ic_table, ols_table
 
         return app
@@ -381,7 +380,7 @@ class DemoSingleAssetFactor(SingleAssetResearch):
 
 
 if __name__ == '__main__':
-    data_path = r'../data.csv'
+    data_path = r'../HK.999010_2019-06-01 00:00:00_2020-05-30 03:00:00_K_1M_qfq.csv'
 
     df = pd.read_csv(data_path)
     df['time_key'] = pd.to_datetime(df['time_key'])
@@ -397,6 +396,6 @@ if __name__ == '__main__':
     factor_study.calculate_factor(alpha_6, **{'time_lag': 5})
     # factor_study.evaluate_alpha()
     # factor_study.out_of_sample_evaluation()
-    factor_study.get_evaluation_dash_app().run_server(debug=True)
+    factor_study.get_evaluation_dash_app().run_server('127.0.0.1', debug=True)
     # json = factor_study.factor.to_json(date_format='iso', orient='split')
     # df = pd.read_json(json, orient='split', typ='series')

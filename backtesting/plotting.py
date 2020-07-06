@@ -25,6 +25,12 @@ def net_value_plot(strategy_net_value: pd.Series,
         benchmark_copy = benchmark[(benchmark.index >= net_value.index[0]) & (benchmark.index <= net_value.index[-1])]
         # benchmark_copy = benchmark_copy[benchmark_copy.index <= net_value.index[-1]]
         fig.add_trace(net_value_line(benchmark_copy / benchmark_copy[0], color='#FFCC00', name='benchmark'))
+
+    x_axis = fig.data[0].x
+    tick_value = [x_axis[i] for i in range(0, len(x_axis), len(x_axis) // 5)]
+    tick_text = [x_axis[i][0:10] for i in range(0, len(x_axis), len(x_axis) // 5)]
+    fig.update_xaxes(ticktext=tick_text, tickvals=tick_value)
+
     return fig
 
 
@@ -68,6 +74,10 @@ def entry_and_exit_plot(ohlc_df, traded: pd.DataFrame, symbol: str, ohlc_graph=T
         autorange=True,
         fixedrange=False
     ))
+    x_axis = fig.data[0].x
+    tick_value = [x_axis[i] for i in range(0, len(x_axis), len(x_axis) // 5)]
+    tick_text = [x_axis[i][0:10] for i in range(0, len(x_axis), len(x_axis) // 5)]
+    fig.update_xaxes(ticktext=tick_text, tickvals=tick_value)
 
     return fig
 
@@ -77,6 +87,10 @@ def maximum_drawdown_plot(drawdown_percent: pd.Series):
     fig.add_trace(net_value_line(drawdown_percent, color='#73B839', name='underwater', fill='tozeroy'), )
     fig.update_layout(
         title="Underwater", )
+    x_axis = fig.data[0].x
+    tick_value = [x_axis[i] for i in range(0, len(x_axis), len(x_axis) // 5)]
+    tick_text = [x_axis[i][0:10] for i in range(0, len(x_axis), len(x_axis) // 5)]
+    fig.update_xaxes(ticktext=tick_text, tickvals=tick_value)
     return fig
 
 
@@ -137,7 +151,7 @@ def daily_heatmap(agg_ret: pd.Series) -> go.Figure:
             col = 0
         col = (col + 1) % 4
 
-    layout = dict(plot_bgcolor='#fff', width=700, height=700,)
+    layout = dict(plot_bgcolor='#fff', width=700, height=700, )
     for i in range(1, num_of_months + 1):
         if i % 3 == 1:
             layout['yaxis' + str(i)] = dict(
@@ -191,7 +205,7 @@ def weekly_heatmap(agg_ret: pd.Series) -> go.Figure:
                          # hovertext=z_text,
                          showscale=False,
                          )
-    layout = dict(plot_bgcolor='#fff', width=700, height=700,)
+    layout = dict(plot_bgcolor='#fff', width=700, height=700, )
     layout['yaxis'] = dict(
         showline=False, showgrid=False, zeroline=False, autorange="reversed"
     )
@@ -233,7 +247,7 @@ def monthly_heatmap(agg_ret: pd.Series) -> go.Figure:
                          # hovertext=z_text,
                          showscale=False,
                          )
-    layout = dict(plot_bgcolor='#fff', width=700, height=700,)
+    layout = dict(plot_bgcolor='#fff', width=700, height=700, )
     layout['yaxis'] = dict(
         showline=False, showgrid=False, zeroline=False, autorange="reversed", type='category'
     )
