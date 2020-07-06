@@ -167,6 +167,15 @@ class BacktestingBrokerage(BrokerageBase):
                     dealt_list.append((order_id, deal_price, order.order_qty))
         return dealt_list
 
+    def stop_order_matching(self, order_id, open_price, high_price, low_price):
+        order = self.working_order[order_id]
+        dealt_list = []
+        if order.order_status == 'SUBMITTED' and order.order_type == 'STOP':
+            pass
+        return dealt_list
+
+
+
     def match_working_order(self, bar_state):
         dealt_list = []
         dealt_order_list = []

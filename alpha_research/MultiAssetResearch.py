@@ -63,6 +63,7 @@ class MultiAssetResearch(AlphaResearch):
         if benchmark is not None:
             # todo compare the index in the benchmark and the first level of the index
             # make sure the benchmark contains the date in the first level of the index
+            self._check_benchmark_valid(benchmark)
             self.benchmark = benchmark
         else:
             self.benchmark = benchmark
@@ -89,6 +90,7 @@ class MultiAssetResearch(AlphaResearch):
 
     def set_benchmark(self, df):
         # todo check benchmark is valid or not
+        self._check_benchmark_valid(df)
         self.benchmark = df
 
     def calculate_factor(self, func, **kwargs):
@@ -113,6 +115,11 @@ class MultiAssetResearch(AlphaResearch):
             groupby = pd.Series(index=self.factor.index,
                                 data=ss[self.factor.index.get_level_values(level=1)].values)
             self.merged_data['group'] = groupby.astype('category')
+
+    def _check_benchmark_valid(self, benchmark):
+        pass
+
+
 
     def evaluate_alpha(self, forward_return_lag: list = None):
         """
@@ -273,18 +280,18 @@ class MultiAssetResearch(AlphaResearch):
                                     )], style={'width': '100%', 'display': 'block', }),
 
             # summary table
-            html.Div([html.H5(children='Factor Summary Table', style={'width': '49%'}),
-                      html.Table(id='summary-table', style={'width': '49%', 'display': 'inline-block'}), ]),
+            html.Div([html.H5(children='Factor Summary Table'),
+                      html.Table(id='summary-table', style={'width': '100%', 'display': 'inline-block'}), ], style={'display': 'inline-block', 'float':'left'}),
 
             # ic_table
-            html.Div([html.H5(children='Factor IC Table', style={'width': '49%'}),
+            html.Div([html.H5(children='Factor IC Table'),
                       html.Table(id='ic-table',
-                                 style={'width': '49%', 'display': 'inline-block'}),
-                      ]),
+                                 style={'width': '100%', 'display': 'inline-block'}),
+                      ],style={'display': 'inline-block', 'float':'right'} ),
 
             # beta table
             html.Div([html.H5(children='Factor Beta')
-                         , html.Table(id='beta-table', style={'width': '100%', 'display': 'inline-block'})]),
+                         , html.Table(id='beta-table')], style={'width': '100%', 'display': 'inline-block'}),
 
             html.Div(
                 [html.H5(children='Factor Distribution', style={'text-align': 'center', 'margin': 'auto'}),
