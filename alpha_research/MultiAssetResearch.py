@@ -117,9 +117,13 @@ class MultiAssetResearch(AlphaResearch):
             self.merged_data['group'] = groupby.astype('category')
 
     def _check_benchmark_valid(self, benchmark):
-        pass
-
-
+        start = self.in_sample.index[0]
+        end = self.out_of_sample.index[-1]
+        if benchmark.index[0] <= start and benchmark.index[-1] >= end:
+            pass
+        else:
+            raise ValueError('Sample data start from {} to {}, but benchmark starts from {} to {}.'
+                             .format(start, end, benchmark.index[0], benchmark.index[-1]))
 
     def evaluate_alpha(self, forward_return_lag: list = None):
         """
@@ -248,7 +252,7 @@ class MultiAssetResearch(AlphaResearch):
             # add forward returns
             html.Div([
                 html.Div(id='forward-returns-period'),
-                html.Div(children='Enter a value to add or remove forward return value',style={'display':'block'}),
+                html.Div(children='Enter a value to add or remove forward return value', style={'display': 'block'}),
                 dcc.Input(
                     id='forwards-periods-input',
                     type='text',
@@ -261,34 +265,34 @@ class MultiAssetResearch(AlphaResearch):
                     labelStyle={'display': 'inline-block'}
                 ),
                 html.Button('Update', id='UpdateButton'), ]
-                , style={'display':'inline-block'}),
+                , style={'display': 'inline-block'}),
             # change parameter
             html.Div([
                 html.Div(children='Factor Parameter'),
                 html.Div(para_dcc_list, id='alpha_paras'),
                 html.Button('Submit', id='AlphaButton'),
                 html.Div(id="current-parameter"),
-            ], style={'display': 'inline-block','margin-left': '20em'})],
-            style={'display':'inline-block'}),
+            ], style={'display': 'inline-block', 'margin-left': '20em'})],
+            style={'display': 'inline-block'}),
 
             # select of factor universe
             html.Div([html.H5(children='Alpha Universe',
-                              style={'text-align': 'center','display':'block'}),
-                      # todo 位置需要调一下
+                              style={'text-align': 'center', 'display': 'block'}),
                       dcc.Checklist(id='alpha-universe',
                                     options=[{'label': i, 'value': i} for i in self.alpha_universe],
                                     value=self.alpha_universe, labelStyle={'display': 'inline-block'},
-                                    )], style={'width': '100%', 'display': 'block','margin':'20px auto'}),
+                                    )], style={'width': '100%', 'display': 'block', 'margin': '20px auto'}),
 
             # summary table
             html.Div([html.H5(children='Factor Summary Table'),
-                      html.Table(id='summary-table', style={'width': '100%', 'display': 'inline-block'}), ], style={'display': 'inline-block', 'float':'left'}),
+                      html.Table(id='summary-table', style={'width': '100%', 'display': 'inline-block'}), ],
+                     style={'display': 'inline-block', 'float': 'left'}),
 
             # ic_table
             html.Div([html.H5(children='Factor IC Table'),
                       html.Table(id='ic-table',
                                  style={'width': '100%', 'display': 'inline-block'}),
-                      ],style={'display': 'inline-block', 'float':'right'} ),
+                      ], style={'display': 'inline-block', 'float': 'right'}),
 
             # beta table
             html.Div([html.H5(children='Factor Beta')
@@ -357,7 +361,6 @@ class MultiAssetResearch(AlphaResearch):
 
                 html.Div(id='quantile parameter'),
                 html.Div(children='Enter a value to change quantile or bin (Quantile has priority)'),
-                # todo quantile selection
                 dcc.Input(
                     id='quantile',
                     type='text',
@@ -372,7 +375,7 @@ class MultiAssetResearch(AlphaResearch):
                     debounce=True
                 ),
                 html.Button('Update', id='UpdateButton_1'), ]
-                , style={'margin': '30px 60px','display':'inline-block'}),
+                , style={'margin': '30px 60px', 'display': 'inline-block'}),
             # change parameter
             html.Div([
                 html.Div(children='Factor Parameter'),
@@ -380,16 +383,15 @@ class MultiAssetResearch(AlphaResearch):
                 html.Button('Submit', id='AlphaButton_1'),
                 html.Div(id="current-parameter_1"),
             ], style={'margin-left': '16em', 'display': 'inline-block'})],
-            ),
+        ),
             # select of factor universe
             html.Div([html.H5(children='Alpha Universe',
-                              style={'text-align': 'center', 'margin': '5px auto', 'display':'block'}),
-                      # todo 位置需要调一下
+                              style={'text-align': 'center', 'margin': '5px auto', 'display': 'block'}),
                       dcc.Checklist(id='alpha-universe_1',
                                     options=[{'label': i, 'value': i} for i in self.alpha_universe],
                                     value=self.alpha_universe,
                                     labelStyle={'display': 'inline-block'},
-                                    )], style={'width': '100%', 'display': 'block','margin-bottom':'30px'}),
+                                    )], style={'width': '100%', 'display': 'block', 'margin-bottom': '30px'}),
 
             html.Div([html.H5(children='Returns by Quantile Bar', style={'text-align': 'center', 'margin': 'auto'}),
                       dcc.Graph(id='quantile-bar')],
@@ -436,7 +438,7 @@ class MultiAssetResearch(AlphaResearch):
             quantile_div,
             group_div
 
-        ],style={'margin':'0 20px'})
+        ], style={'margin': '0 20px'})
 
         # for switching the pages
         @app.callback(dash.dependencies.Output('page-content', 'children'),
@@ -475,14 +477,7 @@ class MultiAssetResearch(AlphaResearch):
             paras = _get_alpha_parameter_from_div(alpha_paras)
             self.calculate_factor(self.alpha_func, **paras)
             in_sample_factor = self.factor  # type: pd.Series
-            # more generally, this line would be
-            # json.dumps(cleaned_df)
-            # print(in_sample_factor)
-            # json.dumps(in_sample_factor)
-            # todo the multiIndex pd.Series object will break if read_json
-            # potential solution:
-            # in_sample_factor.reset_index().to_json()
-            # todo pickle solution unsuccessful
+            # pickle solution unsuccessful
             return in_sample_factor.reset_index().to_json()
 
         @app.callback(Output('out_sample_factor', 'children'),
@@ -541,16 +536,18 @@ class MultiAssetResearch(AlphaResearch):
             factor_index_ = json.loads(factor_index_name_saved)
             factor = pd.read_json(in_alpha_json)
             factor.set_index(factor_index_, inplace=True)
-            # todo factor selection by universe list
+
+            factor = factor.loc[(slice(None), universe),:]
             factor = factor[self.factor_name]
+            insample = self.in_sample.loc[(slice(None), universe),:]
             if value == 'In sample':
                 # --------- calculation first ---------
-                returns = calculate_forward_returns(self.in_sample, forward_returns_period)
+                returns = calculate_forward_returns(insample, forward_returns_period)
                 position = self.alpha_position_func(factor)
                 merged_data = pd.DataFrame(index=factor.index)
                 merged_data['factor'] = factor
 
-                factor_returns = calculate_cross_section_factor_returns(self.in_sample, position)
+                factor_returns = calculate_cross_section_factor_returns(insample, position)
                 cumulative_returns = calculate_cumulative_returns(factor_returns, 1)
 
                 # ------- factor distribution study ---------
@@ -590,19 +587,23 @@ class MultiAssetResearch(AlphaResearch):
             else:
                 out_factor = pd.read_json(out_alpha_json)
                 out_factor.set_index(factor_index_, inplace=True)
+                # next two line cannot change position
+                out_factor = out_factor.loc[(slice(None), universe), :]
                 out_factor = out_factor[self.factor_name]
+                # print(out_factor)
+                # print(self.out_of_sample)
+                out_of_sample = self.out_of_sample.loc[(slice(None), universe), :]
 
-                returns = calculate_forward_returns(self.out_of_sample, forward_returns_period)
+
+                returns = calculate_forward_returns(out_of_sample, forward_returns_period)
                 position = self.alpha_position_func(out_factor)
                 merged_data = pd.DataFrame(index=factor.index)
                 merged_data['factor'] = factor
 
-                factor_returns = calculate_cross_section_factor_returns(self.out_of_sample, position)
+                factor_returns = calculate_cross_section_factor_returns(out_of_sample, position)
                 cumulative_returns = calculate_cumulative_returns(factor_returns, 1)
 
                 # update_distribution_figure = factor_distribution_plot(out_factor)
-
-                returns = calculate_forward_returns(self.out_of_sample, forward_returns_period)
 
                 # for out of sample data onlye
                 in_out_distplot = overlaid_factor_distribution_plot(factor, out_factor)
@@ -673,16 +674,13 @@ class MultiAssetResearch(AlphaResearch):
         @app.callback([Output('quantile_list_1', 'children'),
                        Output('bin_1', 'children')],
                       [Input('quantile', 'value'),
-                      Input('bin', 'value') ])
+                       Input('bin', 'value')])
         def update_quantile(quantile_str, bin):
             if quantile_str != 'None':
                 quantile_list = [float(q) for q in quantile_str.split(',')]
             else:
                 quantile_list = None
             return json.dumps(quantile_list), bin
-
-
-
 
         @app.callback([
             Output('quantile-bar', 'figure'),
@@ -714,13 +712,15 @@ class MultiAssetResearch(AlphaResearch):
             factor = pd.read_json(in_alpha_json)
             factor.set_index(factor_index_, inplace=True)
             # todo factor selection by universe list
+            factor = factor.loc[(slice(None), universe), :]
             factor = factor[self.factor_name]
 
             factor_quantile_list = get_valid_quantile(quantile)
             factor_bin_num = int(bin)
+            insample = self.in_sample.loc[(slice(None), universe),:]
             if in_out_sample == 'In sample':
                 # --------- calculation first ---------
-                returns = calculate_forward_returns(self.in_sample, forward_returns_period)
+                returns = calculate_forward_returns(insample, forward_returns_period)
                 # position = self.alpha_position_func(factor)
                 merged_data = pd.DataFrame(index=factor.index)
                 merged_data['factor'] = factor
@@ -743,7 +743,9 @@ class MultiAssetResearch(AlphaResearch):
                 # todo out of sample
                 # todo currently it is same with in the sample.
                 # --------- calculation first ---------
-                returns = calculate_forward_returns(self.in_sample, forward_returns_period)
+                out_of_sample = self.out_of_sample.loc[(slice(None), universe), :]
+
+                returns = calculate_forward_returns(out_of_sample, forward_returns_period)
                 # position = self.alpha_position_func(factor)
                 merged_data = pd.DataFrame(index=factor.index)
                 merged_data['factor'] = factor
@@ -766,7 +768,7 @@ class MultiAssetResearch(AlphaResearch):
 
 
 if __name__ == '__main__':
-    data = pd.read_csv('hsi_component.csv')
+    data = pd.read_csv(r'../hsi_component.csv')
     data['Date'] = pd.to_datetime(data['Date'])
     data.set_index(['Date', 'code'], inplace=True)
     multi_study = MultiAssetResearch(data)
