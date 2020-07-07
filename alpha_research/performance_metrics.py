@@ -157,8 +157,8 @@ def mean_return_by_quantile(merged_data: pd.DataFrame) -> tuple:
     #                 2010-06-21        -0.004873        -0.017346         -0.035416
     #                 2010-06-22        -0.000315        -0.036443         -0.046313
     quantile_ret_ts = group_stats.T.xs('mean', level=1).T # type: pd.DataFrame
-
-
+    # quantile_ret_ts.dropna(inplace=True)
+    # quantile_ret_ts.sort_index(level=1, inplace=True)
     #              1_period_return            ... 10_period_return
     #                            mean       std  ...              std count
     # factor_quantile                            ...
