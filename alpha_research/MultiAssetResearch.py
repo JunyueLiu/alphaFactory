@@ -372,24 +372,24 @@ class MultiAssetResearch(AlphaResearch):
                     debounce=True
                 ),
                 html.Button('Update', id='UpdateButton_1'), ]
-                , style={'margin-left': '100px', 'width:': '400px', 'float': 'left'}),
+                , style={'margin': '30px 60px','display':'inline-block'}),
             # change parameter
             html.Div([
                 html.Div(children='Factor Parameter'),
                 html.Div(para_dcc_list, id='alpha_paras_1'),
                 html.Button('Submit', id='AlphaButton_1'),
                 html.Div(id="current-parameter_1"),
-            ], style={'margin-left': '400px', 'display': 'inline-block'})],
-            style={'margin-left': '100px', 'width:': '400px', 'float': 'left'}),
+            ], style={'margin-left': '16em', 'display': 'inline-block'})],
+            ),
             # select of factor universe
             html.Div([html.H5(children='Alpha Universe',
-                              style={'text-align': 'center', 'margin': 'auto'}),
+                              style={'text-align': 'center', 'margin': '5px auto', 'display':'block'}),
                       # todo 位置需要调一下
                       dcc.Checklist(id='alpha-universe_1',
                                     options=[{'label': i, 'value': i} for i in self.alpha_universe],
                                     value=self.alpha_universe,
                                     labelStyle={'display': 'inline-block'},
-                                    )], style={'width': '100%', 'display': 'block'}),
+                                    )], style={'width': '100%', 'display': 'block','margin-bottom':'30px'}),
 
             html.Div([html.H5(children='Returns by Quantile Bar', style={'text-align': 'center', 'margin': 'auto'}),
                       dcc.Graph(id='quantile-bar')],
