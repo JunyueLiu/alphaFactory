@@ -167,14 +167,14 @@ class SingleAssetResearch(AlphaResearch):
                         value='1, 2, 5, 10'
                     ),
                     html.Button('Update', id='UpdateButton'), ]
-                    , style={'margin-left': '100px', 'width:': '400px', 'float': 'left'}),
+                    , style={'margin-left': '6.25em', 'width:': '25em', 'float': 'left'}),
                 # change parameter
                 html.Div([
                     html.Div(children='Factor Parameter'),
                     html.Div(para_dcc_list, id='alpha_paras'),
                     html.Button('Submit', id='AlphaButton'),
                     html.Div(id="current-parameter"),
-                ], style={'margin-left': '400px', 'display': 'inline-block'}),
+                ], style={'margin-left': '20em', 'display': 'inline-block'}),
 
             ]),
 
@@ -190,18 +190,18 @@ class SingleAssetResearch(AlphaResearch):
 
             # summary table
             html.Div([html.H5(children='Factor Summary Table', style={'text-align': 'center', 'margin-bottom': '20px'}),
-                      html.Table(id='summary-table', style={'width:': '40%', 'float': 'left', 'font-size': '20px'})],
-                     style={'margin-left': '100px', 'display': 'inline-block'}),
+                      html.Table(id='summary-table', style={'width:': '40%', 'float': 'left', 'font-size': '1.25em'})],
+                     style={'margin-left': '6.25rem', 'display': 'inline-block'}),
 
             # ic_table
             html.Div([html.H5(children='Factor IC Table',
                               style={'display': 'block', 'text-align': 'center', 'margin-bottom': '20px'}),
-                      html.Table(id='ic-table', style={'width:': '40%', 'font-size': '20px'}),
-                      ], style={'margin-left': '300px', 'display': 'inline-block'}),
+                      html.Table(id='ic-table', style={'width:': '40%', 'font-size': '1.25em'}),
+                      ], style={'margin-left': '18.75em', 'display': 'inline-block'}),
 
             # beta table
             html.Div([html.H5(children='Factor Beta', style={'text-align': 'center', 'margin-bottom': '20px'})
-                         , html.Table(id='beta-table', style={'width': '100%', 'font-size': '20px'})],
+                         , html.Table(id='beta-table', style={'width': '100%', 'font-size': '1.25em'})],
                      style={'display': 'block', 'margin': '20px auto 60px'}),
 
             html.Div([html.H5(children='Factor Distribution', style={'text-align': 'center', 'margin': 'auto'}),
@@ -380,7 +380,7 @@ class DemoSingleAssetFactor(SingleAssetResearch):
 
 
 if __name__ == '__main__':
-    data_path = r'../HK.999010_2019-06-01 00:00:00_2020-05-30 03:00:00_K_1M_qfq.csv'
+    data_path = r'../data.csv'
 
     df = pd.read_csv(data_path)
     df['time_key'] = pd.to_datetime(df['time_key'])
