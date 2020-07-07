@@ -61,10 +61,10 @@ def cumulative_return_plot(cumulative_factor_returns, benchmark=None, factor_nam
 
         fig.add_trace(line(benchmark, name=benchmark_name, color='#008000', strftime_format=strftime_format))
 
-    x_axis = fig.data[0].x
-    tick_value = [x_axis[i] for i in range(0, len(x_axis), len(x_axis) // 5)]
-    tick_text = [x_axis[i][0:10] for i in range(0, len(x_axis), len(x_axis) // 5)]
-    fig.update_xaxes(ticktext=tick_text, tickvals=tick_value, title_text="time")
+    # x_axis = fig.data[0].x
+    # tick_value = [x_axis[i] for i in range(0, len(x_axis), len(x_axis) // 5)]
+    # tick_text = [x_axis[i][0:10] for i in range(0, len(x_axis), len(x_axis) // 5)]
+    # fig.update_xaxes(ticktext=tick_text, tickvals=tick_value, title_text="time")
 
     return fig
 
@@ -242,7 +242,7 @@ def returns_by_quantile_distplot(quantile_ret_ts: pd.DataFrame):
     #                 2010-06-22        -0.000315        -0.036443         -0.046313
     #                 2010-06-23        -0.010813        -0.039430         -0.039475
     # ...                                     ...              ...               ...
-    fig = make_subplots(rows=len(quantile_ret_ts.columns), cols=1)
+    fig = make_subplots(rows=len(quantile_ret_ts.columns), cols=1, shared_xaxes=True)
     count = 1
     for ret_col in quantile_ret_ts.columns:
         hist_data = []
@@ -262,8 +262,16 @@ def returns_by_quantile_distplot(quantile_ret_ts: pd.DataFrame):
 def cumulative_returns_by_quantile_plot(cum_ret_by_qt_ts: pd.Series):
     strftime_format = generate_strftime_format(cum_ret_by_qt_ts.index.get_level_values(1))
     fig = go.Figure()
+    idx = cum_ret_by_qt_ts.index.get_level_values(1).unique().to_list()
     for g in cum_ret_by_qt_ts.groupby(level=0):
-        fig.add_trace(line(g[1], timestamp=g[1].index.get_level_values(1), name=g[0], strftime_format=strftime_format))
+
+        df = g[1] # type: pd.DataFrame
+        # this code is to fill the time when there is no quantile level is there.
+        # still cannot understand why this would happen
+        df.reset_index(level=0, drop=True,inplace=True)
+        df.sort_index(level=1, inplace=True)
+        df = df.reindex(idx, method='ffill')
+        fig.add_trace(line(df, timestamp=idx, name=g[0], strftime_format=strftime_format))
     return fig
 
 

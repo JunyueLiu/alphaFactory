@@ -62,6 +62,8 @@ def calculate_cumulative_returns_by_quantile(quantile_ret_ts: pd.DataFrame):
     quantile_ret_ts_ = quantile_ret_ts.copy().add(1)  # type: pd.DataFrame
     # todo period larger than 1 is not right cumulative return
     cumulative_ret_by_group = quantile_ret_ts_.groupby(level=0).cumprod()
+    cumulative_ret_by_group.dropna(inplace=True)
+    cumulative_ret_by_group.sort_index(level=1, inplace=True)
     return cumulative_ret_by_group
 
 

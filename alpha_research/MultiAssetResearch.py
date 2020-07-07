@@ -669,8 +669,16 @@ class MultiAssetResearch(AlphaResearch):
             forward_str = str(fr).replace('[', '').replace(']', '')
             return json.dumps(fr), 'Forward return list: ' + forward_str
 
-        # todo update quantile and bin in the hidden data
-
+        @app.callback([Output('quantile_list_1', 'children'),
+                       Output('bin_1', 'children')],
+                      [Input('quantile', 'value'),
+                      Input('bin', 'value') ])
+        def update_quantile(quantile_str, bin):
+            if quantile_str != 'None':
+                quantile_list = [float(q) for q in quantile_str.split(',')]
+            else:
+                quantile_list = None
+            return json.dumps(quantile_list), bin
 
 
 
