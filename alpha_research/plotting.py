@@ -61,10 +61,10 @@ def cumulative_return_plot(cumulative_factor_returns, benchmark=None, factor_nam
 
         fig.add_trace(line(benchmark, name=benchmark_name, color='#008000', strftime_format=strftime_format))
 
-    # x_axis = fig.data[0].x
-    # tick_value = [x_axis[i] for i in range(0, len(x_axis), len(x_axis) // 5)]
-    # tick_text = [x_axis[i][0:10] for i in range(0, len(x_axis), len(x_axis) // 5)]
-    # fig.update_xaxes(ticktext=tick_text, tickvals=tick_value, title_text="time")
+    x_axis = fig.data[0].x
+    tick_value = [x_axis[i] for i in range(0, len(x_axis), len(x_axis) // 5)]
+    tick_text = [x_axis[i][0:10] for i in range(0, len(x_axis), len(x_axis) // 5)]
+    fig.update_xaxes(ticktext=tick_text, tickvals=tick_value, title_text="time")
 
     return fig
 
