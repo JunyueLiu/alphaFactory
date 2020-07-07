@@ -248,7 +248,7 @@ class MultiAssetResearch(AlphaResearch):
             # add forward returns
             html.Div([
                 html.Div(id='forward-returns-period'),
-                html.Div(children='Enter a value to add or remove forward return value'),
+                html.Div(children='Enter a value to add or remove forward return value',style={'display':'block'}),
                 dcc.Input(
                     id='forwards-periods-input',
                     type='text',
@@ -261,23 +261,24 @@ class MultiAssetResearch(AlphaResearch):
                     labelStyle={'display': 'inline-block'}
                 ),
                 html.Button('Update', id='UpdateButton'), ]
-                , style={'margin-left': '100px', 'width:': '400px', 'float': 'left'}),
+                , style={'display':'inline-block'}),
             # change parameter
             html.Div([
                 html.Div(children='Factor Parameter'),
                 html.Div(para_dcc_list, id='alpha_paras'),
                 html.Button('Submit', id='AlphaButton'),
                 html.Div(id="current-parameter"),
-            ], style={'margin-left': '400px', 'display': 'inline-block'})],
-            style={'margin-left': '100px', 'width:': '400px', 'float': 'left'}),
+            ], style={'display': 'inline-block','margin-left': '20em'})],
+            style={'display':'inline-block'}),
+
             # select of factor universe
             html.Div([html.H5(children='Alpha Universe',
-                              style={'text-align': 'center', 'margin': 'auto'}),
+                              style={'text-align': 'center','display':'block'}),
                       # todo 位置需要调一下
                       dcc.Checklist(id='alpha-universe',
                                     options=[{'label': i, 'value': i} for i in self.alpha_universe],
                                     value=self.alpha_universe, labelStyle={'display': 'inline-block'},
-                                    )], style={'width': '100%', 'display': 'block', }),
+                                    )], style={'width': '100%', 'display': 'block','margin':'20px auto'}),
 
             # summary table
             html.Div([html.H5(children='Factor Summary Table'),
@@ -388,7 +389,7 @@ class MultiAssetResearch(AlphaResearch):
                                     options=[{'label': i, 'value': i} for i in self.alpha_universe],
                                     value=self.alpha_universe,
                                     labelStyle={'display': 'inline-block'},
-                                    )], style={'width': '100%', 'display': 'block', }),
+                                    )], style={'width': '100%', 'display': 'block'}),
 
             html.Div([html.H5(children='Returns by Quantile Bar', style={'text-align': 'center', 'margin': 'auto'}),
                       dcc.Graph(id='quantile-bar')],
@@ -435,7 +436,7 @@ class MultiAssetResearch(AlphaResearch):
             quantile_div,
             group_div
 
-        ])
+        ],style={'margin':'0 20px'})
 
         # for switching the pages
         @app.callback(dash.dependencies.Output('page-content', 'children'),
@@ -765,7 +766,7 @@ class MultiAssetResearch(AlphaResearch):
 
 
 if __name__ == '__main__':
-    data = pd.read_csv('../hsi_component.csv')
+    data = pd.read_csv('hsi_component.csv')
     data['Date'] = pd.to_datetime(data['Date'])
     data.set_index(['Date', 'code'], inplace=True)
     multi_study = MultiAssetResearch(data)
