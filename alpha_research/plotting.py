@@ -57,14 +57,15 @@ def cumulative_return_plot(cumulative_factor_returns, benchmark=None, factor_nam
             line(cumulative_factor_returns[col], name=factor_name + '_' + col, strftime_format=strftime_format))
     if benchmark is not None:
         # todo filter the benchmark to make benchmark have same start and end
-
+        benchmark = benchmark[
+            (benchmark.index >= cumulative_factor_returns.index[0]) & (benchmark.index <= cumulative_factor_returns.index[-1])]
 
         fig.add_trace(line(benchmark, name=benchmark_name, color='#008000', strftime_format=strftime_format))
 
-    # x_axis = fig.data[0].x
-    # tick_value = [x_axis[i] for i in range(0, len(x_axis), len(x_axis) // 5)]
-    # tick_text = [x_axis[i][0:10] for i in range(0, len(x_axis), len(x_axis) // 5)]
-    # fig.update_xaxes(ticktext=tick_text, tickvals=tick_value, title_text="time")
+    x_axis = fig.data[0].x
+    tick_value = [x_axis[i] for i in range(0, len(x_axis), len(x_axis) // 5)]
+    tick_text = [x_axis[i][0:10] for i in range(0, len(x_axis), len(x_axis) // 5)]
+    fig.update_xaxes(ticktext=tick_text, tickvals=tick_value, title_text="time")
 
     return fig
 
@@ -264,11 +265,10 @@ def cumulative_returns_by_quantile_plot(cum_ret_by_qt_ts: pd.Series):
     fig = go.Figure()
     idx = cum_ret_by_qt_ts.index.get_level_values(1).unique().to_list()
     for g in cum_ret_by_qt_ts.groupby(level=0):
-
-        df = g[1] # type: pd.DataFrame
+        df = g[1]  # type: pd.DataFrame
         # this code is to fill the time when there is no quantile level is there.
         # still cannot understand why this would happen
-        df.reset_index(level=0, drop=True,inplace=True)
+        df.reset_index(level=0, drop=True, inplace=True)
         df.sort_index(level=1, inplace=True)
         df = df.reindex(idx, method='ffill')
         fig.add_trace(line(df, timestamp=idx, name=g[0], strftime_format=strftime_format))

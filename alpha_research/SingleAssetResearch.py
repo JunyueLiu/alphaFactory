@@ -380,12 +380,12 @@ class DemoSingleAssetFactor(SingleAssetResearch):
 
 
 if __name__ == '__main__':
-    data_path = r'../data.csv'
+    data_path = r'../HK.999010_2019-06-01 00:00:00_2020-05-30 03:00:00_K_1M_qfq.csv'
 
     df = pd.read_csv(data_path)
     df['time_key'] = pd.to_datetime(df['time_key'])
     df.set_index('time_key', inplace=True)
-    df = df[-5000:]
+    df = df[-10000:-5000]
     parameter = {'short_period': 5, 'long_period': 10}
 
     factor_study = SingleAssetResearch(df)
