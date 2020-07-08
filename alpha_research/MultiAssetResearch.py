@@ -438,14 +438,14 @@ class MultiAssetResearch(AlphaResearch):
         ]
 
         )
-        group_div = html.Div(children=[
+        group_div = html.Div(children=[html.Div([
             # todo group div and analysis
             # forward return for each group
             html.Div([
                 html.Div(id='forward-returns-period_2'),
                 html.Div(children='Enter a value to add or remove forward return value'),
                 dcc.Input(
-                    id='forwards-periods-input_1',
+                    id='forwards-periods-input_2',
                     type='text',
                     value='1, 2, 5, 10'
                 ),
@@ -454,7 +454,15 @@ class MultiAssetResearch(AlphaResearch):
                     options=[{'label': i, 'value': i} for i in ['In sample', 'Out ot the sample']],
                     value='In sample',
                     labelStyle={'display': 'inline-block'}
-                ) ]),
+                ),
+                html.Button('Update', id='UpdateButton_2')], style={'display': 'inline-block'}),
+            html.Div([
+                html.Div(children='Factor Parameter'),
+                html.Div(para_dcc_list, id='alpha_paras_2'),
+                html.Button('Submit', id='AlphaButton_2'),
+                html.Div(id="current-parameter"),
+            ], style={'display': 'inline-block', 'margin-left': '20em'})],
+            style={'display': 'inline-block'}),
             # subplot of each group
             # selected group for analysis
             # ic bar plot by group
@@ -469,9 +477,19 @@ class MultiAssetResearch(AlphaResearch):
             # 1. within group factor backtesting
             dcc.Graph(id='within-group-backtesting'),
             # 2. group quantile analysis
-            dcc.Graph(id='group-quantile')
-        ])
+            dcc.Graph(id='group-quantile'),
 
+            #  hidden data
+            html.Div(children=json.dumps(list(self.factor.index.names)),
+                     id='factor_index_name_saved_2',
+                     style={'display': 'none'}),
+            html.Div(children=self.factor.reset_index().to_json(), id='in_sample_factor_2',
+                     style={'display': 'none'}),
+            html.Div(id='out_sample_factor_2', style={'display': 'none'}),
+            html.Div(children=json.dumps([1, 2, 5, 10]), id='forward_returns_period_saved_2',
+                     style={'display': 'none'}),
+
+        ])
 
         app.layout = url_bar_and_content_div
 
@@ -805,6 +823,54 @@ class MultiAssetResearch(AlphaResearch):
                 qt_cum = cumulative_returns_by_group_plot(cum_ret_by_qt['1_period_return'])
                 return qt_bar, qt_heatmap, qt_displot, qt_cum
 
+        # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        # ++++++++++++++++++ for factor group analysis page  ++++++++++++++++++++++++
+        # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        # for update change of parameter in the quantile analysis page
+        @app.callback(Output('in_sample_factor_2', 'children'),
+                      [
+                          Input('AlphaButton_2', 'n_clicks'),
+                          Input('alpha_paras_2', 'children')])
+        def update_alpha_insample_2(n_clicks, alpha_paras):
+            paras = _get_alpha_parameter_from_div(alpha_paras)
+            self.calculate_factor(self.alpha_func, **paras)
+            in_sample_factor = self.factor  # type: pd.Series
+            return in_sample_factor.reset_index().to_json()
+
+        @app.callback(Output('out_sample_factor_2', 'children'),
+                      [
+                          Input('AlphaButton_2', 'n_clicks'),
+                          Input('alpha_paras_2', 'children')])
+        def update_alpha_out_of_sample_2(n_clicks, alpha_paras):
+
+            paras = _get_alpha_parameter_from_div(alpha_paras)
+            self.calculate_factor(self.alpha_func, **paras)
+
+            out_of_sample_factor = self.alpha_func(self.out_of_sample, **paras)  # type: pd.Series
+            out_of_sample_factor.name = self.factor_name
+            # more generally, this line would be
+            # json.dumps(cleaned_df)
+            return out_of_sample_factor.reset_index().to_json()
+
+        @app.callback([Output('forward_returns_period_saved_2', 'children'),
+                       Output("forward-returns-period_2", "children")],
+                      [Input("UpdateButton_2", "n_clicks")],
+                      [State("forwards-periods-input_2", "value")])
+        def update_forward_return_2(n_clicks, value):
+            fr = list(set([int(p) for p in value.split(',')]))
+            fr.sort()
+            forward_str = str(fr).replace('[', '').replace(']', '')
+            return json.dumps(fr), 'Forward return list: ' + forward_str
+
+
+
+
+
+
+
+
+
+
         return app
 
 
@@ -850,7 +916,7 @@ if __name__ == '__main__':
     multi_study.set_asset_group(group)
     multi_study.set_benchmark(benchmark)
     multi_study.calculate_factor(momentum_alpha)
-    multi_study.evaluate_alpha()
-    # multi_study.get_evaluation_dash_app().run_server(host='127.0.0.1', debug=True)
+    # multi_study.evaluate_alpha()
+    multi_study.get_evaluation_dash_app().run_server(host='127.0.0.1', debug=True)
     # j = multi_study.factor.reset_index().to_json(orient='index')
     # factor = pd.read_json(j, orient='index', typ='series')
