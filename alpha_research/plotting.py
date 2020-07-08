@@ -56,13 +56,11 @@ def cumulative_return_plot(cumulative_factor_returns, benchmark=None, factor_nam
         fig.add_trace(
             line(cumulative_factor_returns[col], name=factor_name + '_' + col, strftime_format=strftime_format))
     if benchmark is not None:
-        # todo filter the benchmark to make benchmark have same start and end
-        print(benchmark.index)
-        print(cumulative_factor_returns.index.get_level_values(0))
         benchmark = benchmark[
             (benchmark.index >= cumulative_factor_returns.index.get_level_values(0)[0])
             & (benchmark.index <= cumulative_factor_returns.index.get_level_values(0)[-1])]
-        fig.add_trace(line(benchmark / benchmark[0], name=benchmark_name, color='#008000', strftime_format=strftime_format))
+        fig.add_trace(
+            line(benchmark / benchmark[0], name=benchmark_name, color='#008000', strftime_format=strftime_format))
 
     x_axis = fig.data[0].x
     tick_value = [x_axis[i] for i in range(0, len(x_axis), len(x_axis) // 5)]
@@ -196,7 +194,7 @@ def turnover_plot(turnover: pd.Series) -> go.Figure:
     return fig
 
 
-def returns_by_quantile_bar_plot(mean_ret: pd.DataFrame, ) -> go.Figure:
+def returns_by_group_bar_plot(mean_ret: pd.DataFrame, ) -> go.Figure:
     # sample
     #                       1_period_return  5_period_return  10_period_return
     # factor_quantile
@@ -208,10 +206,11 @@ def returns_by_quantile_bar_plot(mean_ret: pd.DataFrame, ) -> go.Figure:
     fig = go.Figure()
     for ret_col in mean_ret.columns:
         fig.add_trace(bar(mean_ret.index, mean_ret[ret_col], ret_col))
+    fig.update_xaxes(title_text=mean_ret.index.name)
     return fig
 
 
-def returns_by_quantile_heatmap_plot(mean_ret: pd.DataFrame, ) -> go.Figure:
+def returns_by_group_heatmap_plot(mean_ret: pd.DataFrame, ) -> go.Figure:
     # sample
     #                       1_period_return  5_period_return  10_period_return
     # factor_quantile
@@ -231,12 +230,14 @@ def returns_by_quantile_heatmap_plot(mean_ret: pd.DataFrame, ) -> go.Figure:
     return fig
 
 
-def returns_by_quantile_distplot(quantile_ret_ts: pd.DataFrame):
+def returns_by_group_distplot(group_ret_ts: pd.DataFrame):
     """
 
-    :param quantile_ret_ts:
+    :param group_ret_ts:
     :return:
     """
+    # todo that's what i want. To fix
+
     #                             1_period_return  5_period_return  10_period_return
     # factor_quantile Date
     # 1               2010-06-17         0.002230         0.021172         -0.014775
@@ -245,14 +246,14 @@ def returns_by_quantile_distplot(quantile_ret_ts: pd.DataFrame):
     #                 2010-06-22        -0.000315        -0.036443         -0.046313
     #                 2010-06-23        -0.010813        -0.039430         -0.039475
     # ...                                     ...              ...               ...
-    fig = make_subplots(rows=len(quantile_ret_ts.columns), cols=1, shared_xaxes=True)
+    fig = make_subplots(rows=len(group_ret_ts.columns), cols=1, shared_xaxes=True)
     count = 1
-    for ret_col in quantile_ret_ts.columns:
+    for ret_col in group_ret_ts.columns:
         hist_data = []
         group_labels = []
-        grouped = quantile_ret_ts[ret_col].groupby(level=0)
+        grouped = group_ret_ts[ret_col].groupby(level=0)
         for group in grouped:
-            group_labels.append(ret_col + ' ' + str(group[0]) + ' quantile')
+            group_labels.append(ret_col + ' ' + str(group[0]) + group_ret_ts.index.get_level_values(0).name)
             hist_data.append(group[1].dropna().values)
         fig1 = ff.create_distplot(hist_data, group_labels, bin_size=.1)
         # fig1 has multi graph object
@@ -262,7 +263,7 @@ def returns_by_quantile_distplot(quantile_ret_ts: pd.DataFrame):
     return fig
 
 
-def cumulative_returns_by_quantile_plot(cum_ret_by_qt_ts: pd.Series):
+def cumulative_returns_by_group_plot(cum_ret_by_qt_ts: pd.Series):
     strftime_format = generate_strftime_format(cum_ret_by_qt_ts.index.get_level_values(1))
     fig = go.Figure()
     idx = cum_ret_by_qt_ts.index.get_level_values(1).unique().to_list()
@@ -274,6 +275,16 @@ def cumulative_returns_by_quantile_plot(cum_ret_by_qt_ts: pd.Series):
         df.sort_index(level=1, inplace=True)
         df = df.reindex(idx, method='ffill')
         fig.add_trace(line(df, timestamp=idx, name=g[0], strftime_format=strftime_format))
+    return fig
+
+
+def grouped_ic_bar(grouped_ic: pd.DataFrame):
+    grouped_mean_ic = grouped_ic.groupby(level=1).mean().T
+    fig = go.Figure()
+    for ic, rows in grouped_mean_ic.iterrows():
+        fig.add_trace(bar(grouped_mean_ic.columns, rows.values, str(ic)))
+    fig.update_xaxes(title_text='Group')
+    fig.update_yaxes(title_text='Information coefficient')
     return fig
 
 
