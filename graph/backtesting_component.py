@@ -3,7 +3,6 @@ import pandas as pd
 import numpy as np
 from scipy import stats
 
-
 def _infer_strftime_format(data: pd.DatetimeIndex):
     unique_index = np.unique(data.values)
     unique_index.sort()

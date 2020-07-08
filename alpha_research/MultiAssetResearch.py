@@ -61,7 +61,6 @@ class MultiAssetResearch(AlphaResearch):
         self.alpha_position_func = calculate_position
 
         if benchmark is not None:
-            # todo compare the index in the benchmark and the first level of the index
             # make sure the benchmark contains the date in the first level of the index
             self._check_benchmark_valid(benchmark)
             self.benchmark = benchmark
@@ -74,6 +73,7 @@ class MultiAssetResearch(AlphaResearch):
 
     def set_from_alpha_to_position_func(self, func):
         # todo check whether this function is valid
+
         self.alpha_position_func = func
 
     def set_factor_bin(self, bin_num):
@@ -117,8 +117,8 @@ class MultiAssetResearch(AlphaResearch):
             self.merged_data['group'] = groupby.astype('category')
 
     def _check_benchmark_valid(self, benchmark):
-        start = self.in_sample.index[0]
-        end = self.out_of_sample.index[-1]
+        start = self.in_sample.index.get_level_values(0)[0]
+        end = self.out_of_sample.index.get_level_values(0)[-1]
         if benchmark.index[0] <= start and benchmark.index[-1] >= end:
             pass
         else:
@@ -216,7 +216,6 @@ class MultiAssetResearch(AlphaResearch):
 
         external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
         app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
-        # todo should can customized the bin or quantile list in the dash app
 
         url_bar_and_content_div = html.Div(children=[
             html.H1(children=self.factor_name + ' evaluation',
@@ -711,7 +710,6 @@ class MultiAssetResearch(AlphaResearch):
             factor_index_ = json.loads(factor_index_name_saved)
             factor = pd.read_json(in_alpha_json)
             factor.set_index(factor_index_, inplace=True)
-            # todo factor selection by universe list
             factor = factor.loc[(slice(None), universe), :]
             factor = factor[self.factor_name]
 
@@ -773,6 +771,11 @@ if __name__ == '__main__':
     data.set_index(['Date', 'code'], inplace=True)
     multi_study = MultiAssetResearch(data)
 
+    benchmark = pd.read_csv(r'../^HSI_1986-12-31 00:00:00_2020-07-07 00:00:00.csv')
+    benchmark['Date'] = pd.to_datetime(benchmark['Date'])
+    benchmark.set_index('Date', inplace=True)
+    benchmark = benchmark['close']
+
 
     def random_alpha(df):
         np.random.seed(0)
@@ -802,8 +805,9 @@ if __name__ == '__main__':
              '2628.HK': 8, '3328.HK': 8, '3988.HK': 8, '1299.HK': 8, '0027.HK': 8, '0288.HK': 8,
              '1113.HK': 9, '1997.HK': 9}
     multi_study.set_asset_group(group)
+    multi_study.set_benchmark(benchmark)
     multi_study.calculate_factor(momentum_alpha)
     # multi_study.evaluate_alpha()
-    multi_study.get_evaluation_dash_app().run_server('127.0.0.1', debug=True)
+    multi_study.get_evaluation_dash_app().run_server(host='127.0.0.1', debug=True)
     # j = multi_study.factor.reset_index().to_json(orient='index')
     # factor = pd.read_json(j, orient='index', typ='series')

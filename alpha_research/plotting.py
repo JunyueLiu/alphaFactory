@@ -57,10 +57,12 @@ def cumulative_return_plot(cumulative_factor_returns, benchmark=None, factor_nam
             line(cumulative_factor_returns[col], name=factor_name + '_' + col, strftime_format=strftime_format))
     if benchmark is not None:
         # todo filter the benchmark to make benchmark have same start and end
+        print(benchmark.index)
+        print(cumulative_factor_returns.index.get_level_values(0))
         benchmark = benchmark[
-            (benchmark.index >= cumulative_factor_returns.index[0]) & (benchmark.index <= cumulative_factor_returns.index[-1])]
-
-        fig.add_trace(line(benchmark, name=benchmark_name, color='#008000', strftime_format=strftime_format))
+            (benchmark.index >= cumulative_factor_returns.index.get_level_values(0)[0])
+            & (benchmark.index <= cumulative_factor_returns.index.get_level_values(0)[-1])]
+        fig.add_trace(line(benchmark / benchmark[0], name=benchmark_name, color='#008000', strftime_format=strftime_format))
 
     x_axis = fig.data[0].x
     tick_value = [x_axis[i] for i in range(0, len(x_axis), len(x_axis) // 5)]
