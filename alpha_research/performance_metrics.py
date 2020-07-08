@@ -53,6 +53,7 @@ def calculate_ts_information_coefficient(factor, returns, suffix='ic') -> pd.Ser
 
 def calculate_cs_information_coefficient(merged_data: pd.DataFrame, by_group=False,
                                          suffix='ic') -> pd.DataFrame:
+    merged_data = merged_data.dropna().copy()
     grouper = [merged_data.index.get_level_values(level=0)]
     if 'group' in merged_data.columns and by_group:
         grouper.append('group')
@@ -62,7 +63,6 @@ def calculate_cs_information_coefficient(merged_data: pd.DataFrame, by_group=Fal
         _ic = group[get_returns_columns(group)] \
             .apply(lambda x: stats.spearmanr(x, f)[0])
         return _ic
-
     ic = merged_data.groupby(grouper).apply(src_ic)  # type: pd.DataFrame
     ic.rename(columns={idx: idx + '_' + suffix for idx in ic.columns}, inplace=True)
     return ic
@@ -169,7 +169,33 @@ def mean_return_by_quantile(merged_data: pd.DataFrame) -> tuple:
                     / np.sqrt(group_stats.T.xs('count', level=1).T)
     return quantile_ret_ts, mean_ret, std_error_ret
 
+def mean_return_by_group(merged_data: pd.DataFrame) -> tuple:
+    grouper = ['group', merged_data.index.get_level_values(level=0)]
+    group_stats = merged_data.groupby(grouper)[get_returns_columns(merged_data)] \
+        .agg(['mean', 'std', 'count'])
+    group_ret_ts = group_stats.T.xs('mean', level=1).T
+    #  1_period_return  5_period_return  10_period_return
+    # group Date
+    # 1     2010-06-17         0.006977         0.023485          0.008289
+    #       2010-06-18         0.012311         0.017228          0.004365
+    #       2010-06-21        -0.000925         0.002492          0.000254
+    #       2010-06-22         0.006306        -0.007319         -0.004966
+    #       2010-06-23        -0.001372        -0.014456         -0.007382
+    group_stats = group_ret_ts.groupby(level=0).agg(['mean', 'std', 'count'])
+    mean_ret = group_stats.T.xs('mean', level=1).T
+    #  1_period_return  5_period_return  10_period_return
+    # group
+    # 1             0.000560         0.002639          0.005226
+    # 2             0.000312         0.001451          0.002995
+    # 3             0.000398         0.001779          0.003585
+    # 4             0.001049         0.005081          0.010061
+    # 5             0.000459         0.002107          0.004075
 
+    std_error_ret = group_stats.T.xs('std', level=1).T \
+                    / np.sqrt(group_stats.T.xs('count', level=1).T)
+    # print(group_stats)
+
+    return group_ret_ts, mean_ret, std_error_ret
 
 
 

@@ -50,7 +50,7 @@ def calculate_cumulative_returns(returns, starting_value=0, out=None):
     return out
 
 
-def calculate_cumulative_returns_by_quantile(quantile_ret_ts: pd.DataFrame):
+def calculate_cumulative_returns_by_group(quantile_ret_ts: pd.DataFrame):
     #                             1_period_return  5_period_return  10_period_return
     # factor_quantile Date
     # 1               2010-06-17         0.002230         0.021172         -0.014775
@@ -112,10 +112,11 @@ def calculate_quantile_returns(factor, quantile_lower, quantile_upper) -> pd.Ser
     return factor_df['quantile_factor']
 
 
-def quantize_factor(merged_data: pd.DataFrame, quantiles: list = None, bins: int = None):
+def quantize_factor(merged_data: pd.DataFrame, quantiles: list = None, bins: int = None, grouped=False):
     """
     merged_data multi index, level 0 is pd.Timestamp, level 1 is asset code.
     two column, factor and 'group'
+    :param grouped:
     :param merged_data:
     :param quantiles:
     :param bins:
@@ -127,7 +128,7 @@ def quantize_factor(merged_data: pd.DataFrame, quantiles: list = None, bins: int
         raise ValueError('Either quantiles or bins should be provided')
 
     grouper = [merged_data.index.get_level_values(level=0)]
-    if 'group' in merged_data.columns:
+    if 'group' in merged_data.columns and grouped is True:
         grouper.append('group')
 
     def quantile_calc(x, _quantiles, _bins):
@@ -248,4 +249,3 @@ def get_valid_quantile(quantile_str: str):
     if ll[-1] < 100:
         ll.append(100)
     return ll
-

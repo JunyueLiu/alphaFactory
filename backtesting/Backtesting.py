@@ -5,6 +5,8 @@ import pandas as pd
 import numpy as np
 import quantstats as qs
 
+from backtesting.dash_app.index_app import get_backtesting_report_dash_app
+
 qs.extend_pandas()
 from numba import njit
 # from backtesting.Exchange import *
@@ -207,7 +209,7 @@ class BacktestingBase:
     @staticmethod
     def get_dash_report(self, backtesting_result):
         # from self.backtesting_result data generate report
-        pass
+        return get_backtesting_report_dash_app(backtesting_result)
 
     def backtesting_result_save_pickle(self, file: str):
         with open(file, 'wb') as f:

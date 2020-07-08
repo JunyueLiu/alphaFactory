@@ -61,7 +61,6 @@ class MultiAssetResearch(AlphaResearch):
         self.alpha_position_func = calculate_position
 
         if benchmark is not None:
-            # todo compare the index in the benchmark and the first level of the index
             # make sure the benchmark contains the date in the first level of the index
             self._check_benchmark_valid(benchmark)
             self.benchmark = benchmark
@@ -74,6 +73,7 @@ class MultiAssetResearch(AlphaResearch):
 
     def set_from_alpha_to_position_func(self, func):
         # todo check whether this function is valid
+
         self.alpha_position_func = func
 
     def set_factor_bin(self, bin_num):
@@ -88,10 +88,9 @@ class MultiAssetResearch(AlphaResearch):
                     list(diff)))
         self.asset_group = group
 
-    def set_benchmark(self, df):
-        # todo check benchmark is valid or not
-        self._check_benchmark_valid(df)
-        self.benchmark = df
+    def set_benchmark(self, series: pd.Series):
+        self._check_benchmark_valid(series)
+        self.benchmark = series
 
     def calculate_factor(self, func, **kwargs):
         self.alpha_func = func
@@ -116,9 +115,12 @@ class MultiAssetResearch(AlphaResearch):
                                 data=ss[self.factor.index.get_level_values(level=1)].values)
             self.merged_data['group'] = groupby.astype('category')
 
-    def _check_benchmark_valid(self, benchmark):
-        start = self.in_sample.index[0]
-        end = self.out_of_sample.index[-1]
+    def _check_benchmark_valid(self, benchmark: pd.Series):
+        if isinstance(benchmark, pd.Series) is False:
+            raise ValueError('benchmark should be Series. {} is given.'.format(type(benchmark)))
+
+        start = self.in_sample.index.get_level_values(0)[0]
+        end = self.out_of_sample.index.get_level_values(0)[-1]
         if benchmark.index[0] <= start and benchmark.index[-1] >= end:
             pass
         else:
@@ -191,20 +193,33 @@ class MultiAssetResearch(AlphaResearch):
 
         # ---------  Quantile analysis ---------
         # returns by quantile bar
-        fig = returns_by_quantile_bar_plot(mean_ret)
+        fig = returns_by_group_bar_plot(mean_ret)
         fig.show()
         # return by quantile heatmap
-        fig = returns_by_quantile_heatmap_plot(mean_ret)
+        fig = returns_by_group_heatmap_plot(mean_ret)
         fig.show()
         # quantile ret distribution
-        fig = returns_by_quantile_distplot(quantile_ret_ts)
+        fig = returns_by_group_distplot(quantile_ret_ts)
         fig.show()
         # cumulative return by quantile
-        cum_ret_by_qt = calculate_cumulative_returns_by_quantile(quantile_ret_ts)
-        fig = cumulative_returns_by_quantile_plot(cum_ret_by_qt['1_period_return'])
+        cum_ret_by_qt = calculate_cumulative_returns_by_group(quantile_ret_ts)
+        fig = cumulative_returns_by_group_plot(cum_ret_by_qt['1_period_return'])
         fig.show()
         # todo by user defined group
-        # print(factor_quantile)
+        # ---------  Group analysis ---------
+        grouped_ic = calculate_cs_information_coefficient(merged_data, True)
+        fig = grouped_ic_bar(grouped_ic)
+        fig.show()
+        group_ret_ts, mean_ret, std_error_ret = mean_return_by_group(merged_data)
+        fig = returns_by_group_bar_plot(mean_ret)
+        fig.show()
+        fig = returns_by_group_heatmap_plot(mean_ret)
+        fig.show()
+        fig = returns_by_group_distplot(group_ret_ts)
+        fig.show()
+        cum_ret_by_group = calculate_cumulative_returns_by_group(group_ret_ts)
+        fig = cumulative_returns_by_group_plot(cum_ret_by_group['1_period_return'])
+        fig.show()
 
     def get_evaluation_dash_app(self):
         # demand:
@@ -216,7 +231,6 @@ class MultiAssetResearch(AlphaResearch):
 
         external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
         app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
-        # todo should can customized the bin or quantile list in the dash app
 
         url_bar_and_content_div = html.Div(children=[
             html.H1(children=self.factor_name + ' evaluation',
@@ -424,11 +438,40 @@ class MultiAssetResearch(AlphaResearch):
         ]
 
         )
-
         group_div = html.Div(children=[
             # todo group div and analysis
+            # forward return for each group
+            html.Div([
+                html.Div(id='forward-returns-period_2'),
+                html.Div(children='Enter a value to add or remove forward return value'),
+                dcc.Input(
+                    id='forwards-periods-input_1',
+                    type='text',
+                    value='1, 2, 5, 10'
+                ),
+                dcc.RadioItems(
+                    id='in-out-sample_2',
+                    options=[{'label': i, 'value': i} for i in ['In sample', 'Out ot the sample']],
+                    value='In sample',
+                    labelStyle={'display': 'inline-block'}
+                ) ]),
+            # subplot of each group
+            # selected group for analysis
+            # ic bar plot by group
+            dcc.Graph(id='group-ic-bar'),
 
+            # factor backtesting by group
+            dcc.Graph(id='group-backtesting'),
+
+            dcc.Dropdown(id='group',
+                         options=[{'label': group, 'value': group} for group in set(self.asset_group.values())]
+                         ),
+            # 1. within group factor backtesting
+            dcc.Graph(id='within-group-backtesting'),
+            # 2. group quantile analysis
+            dcc.Graph(id='group-quantile')
         ])
+
 
         app.layout = url_bar_and_content_div
 
@@ -537,9 +580,9 @@ class MultiAssetResearch(AlphaResearch):
             factor = pd.read_json(in_alpha_json)
             factor.set_index(factor_index_, inplace=True)
 
-            factor = factor.loc[(slice(None), universe),:]
+            factor = factor.loc[(slice(None), universe), :]
             factor = factor[self.factor_name]
-            insample = self.in_sample.loc[(slice(None), universe),:]
+            insample = self.in_sample.loc[(slice(None), universe), :]
             if value == 'In sample':
                 # --------- calculation first ---------
                 returns = calculate_forward_returns(insample, forward_returns_period)
@@ -593,7 +636,6 @@ class MultiAssetResearch(AlphaResearch):
                 # print(out_factor)
                 # print(self.out_of_sample)
                 out_of_sample = self.out_of_sample.loc[(slice(None), universe), :]
-
 
                 returns = calculate_forward_returns(out_of_sample, forward_returns_period)
                 position = self.alpha_position_func(out_factor)
@@ -711,13 +753,12 @@ class MultiAssetResearch(AlphaResearch):
             factor_index_ = json.loads(factor_index_name_saved)
             factor = pd.read_json(in_alpha_json)
             factor.set_index(factor_index_, inplace=True)
-            # todo factor selection by universe list
             factor = factor.loc[(slice(None), universe), :]
             factor = factor[self.factor_name]
 
             factor_quantile_list = get_valid_quantile(quantile)
             factor_bin_num = int(bin)
-            insample = self.in_sample.loc[(slice(None), universe),:]
+            insample = self.in_sample.loc[(slice(None), universe), :]
             if in_out_sample == 'In sample':
                 # --------- calculation first ---------
                 returns = calculate_forward_returns(insample, forward_returns_period)
@@ -730,14 +771,14 @@ class MultiAssetResearch(AlphaResearch):
                                                   factor_bin_num)
                 merged_data['factor_quantile'] = factor_quantile
                 quantile_ret_ts, mean_ret, std_error_ret = mean_return_by_quantile(merged_data)
-                cum_ret_by_qt = calculate_cumulative_returns_by_quantile(quantile_ret_ts)
+                cum_ret_by_qt = calculate_cumulative_returns_by_group(quantile_ret_ts)
 
                 # todo table to show
                 # display(mean_ret)
-                qt_bar = returns_by_quantile_bar_plot(mean_ret)
-                qt_heatmap = returns_by_quantile_heatmap_plot(mean_ret)
-                qt_displot = returns_by_quantile_distplot(quantile_ret_ts)
-                qt_cum = cumulative_returns_by_quantile_plot(cum_ret_by_qt['1_period_return'])
+                qt_bar = returns_by_group_bar_plot(mean_ret)
+                qt_heatmap = returns_by_group_heatmap_plot(mean_ret)
+                qt_displot = returns_by_group_distplot(quantile_ret_ts)
+                qt_cum = cumulative_returns_by_group_plot(cum_ret_by_qt['1_period_return'])
                 return qt_bar, qt_heatmap, qt_displot, qt_cum
             else:
                 # todo out of sample
@@ -754,14 +795,14 @@ class MultiAssetResearch(AlphaResearch):
                                                   factor_bin_num)
                 merged_data['factor_quantile'] = factor_quantile
                 quantile_ret_ts, mean_ret, std_error_ret = mean_return_by_quantile(merged_data)
-                cum_ret_by_qt = calculate_cumulative_returns_by_quantile(quantile_ret_ts)
+                cum_ret_by_qt = calculate_cumulative_returns_by_group(quantile_ret_ts)
 
                 # todo table to show
                 # display(mean_ret)
-                qt_bar = returns_by_quantile_bar_plot(mean_ret)
-                qt_heatmap = returns_by_quantile_heatmap_plot(mean_ret)
-                qt_displot = returns_by_quantile_distplot(quantile_ret_ts)
-                qt_cum = cumulative_returns_by_quantile_plot(cum_ret_by_qt['1_period_return'])
+                qt_bar = returns_by_group_bar_plot(mean_ret)
+                qt_heatmap = returns_by_group_heatmap_plot(mean_ret)
+                qt_displot = returns_by_group_distplot(quantile_ret_ts)
+                qt_cum = cumulative_returns_by_group_plot(cum_ret_by_qt['1_period_return'])
                 return qt_bar, qt_heatmap, qt_displot, qt_cum
 
         return app
@@ -772,6 +813,11 @@ if __name__ == '__main__':
     data['Date'] = pd.to_datetime(data['Date'])
     data.set_index(['Date', 'code'], inplace=True)
     multi_study = MultiAssetResearch(data)
+
+    benchmark = pd.read_csv(r'../^HSI_1986-12-31 00:00:00_2020-07-07 00:00:00.csv')
+    benchmark['Date'] = pd.to_datetime(benchmark['Date'])
+    benchmark.set_index('Date', inplace=True)
+    benchmark = benchmark['close']
 
 
     def random_alpha(df):
@@ -802,8 +848,9 @@ if __name__ == '__main__':
              '2628.HK': 8, '3328.HK': 8, '3988.HK': 8, '1299.HK': 8, '0027.HK': 8, '0288.HK': 8,
              '1113.HK': 9, '1997.HK': 9}
     multi_study.set_asset_group(group)
+    multi_study.set_benchmark(benchmark)
     multi_study.calculate_factor(momentum_alpha)
-    # multi_study.evaluate_alpha()
-    multi_study.get_evaluation_dash_app().run_server('127.0.0.1', debug=True)
+    multi_study.evaluate_alpha()
+    # multi_study.get_evaluation_dash_app().run_server(host='127.0.0.1', debug=True)
     # j = multi_study.factor.reset_index().to_json(orient='index')
     # factor = pd.read_json(j, orient='index', typ='series')

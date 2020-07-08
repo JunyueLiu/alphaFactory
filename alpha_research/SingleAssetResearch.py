@@ -186,7 +186,6 @@ class SingleAssetResearch(AlphaResearch):
                     labelStyle={'display': 'inline-block'}
                 )
             ], style={'display': 'block', 'margin': '0px 100px 50px 100px'}),
-            # todo 拯救一下我的表格布局吧，冇眼睇
 
             # summary table
             html.Div([html.H5(children='Factor Summary Table', style={'text-align': 'center', 'margin-bottom': '20px'}),
