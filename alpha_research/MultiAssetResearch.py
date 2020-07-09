@@ -676,7 +676,6 @@ class MultiAssetResearch(AlphaResearch):
                 # print(out_factor)
                 # print(self.out_of_sample)
                 out_of_sample = self.out_of_sample.loc[(slice(None), universe), :]
-
                 returns = calculate_forward_returns(out_of_sample, forward_returns_period)
                 position = self.alpha_position_func(out_factor)
                 merged_data = pd.DataFrame(index=factor.index)
@@ -825,14 +824,15 @@ class MultiAssetResearch(AlphaResearch):
                 # todo currently it is same with in the sample.
                 # --------- calculation first ---------
                 # factor_index_ = json.loads(factor_index_name_saved)
-                out_of_sample = pd.read_json(out_of_sample_factor)
-                out_of_sample.set_index(factor_index_, inplace=True)
-                out_of_sample = out_of_sample.loc[(slice(None), universe), :]
-
+                out_factor = pd.read_json(out_of_sample_factor)
+                out_factor.set_index(factor_index_, inplace=True)
+                out_factor = out_factor.loc[(slice(None), universe), :]
+                # print(out_of_sample)
+                out_of_sample = self.out_of_sample.loc[(slice(None), universe), :]
                 returns = calculate_forward_returns(out_of_sample, forward_returns_period)
-                # position = self.alpha_position_func(factor)
+                # position = self.alpha_position_func(out_factor)
                 merged_data = pd.DataFrame(index=out_of_sample.index)
-                merged_data['factor'] = out_of_sample
+                merged_data['factor'] = out_factor
                 merged_data = merged_data.join(returns)
                 factor_quantile = quantize_factor(merged_data, factor_quantile_list,
                                                   factor_bin_num)
@@ -925,6 +925,8 @@ class MultiAssetResearch(AlphaResearch):
                     groupby = pd.Series(index=self.factor.index,
                                         data=ss[self.factor.index.get_level_values(level=1)].values)
                     merged_data['group'] = groupby.astype('category')
+                else:
+                    return go.Figure(), go.Figure(), go.Figure(), go.Figure()
 
                 merged_data = merged_data.join(returns)
 
@@ -941,7 +943,35 @@ class MultiAssetResearch(AlphaResearch):
                 return group_ic_bar, group_ret_bar, group_displot, group_backtesting
             else:
                 # todo out of sample
-                pass
+                out_factor = pd.read_json(out_of_sample_factor)
+                out_factor.set_index(factor_index_, inplace=True)
+                out_factor = out_factor[self.factor_name]
+
+                out_of_sample = self.out_of_sample
+
+                returns = calculate_forward_returns(out_of_sample, forward_returns_period)
+                merged_data = pd.DataFrame(index=out_of_sample.index)
+                merged_data['factor'] = out_factor
+                if self.asset_group is not None:
+                    ss = pd.Series(self.asset_group)
+                    groupby = pd.Series(index=out_factor.index,
+                                        data=ss[out_factor.index.get_level_values(level=1)].values)
+                    merged_data['group'] = groupby.astype('category')
+                else:
+                    return go.Figure(), go.Figure(), go.Figure(), go.Figure()
+
+                merged_data = merged_data.join(returns)
+                grouped_ic = calculate_cs_information_coefficient(merged_data, True)
+                group_ic_bar = grouped_ic_bar(grouped_ic)
+
+                group_ret_ts, mean_ret, std_error_ret = mean_return_by_group(merged_data)
+                group_ret_bar = returns_by_group_bar_plot(mean_ret)
+                group_displot = returns_by_group_distplot(group_ret_ts)
+                cum_ret_by_group = calculate_cumulative_returns_by_group(group_ret_ts)
+                # todo should add 1 period to it, in case user didn't select
+                group_backtesting = cumulative_returns_by_group_plot(cum_ret_by_group['1_period_return'])
+
+                return group_ic_bar, group_ret_bar, group_displot, group_backtesting
 
         @app.callback([Output('quantile_list_2', 'children'),
                        Output('bin_2', 'children')],
@@ -999,6 +1029,8 @@ class MultiAssetResearch(AlphaResearch):
                     groupby = pd.Series(index=factor.index,
                                         data=ss[factor.index.get_level_values(level=1)].values)
                     merged_data['group'] = groupby.astype('category')
+                else:
+                    return go.Figure(), go.Figure()
                 merged_data = merged_data.join(returns)
                 merged_data_ = merged_data[merged_data['group'] == group].drop(columns=['group'])
                 factor_quantile = quantize_factor(merged_data_, factor_quantile_list,
@@ -1011,7 +1043,32 @@ class MultiAssetResearch(AlphaResearch):
 
                 return qt_bar, qt_cum
             else:
-                pass
+                out_factor = pd.read_json(out_of_sample_factor)
+                out_factor.set_index(factor_index_, inplace=True)
+                out_factor = out_factor[self.factor_name]
+                out_of_sample = self.out_of_sample
+                returns = calculate_forward_returns(out_of_sample, forward_returns_period)
+                # position = self.alpha_position_func(factor)
+                merged_data = pd.DataFrame(index=out_factor.index)
+                merged_data['factor'] = out_factor
+                if self.asset_group is not None:
+                    ss = pd.Series(self.asset_group)
+                    groupby = pd.Series(index=out_factor.index,
+                                        data=ss[out_factor.index.get_level_values(level=1)].values)
+                    merged_data['group'] = groupby.astype('category')
+                else:
+                    return go.Figure(), go.Figure()
+                merged_data = merged_data.join(returns)
+                merged_data_ = merged_data[merged_data['group'] == group].drop(columns=['group'])
+                factor_quantile = quantize_factor(merged_data_, factor_quantile_list,
+                                                  factor_bin_num)
+                merged_data_['factor_quantile'] = factor_quantile
+                quantile_ret_ts, mean_ret, std_error_ret = mean_return_by_quantile(merged_data_)
+                cum_ret_by_qt = calculate_cumulative_returns_by_group(quantile_ret_ts)
+                qt_bar = returns_by_group_bar_plot(mean_ret)
+                qt_cum = cumulative_returns_by_group_plot(cum_ret_by_qt['1_period_return'])
+
+                return qt_bar, qt_cum
 
         return app
 
