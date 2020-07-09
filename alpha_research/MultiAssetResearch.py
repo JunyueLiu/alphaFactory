@@ -467,13 +467,31 @@ class MultiAssetResearch(AlphaResearch):
             # selected group for analysis
             # ic bar plot by group
             dcc.Graph(id='group-ic-bar'),
-
+            dcc.Graph(id='group-ret-bar'),
+            dcc.Graph(id='group-displot'),
             # factor backtesting by group
             dcc.Graph(id='group-backtesting'),
 
             dcc.Dropdown(id='group',
-                         options=[{'label': group, 'value': group} for group in set(self.asset_group.values())]
+                         options=[{'label': group, 'value': group} for group in set(self.asset_group.values())],
+                         value=list(self.asset_group.values())[0],
+
                          ),
+            html.Div(id='quantile parameter'),
+            html.Div(children='Enter a value to change quantile or bin (Quantile has priority)'),
+            dcc.Input(
+                id='quantile2',
+                type='text',
+                value=str(self.factor_quantile_list).replace('[', '').replace(']', ''),
+                debounce=True
+            ),
+            dcc.Input(
+                id='bin2',
+                type='number',
+                value=self.factor_bin_num,
+                min='1',
+                debounce=True
+            ),
             # 1. within group factor backtesting
             dcc.Graph(id='within-group-backtesting'),
             # 2. group quantile analysis
@@ -487,6 +505,10 @@ class MultiAssetResearch(AlphaResearch):
                      style={'display': 'none'}),
             html.Div(id='out_sample_factor_2', style={'display': 'none'}),
             html.Div(children=json.dumps([1, 2, 5, 10]), id='forward_returns_period_saved_2',
+                     style={'display': 'none'}),
+            html.Div(children=json.dumps(self.factor_quantile_list), id='quantile_list_2',
+                     style={'display': 'none'}),
+            html.Div(children=self.factor_bin_num, id='bin_2',
                      style={'display': 'none'}),
 
         ])
@@ -802,12 +824,15 @@ class MultiAssetResearch(AlphaResearch):
                 # todo out of sample
                 # todo currently it is same with in the sample.
                 # --------- calculation first ---------
-                out_of_sample = self.out_of_sample.loc[(slice(None), universe), :]
+                # factor_index_ = json.loads(factor_index_name_saved)
+                out_of_sample = pd.read_json(out_of_sample_factor)
+                out_of_sample.set_index(factor_index_, inplace=True)
+                out_of_sample = out_of_sample.loc[(slice(None), universe), :]
 
                 returns = calculate_forward_returns(out_of_sample, forward_returns_period)
                 # position = self.alpha_position_func(factor)
-                merged_data = pd.DataFrame(index=factor.index)
-                merged_data['factor'] = factor
+                merged_data = pd.DataFrame(index=out_of_sample.index)
+                merged_data['factor'] = out_of_sample
                 merged_data = merged_data.join(returns)
                 factor_quantile = quantize_factor(merged_data, factor_quantile_list,
                                                   factor_bin_num)
@@ -862,14 +887,131 @@ class MultiAssetResearch(AlphaResearch):
             forward_str = str(fr).replace('[', '').replace(']', '')
             return json.dumps(fr), 'Forward return list: ' + forward_str
 
+        @app.callback([
+            Output('group-ic-bar', 'figure'),
+            Output('group-ret-bar', 'figure'),
+            Output('group-displot', 'figure'),
+            Output('group-backtesting', 'figure'),
+        ], [Input("UpdateButton_2", "n_clicks"),
+            Input('in-out-sample_2', 'value'),
+            Input('forward_returns_period_saved_2', 'children'),
+            Input('in_sample_factor_2', 'children'),
+            Input('out_sample_factor_2', 'children'),
+            Input('factor_index_name_saved_2', 'children'),
 
+            ])
+        def update_group_page(n_clicks,
+                              in_out_sample,
+                              forward_period,
+                              in_alpha_json,
+                              out_of_sample_factor,
+                              factor_index_name_saved,
+                              ):
 
+            forward_returns_period = json.loads(forward_period)
+            factor_index_ = json.loads(factor_index_name_saved)
+            factor = pd.read_json(in_alpha_json)
+            factor.set_index(factor_index_, inplace=True)
+            factor = factor[self.factor_name]
+            insample = self.in_sample
+            if in_out_sample == 'In sample':
+                returns = calculate_forward_returns(insample, forward_returns_period)
+                # todo position calculation selection
+                # position = self.alpha_position_func(factor)
+                merged_data = pd.DataFrame(index=factor.index)
+                merged_data['factor'] = factor
+                if self.asset_group is not None:
+                    ss = pd.Series(self.asset_group)
+                    groupby = pd.Series(index=self.factor.index,
+                                        data=ss[self.factor.index.get_level_values(level=1)].values)
+                    merged_data['group'] = groupby.astype('category')
 
+                merged_data = merged_data.join(returns)
 
+                grouped_ic = calculate_cs_information_coefficient(merged_data, True)
+                group_ic_bar = grouped_ic_bar(grouped_ic)
 
+                group_ret_ts, mean_ret, std_error_ret = mean_return_by_group(merged_data)
+                group_ret_bar = returns_by_group_bar_plot(mean_ret)
+                group_displot = returns_by_group_distplot(group_ret_ts)
+                cum_ret_by_group = calculate_cumulative_returns_by_group(group_ret_ts)
+                # todo should add 1 period to it, in case user didn't select
+                group_backtesting = cumulative_returns_by_group_plot(cum_ret_by_group['1_period_return'])
 
+                return group_ic_bar, group_ret_bar, group_displot, group_backtesting
+            else:
+                # todo out of sample
+                pass
 
+        @app.callback([Output('quantile_list_2', 'children'),
+                       Output('bin_2', 'children')],
+                      [Input('quantile2', 'value'),
+                       Input('bin2', 'value')])
+        def update_quantile(quantile_str, bin):
+            if quantile_str != 'None':
+                quantile_list = [float(q) for q in quantile_str.split(',')]
+            else:
+                quantile_list = None
+            return json.dumps(quantile_list), bin
 
+        @app.callback([
+            Output('within-group-backtesting', 'figure'),
+            Output('group-quantile', 'figure'),
+        ], [
+            Input('in-out-sample_2', 'value'),
+            Input('forward_returns_period_saved_2', 'children'),
+            Input('in_sample_factor_2', 'children'),
+            Input('out_sample_factor_2', 'children'),
+            Input('group', 'value'),
+            Input('factor_index_name_saved_2', 'children'),
+            Input('quantile2', 'value'),
+            Input('bin2', 'value')
+        ])
+        def update_group_selection(in_out_sample,
+                                   forward_period,
+                                   in_alpha_json,
+                                   out_of_sample_factor,
+                                   group,
+                                   factor_index_name_saved,
+                                   quantile,
+                                   bin):
+            factor_quantile_list = get_valid_quantile(quantile)
+            factor_bin_num = int(bin)
+            forward_returns_period = json.loads(forward_period)
+            factor_index_ = json.loads(factor_index_name_saved)
+            factor = pd.read_json(in_alpha_json)
+            factor.set_index(factor_index_, inplace=True)
+
+            # factor = factor.loc[(slice(None), universe), :]
+            # print(factor)
+            factor = factor[self.factor_name]
+
+            factor_quantile_list = get_valid_quantile(quantile)
+            factor_bin_num = int(bin)
+            insample = self.in_sample
+            if in_out_sample == 'In sample':
+                returns = calculate_forward_returns(insample, forward_returns_period)
+                # position = self.alpha_position_func(factor)
+                merged_data = pd.DataFrame(index=factor.index)
+                merged_data['factor'] = factor
+                if self.asset_group is not None:
+                    ss = pd.Series(self.asset_group)
+                    groupby = pd.Series(index=factor.index,
+                                        data=ss[factor.index.get_level_values(level=1)].values)
+                    merged_data['group'] = groupby.astype('category')
+                merged_data = merged_data.join(returns)
+                merged_data_ = merged_data[merged_data['group'] == group].drop(columns=['group'])
+                factor_quantile = quantize_factor(merged_data_, factor_quantile_list,
+                                                  factor_bin_num)
+                merged_data_['factor_quantile'] = factor_quantile
+                quantile_ret_ts, mean_ret, std_error_ret = mean_return_by_quantile(merged_data_)
+                cum_ret_by_qt = calculate_cumulative_returns_by_group(quantile_ret_ts)
+                qt_bar = returns_by_group_bar_plot(mean_ret)
+                qt_cum = cumulative_returns_by_group_plot(cum_ret_by_qt['1_period_return'])
+
+                return qt_bar, qt_cum
+            else:
+                pass
 
         return app
 
