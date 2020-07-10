@@ -41,7 +41,10 @@ def adv(prices: pd.Series, volume, d: int) -> pd.Series:
     :param volume:
     :return:
     """
-    return (prices * volume).rolling(d).mean()
+    if isinstance(prices.index, pd.MultiIndex):
+        return (prices * volume).groupby(level=1).rolling(d).mean()
+    else:
+        return (prices * volume).rolling(d).mean()
 
 
 def rank(x: pd.Series) -> pd.Series:
@@ -63,7 +66,10 @@ def delay(x: pd.Series, d: int) -> pd.Series:
     :return:
     """
     assert d > 0
-    return x.shift(d)
+    if isinstance(x.index, pd.MultiIndex):
+        return x.groupby(level=1).shift(d)
+    else:
+        return x.shift(d)
 
 
 def correlation(x: pd.Series, y: pd.Series, d: int) -> pd.Series:
@@ -96,7 +102,10 @@ def delta(x: pd.Series, d: int) -> pd.Series:
     :return:
     """
     assert d > 0
-    return x - x.shift(d)
+    if isinstance(x.index, pd.MultiIndex):
+        return x.groupby(level=1).diff(d)
+    else:
+        return x - x.shift(d)
 
 def scale(x: pd.Series, a: int = 1) -> pd.Series:
     """
@@ -106,6 +115,7 @@ def scale(x: pd.Series, a: int = 1) -> pd.Series:
     :return:
     """
     # todo check this implementation is right
+    assert isinstance(x.index, pd.MultiIndex)
     return x.groupby(level=0).apply(lambda e: a * e / e.abs().sum())
 
 
