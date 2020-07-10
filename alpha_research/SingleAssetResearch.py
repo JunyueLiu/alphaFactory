@@ -50,7 +50,7 @@ class SingleAssetResearch(AlphaResearch):
     def set_factor_name(self, factor_name):
         self.factor_name = factor_name
 
-    def calculate_factor(self, func, **kwargs) -> pd.DataFrame:
+    def calculate_factor(self, func, **kwargs) -> pd.Series:
         self.alpha_func = func
         self.alpha_func_paras = kwargs
         if kwargs is not None:

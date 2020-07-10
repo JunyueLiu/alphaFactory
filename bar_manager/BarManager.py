@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 # from numba.experimental import jitclass
-from numba import jitclass, types, typed
+# from numba import jitclass, types, typed
 from technical_analysis.overlap import *
 from technical_analysis.volatility import *
 from technical_analysis.volume import *
@@ -183,46 +183,46 @@ class BarManager:
         return data
 
 
-ta_ty = (types.unicode_type, types.float32[:])
-para_ty = (types.unicode_type, types.DictType(*(types.unicode_type, types.Any)))
-spec = [
-    ('size', types.int32),
-    ('inited', types.boolean),
-    # ('interval')
-    ('bar_name', types.unicode_type),
-    ('time', types.float32[:]),
-    ('open', types.float32[:]),
-    ('high', types.float32[:]),
-    ('low', types.float32[:]),
-    ('close', types.float32[:]),
-    ('volume', types.float32[:]),
-    ('ta', types.DictType(*ta_ty)),
-    ('technical_indicator_parameters', types.DictType(*para_ty)),
-    ('max_TI_period', types.int32)
-]
+# ta_ty = (types.unicode_type, types.float32[:])
+# para_ty = (types.unicode_type, types.DictType(*(types.unicode_type, types.Any)))
+# spec = [
+#     ('size', types.int32),
+#     ('inited', types.boolean),
+#     # ('interval')
+#     ('bar_name', types.unicode_type),
+#     ('time', types.float32[:]),
+#     ('open', types.float32[:]),
+#     ('high', types.float32[:]),
+#     ('low', types.float32[:]),
+#     ('close', types.float32[:]),
+#     ('volume', types.float32[:]),
+#     ('ta', types.DictType(*ta_ty)),
+#     ('technical_indicator_parameters', types.DictType(*para_ty)),
+#     ('max_TI_period', types.int32)
+# ]
 
 
-@jitclass(spec)
-class NumbaBarManager:
-
-    def __init__(self, bar_name, size=100, ta_parameters=None):
-        # super().__init__(bar_name)
-        self.size = size
-        self.inited = False
-        # self.interval = None
-        self.bar_name = bar_name
-
-        self.time = np.zeros(size)
-        self.open = np.zeros(size)
-        self.high = np.zeros(size)
-        self.low = np.zeros(size)
-        self.close = np.zeros(size)
-        self.volume = np.zeros(size)
-        self.technical_indicator_parameters = typed.Dict.empty(*para_ty)
-        self.ta = typed.Dict.empty(*ta_ty)  # to store technical indicators
-        # self.customized_indicator_name = []
-
-        self.max_TI_period = 0
+# @jitclass(spec)
+# class NumbaBarManager:
+#
+#     def __init__(self, bar_name, size=100, ta_parameters=None):
+#         # super().__init__(bar_name)
+#         self.size = size
+#         self.inited = False
+#         # self.interval = None
+#         self.bar_name = bar_name
+#
+#         self.time = np.zeros(size)
+#         self.open = np.zeros(size)
+#         self.high = np.zeros(size)
+#         self.low = np.zeros(size)
+#         self.close = np.zeros(size)
+#         self.volume = np.zeros(size)
+#         self.technical_indicator_parameters = typed.Dict.empty(*para_ty)
+#         self.ta = typed.Dict.empty(*ta_ty)  # to store technical indicators
+#         # self.customized_indicator_name = []
+#
+#         self.max_TI_period = 0
 
 
 if __name__ == '__main__':
