@@ -81,7 +81,18 @@ def correlation(x: pd.Series, y: pd.Series, d: int) -> pd.Series:
     :param d:
     :return:
     """
-    return x.rolling(window=d).corr(y)
+    # todo multiindex
+    if isinstance(x.index, pd.MultiIndex):
+        j = x.to_frame().join(y.to_frame())
+        res = []
+        for g in j.groupby(level=1):
+            a = g[1][x.name]
+            b = g[1][y.name]
+            r = a.rolling(window=d).corr(b)
+            res.append(r)
+        return pd.concat(res)
+    else:
+        return x.rolling(window=d).corr(y)
 
 
 def covariance(x: pd.Series, y: pd.Series, d) -> pd.Series:
@@ -92,7 +103,18 @@ def covariance(x: pd.Series, y: pd.Series, d) -> pd.Series:
     :param d:
     :return:
     """
-    return x.rolling(window=d).cov(y)
+    # todo multiindex
+    if isinstance(x.index, pd.MultiIndex):
+        j = x.to_frame().join(y.to_frame())
+        res = []
+        for g in j.groupby(level=1):
+            a = g[1][x.name]
+            b = g[1][y.name]
+            r = a.rolling(window=d).cov(b)
+            res.append(r)
+        return pd.concat(res)
+    else:
+        return x.rolling(window=d).cov(y)
 
 def delta(x: pd.Series, d: int) -> pd.Series:
     """
