@@ -304,26 +304,31 @@ def year_heatmap(agg_ret: pd.Series) -> go.Figure:
     :param agg_ret:
     :return:
     """
-    # todo have bug
     fig = go.Figure()
     agg_ret_ = agg_ret.copy().replace(0, np.NAN)
     agg_ret_ = (agg_ret_ - agg_ret_.min()) / (agg_ret_.max() - agg_ret_.min())
-    print(agg_ret)
     y = agg_ret_.index.to_period('Y').unique().strftime('%Y').to_list()
-
+    years = [i for i in range(5 * int(int(y[0]) / 5), int((int(y[-1]) + 5) / 5) * 5, 1)]
     z = []
-    x = [0]
-    i = 0
-    for y_ in y:
-        if i < len(agg_ret_) and agg_ret_.index[i].year == int(y_):
-            z.append(agg_ret_[i])
-            i += 1
+    x = []
+    j = 0
+    decade = 1
+    z_ = []
+    for i in range(len(years)):
+        if j < len(y) and int(y[j]) == years[i]:
+            z_.append(agg_ret[j])
+            j += 1
         else:
-            z.append(None)
+            z_.append(np.nan)
+        if i % 5 == 4:
+            z.append(z_)
+            z_ = []
+            x.append(decade)
+            decade += 1
+
     colorscale = [[0, 'red'], [0.5, 'yellow'], [1, 'green']]
     # todo Annotations
-    print(z)
-    heatmap = go.Heatmap(z=[z], y=y, x=x,
+    heatmap = go.Heatmap(z=z, y=x, x=y,
                          colorscale=colorscale,
                          # xgap=3,  # this
                          # ygap=3,  # and this is used to make the grid-like apperance

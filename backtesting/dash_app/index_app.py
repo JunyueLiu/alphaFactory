@@ -146,13 +146,45 @@ def get_backtesting_report_dash_app(backtesting_result: dict):
             agg_ret = aggregate_returns(backtesting_result['rate of return'], 'quarter')
             heatmap = aggregate_returns_heatmap(agg_ret, 'quarter')
             displot = returns_distribution_plot(agg_ret)
-            return 'Quarter Analysis', heatmap, displot
+            consec_win = agg_ret.groupby((agg_ret > 0).cumsum())
+            consec_loss = agg_ret.groupby((agg_ret < 0).cumsum())
+            period_performance = {
+                'Best Quarter': agg_ret.index[agg_ret.argmax()].date(),
+                'Best Quarter Return': "{:.2f} %".format(100 * agg_ret.max()),
+                'Worst Quarter': agg_ret.index[agg_ret.argmin()].date(),
+                'Worst Quarter Return': "{:.2f} %".format(100 * agg_ret.min()),
+                'Quarters of Consecutive Win': consec_win.cumcount().max(),
+                'Quarters of Consecutive Losses': consec_loss.cumcount().max(),
+                'Avg Quarterly Return %': "{:.2f} %".format(100 * agg_ret.mean()),
+                'Quarterly Return Vol %': "{:.2f} %".format(100 * agg_ret.std()),
+                'Quarterly Return Skew': "{:.2f} ".format(agg_ret.skew()),
+                'Quarterly Return Kurt': "{:.2f} ".format(agg_ret.kurt()),
+
+            }
+
+            return 'Quarter Analysis', heatmap, displot, pd.Series(period_performance,
+                                                                   name='Quarterly Key Performance').to_markdown()
         elif value == 'Y':
             agg_ret = aggregate_returns(backtesting_result['rate of return'], 'year')
             heatmap = aggregate_returns_heatmap(agg_ret, 'year')
             displot = returns_distribution_plot(agg_ret)
-            return 'Year Analysis', heatmap, displot
+            consec_win = agg_ret.groupby((agg_ret > 0).cumsum())
+            consec_loss = agg_ret.groupby((agg_ret < 0).cumsum())
+            period_performance = {
+                'Best Year': agg_ret.index[agg_ret.argmax()].date(),
+                'Best Year Return': "{:.2f} %".format(100 * agg_ret.max()),
+                'Worst Year': agg_ret.index[agg_ret.argmin()].date(),
+                'Worst Year Return': "{:.2f} %".format(100 * agg_ret.min()),
+                'Years of Consecutive Win': consec_win.cumcount().max(),
+                'Years of Consecutive Losses': consec_loss.cumcount().max(),
+                'Avg Yearly Return %': "{:.2f} %".format(100 * agg_ret.mean()),
+                'Yearly Return Vol %': "{:.2f} %".format(100 * agg_ret.std()),
+                'Yearly Return Skew': "{:.2f} ".format(agg_ret.skew()),
+                'Yearly Return Kurt': "{:.2f} ".format(agg_ret.kurt()),
 
+            }
+            return 'Year Analysis', heatmap, displot, pd.Series(period_performance,
+                                                                   name='Yearly Key Performance').to_markdown()
 
     # --------------- entry exit page callback ---------------
     @app.callback(Output('timeframe', 'options'),
