@@ -3,12 +3,10 @@ import pickle
 import datetime
 import pandas as pd
 import numpy as np
-import quantstats as qs
 
 from backtesting.dash_app.index_app import get_backtesting_report_dash_app
 
-qs.extend_pandas()
-from numba import njit
+# from numba import njit
 # from backtesting.Exchange import *
 from strategy.DoubleMA import DoubleMA
 from gateway.quote_base import QuoteBase
@@ -183,8 +181,6 @@ class BacktestingBase:
         self.backtesting_result['volatility'] = returns_volatility(returns)
         self.backtesting_result['skew'] = returns_skew(returns)
         self.backtesting_result['Kurtosis'] = returns_kurt(returns)
-
-
 
         # data here is pandas Series, save for future use
         self.backtesting_result['data'] = self.data

@@ -103,7 +103,7 @@ def sortino(returns, rf=0, periods=252, annualize=True):
     return res
 
 
-def cagr(net_value, rf=0., compounded=True):
+def cagr(net_value):
     """
 
     :param net_value:
@@ -111,9 +111,9 @@ def cagr(net_value, rf=0., compounded=True):
     :param compounded:
     :return:
     """
-    years = (pd.to_datetime(net_value.index[-1]) - pd.to_datetime(net_value.index[0])).days / 365.
+    years = (net_value.index[-1] - net_value.index[0]).days / 365.
 
-    res = abs(net_value[-1] - 1) ** (1.0 / years) - 1
+    res = abs(net_value[-1] / net_value[0]) ** (1.0 / years) - 1
 
     return res
 
