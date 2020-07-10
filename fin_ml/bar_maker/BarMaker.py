@@ -1,5 +1,6 @@
-import pandas as pd
 import os
+import pandas as pd
+import numpy as np
 
 
 class BarMaker:
@@ -66,15 +67,15 @@ class TickBarMaker(BarMaker):
     def make_time_bar(self, interval: str):
         bar_data = self.tick_data.copy()
         resampler = bar_data.resample(interval)
-        agg_dict = {self.price_key: ['ohlc', 'count'],
+        agg_dict = {self.price_key: ['ohlc', 'count']
                     }
-        if self.volume_key is not None:
-            agg_dict[self.volume_key] = 'sum'
 
         bar_data = resampler.agg(agg_dict)  # type: pd.DataFrame
-        bar_data.fillna(method='ffill', inplace=True)
         bar_data.columns = bar_data.columns.get_level_values(2)
         bar_data.rename(columns={'mp': 'count'}, inplace=True)
+        bar_data.fillna(method='ffill', inplace=True)
+        if self.volume_key is not None:
+            bar_data[self.volume_key] = resampler.agg({self.volume_key: 'sum'})
         return bar_data
 
     def make_count_bar(self, count: int):
@@ -93,17 +94,76 @@ class TickBarMaker(BarMaker):
         count_bar['count'] = count
         return count_bar
 
-    def make_imbalanced_bar(self, alpha: float):
-        pass
+    def make_imbalanced_bar(self, alpha: float, default_T: int = 10):
+        # todo possible wrong implementation
+        T = []
+        bar_sampled_event = [self.tick_data.index[0]]
+        pro_b1_bar_list = []
+
+        df = self.tick_data.copy()
+        df['bt'] = df['mp'].diff()
+        df['bt'] = df['bt'].abs() / df['bt']
+        df['bt'] = np.where(df['bt'] == 0, df['bt'].shift(1), df['bt'])
+        df['bt'] = df['bt'].fillna(0)
+        df['group'] = 0
+        group = 0
+
+        cur = default_T
+        while cur < len(self.tick_data) - 1:
+            # break_condition = False
+            if group == 0:
+                b1_count = np.sum(np.where(df['bt'].values[:default_T] == 1, 1, 0)) + df['bt'].values[default_T - 1]
+                pro_b1 = b1_count / default_T
+                bar_sampled_event.append(self.tick_data.index[default_T])
+                T.append(default_T)
+                pro_b1_bar_list.append(pro_b1)
+                df['group'].loc[bar_sampled_event[-2]:bar_sampled_event[-1]] = group
+                group += 1
+            else:
+                expected_T = (T[-1] - T[-2]) * alpha + T[-2] if len(T) > 1 else T[-1]
+                expected_pro_b1 = (pro_b1_bar_list[-1] - pro_b1_bar_list[-2]) * alpha + pro_b1_bar_list[-2] \
+                    if len(pro_b1_bar_list) > 1 else pro_b1_bar_list[-1]
+                theta = 0
+                b1_count = 0
+                t_temple = 0
+                cur = sum(T)
+                threshold = expected_T * abs(2 * expected_pro_b1 - 1)
+
+                while abs(theta) < threshold and cur < len(self.tick_data) - 1:
+                    b = df['bt'].values[cur]
+                    theta += b
+                    if b == 1:
+                        b1_count += 1
+                    cur += 1
+                    t_temple += 1
+                T.append(t_temple)
+                bar_sampled_event.append(self.tick_data.index[cur])
+                pro_b1 = b1_count / t_temple
+                pro_b1_bar_list.append(pro_b1)
+                df['group'].loc[bar_sampled_event[-2]:bar_sampled_event[-1]] = group
+                group += 1
+
+        agg_dict = {self.price_key: 'ohlc',
+                    self.time_key: 'last'
+                    }
+
+
+        grouper = df.reset_index().groupby('group')
+        bar_data = grouper.agg(agg_dict)
+
+        bar_data.columns = bar_data.columns.get_level_values(1)
+        bar_data['count'] = grouper.agg({self.price_key: 'count'})
+        if self.volume_key is not None:
+            bar_data[self.volume_key] = grouper.agg({self.volume_key: 'sum'})
+        return bar_data
 
     def make_run_bar(self):
         pass
-
-
 
 
 if __name__ == '__main__':
     tick_df = pd.read_csv(r'../../local_data/EURUSD/tick/EURUSD_2016_1.csv')
     bm = TickBarMaker(tick_df)
     # time_bar = bm.make_time_bar('1H')
-    count_bar = bm.make_count_bar(100)
+    # count_bar = bm.make_count_bar(100)
+    imbalance = bm.make_imbalanced_bar(0.5)
