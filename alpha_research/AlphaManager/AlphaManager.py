@@ -136,29 +136,35 @@ class AlphaManager:
         pass
 
 
+
+# todo:添加时间，作者
+# 查的时候可以查出alpha有多少
 if __name__ == '__main__':
     # sample data
-    data_path = r'../HK.999010_2019-06-01 00:00:00_2020-05-30 03:00:00_K_1M_qfq.csv'
-    df = pd.read_csv(data_path)
-    df['time_key'] = pd.to_datetime(df['time_key'])
-    df.set_index('time_key', inplace=True)
-    data = df[-100:]
+    # data_path = r'../HK.999010_2019-06-01 00:00:00_2020-05-30 03:00:00_K_1M_qfq.csv'
+    # df = pd.read_csv(data_path)
+    # df['time_key'] = pd.to_datetime(df['time_key'])
+    # df.set_index('time_key', inplace=True)
+    # data = df[-100:]
 
     # factor_study = SingleAssetResearch(df)
     # factor = factor_study.calculate_factor(alpha_6, **{'time_lag': 5})
     # func = alpha_6
 
     # connect mongodb
-    connect = MongoConnection('ip', 27017, 'root', 'password')
-    print('connect')
-    alpha_storage = AlphaStorage('alpha_1', alpha_1, {},
-                                 'test',
-                                 CHINA, 'CSI300', {'data': data})
+    connect = MongoConnection('120.55.45.12', 27017, 'root', 'AlphaFactory2020')
+    # print('connect')
+    # alpha_storage = AlphaStorage('alpha_1', alpha_1, {},
+    #                              'test',
+    #                              CHINA, 'CSI300', {'data': data})
     db = 'test'
     collection = 'alphatest'
     manager = AlphaManager(connect)
-    manager.add_alpha(db, collection, alpha_storage)
+    # manager.add_alpha(db, collection, alpha_storage)
     query = {'name': 'alpha_1'}
     alphaStorage_list = manager.query_alpha(db, collection, query)
+    print(alphaStorage_list)
+
+
 
     # 返回是一个list list中每个对象是dict
