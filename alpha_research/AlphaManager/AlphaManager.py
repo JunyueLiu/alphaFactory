@@ -139,6 +139,7 @@ class AlphaManager:
 
 # todo:添加时间，作者
 # 查的时候可以查出alpha有多少
+# todo:测试alpha
 if __name__ == '__main__':
     # sample data
     # data_path = r'../HK.999010_2019-06-01 00:00:00_2020-05-30 03:00:00_K_1M_qfq.csv'

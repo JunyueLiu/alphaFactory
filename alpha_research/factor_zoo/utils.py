@@ -83,9 +83,13 @@ def correlation(x: pd.Series, y: pd.Series, d: int) -> pd.Series:
     """
     # todo multiindex
     if isinstance(x.index, pd.MultiIndex):
+        x.name = 'x'
+        y.name = 'y'
         j = x.to_frame().join(y.to_frame())
         res = []
+
         for g in j.groupby(level=1):
+
             a = g[1][x.name]
             b = g[1][y.name]
             r = a.rolling(window=d).corr(b)

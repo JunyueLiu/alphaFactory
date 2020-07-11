@@ -15,7 +15,7 @@ def alpha_1(df: pd.DataFrame):
     """
     _close = df['close']
     _ret = returns(_close)
-    _cond = pd.Series(np.where(_ret < np.zeros_like(_ret.shape), stddev(_ret, 20), _close), index=_close.index)
+    _cond = pd.Series(np.where(_ret < np.zeros_like(_ret.shape[0]), stddev(_ret, 20), _close), index=_close.index)
     return rank(ts_argmax(signedpower(_cond, 2), 5) - 0.5)
 
 
@@ -39,6 +39,9 @@ def alpha_3(df: pd.DataFrame):
     """
     _open = df['open']
     _volume = df['volume']
+
+    #window = 10全是Nan
+
     return (-1 * correlation(rank(_open), rank(_volume), 10))
 
 
