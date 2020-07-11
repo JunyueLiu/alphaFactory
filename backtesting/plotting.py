@@ -140,7 +140,8 @@ def daily_heatmap(agg_ret: pd.Series) -> go.Figure:
                           # xgap=3,  # this
                           # ygap=3,  # and this is used to make the grid-like apperance
                           # text=z_text,
-                          # hovertext=z_text,
+                          hovertext=z_text,
+                          hoverinfo='x+y+text',
                           showscale=False,
                           )
 
@@ -185,16 +186,21 @@ def weekly_heatmap(agg_ret: pd.Series) -> go.Figure:
     # cal = calendar.monthcalendar(g[0].year, g[0].month)
     x = ['Week ' + str(i) for i in range(1, 6)]
     z = []
+    z_text = []
     i = 0
     for month in y:
         z1 = []
+        z1_text = []
         for w in x:
             if i < len(agg_ret_) and agg_ret_.index[i].strftime('%Y-%m') == month:
                 z1.append(agg_ret_[i])
+                z1_text.append('{:.3f} %'.format(100 * agg_ret[i]))
                 i += 1
             else:
                 z1.append(None)
+                z1_text.append(None)
         z.append(z1)
+        z_text.append(z1_text)
     colorscale = [[0, 'red'], [0.5, 'yellow'], [1, 'green']]
     # todo Annotations
     heatmap = go.Heatmap(z=z, x=x, y=y,
@@ -202,7 +208,8 @@ def weekly_heatmap(agg_ret: pd.Series) -> go.Figure:
                          # xgap=3,  # this
                          # ygap=3,  # and this is used to make the grid-like apperance
                          # text=z_text,
-                         # hovertext=z_text,
+                         hovertext=z_text,
+                         hoverinfo='x+y+text',
                          showscale=False,
                          )
     layout = dict(plot_bgcolor='#fff', width=700, height=700, )
@@ -227,16 +234,21 @@ def monthly_heatmap(agg_ret: pd.Series) -> go.Figure:
     # cal = calendar.monthcalendar(g[0].year, g[0].month)
     x = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
     z = []
+    z_text = []
     i = 0
     for y_ in y:
         z1 = []
+        z1_text = []
         for w in x:
             if i < len(agg_ret_) and agg_ret_.index[i].month - 1 == len(z1):
                 z1.append(agg_ret_[i])
+                z1_text.append('{:.3f} %'.format(100 * agg_ret[i]))
                 i += 1
             else:
                 z1.append(None)
+                z1_text.append(None)
         z.append(z1)
+        z_text.append(z1_text)
     colorscale = [[0, 'red'], [0.5, 'yellow'], [1, 'green']]
     # todo Annotations
     heatmap = go.Heatmap(z=z, x=x, y=y,
@@ -244,7 +256,8 @@ def monthly_heatmap(agg_ret: pd.Series) -> go.Figure:
                          # xgap=3,  # this
                          # ygap=3,  # and this is used to make the grid-like apperance
                          # text=z_text,
-                         # hovertext=z_text,
+                         hovertext=z_text,
+                         hoverinfo='x+y+text',
                          showscale=False,
                          )
     layout = dict(plot_bgcolor='#fff', width=700, height=700, )
@@ -267,16 +280,21 @@ def quarter_heatmap(agg_ret: pd.Series) -> go.Figure:
 
     x = ['Q1', 'Q2', 'Q3', 'Q4']
     z = []
+    z_text = []
     i = 0
     for y_ in y:
         z1 = []
+        z1_text = []
         for w in x:
             if i < len(agg_ret_) and agg_ret_.index[i].quarter - 1 == len(z1):
                 z1.append(agg_ret_[i])
+                z1_text.append('{:.3f} %'.format(100 * agg_ret[i]))
                 i += 1
             else:
                 z1.append(None)
+                z1_text.append(None)
         z.append(z1)
+        z_text.append(z1_text)
     colorscale = [[0, 'red'], [0.5, 'yellow'], [1, 'green']]
     # todo Annotations
     heatmap = go.Heatmap(z=z, x=x, y=y,
@@ -284,7 +302,8 @@ def quarter_heatmap(agg_ret: pd.Series) -> go.Figure:
                          # xgap=3,  # this
                          # ygap=3,  # and this is used to make the grid-like apperance
                          # text=z_text,
-                         # hovertext=z_text,
+                         hovertext=z_text,
+                         hoverinfo='x+y+text',
                          showscale=False,
                          )
     layout = dict(plot_bgcolor=('#fff'))
@@ -310,19 +329,24 @@ def year_heatmap(agg_ret: pd.Series) -> go.Figure:
     y = agg_ret_.index.to_period('Y').unique().strftime('%Y').to_list()
     years = [i for i in range(5 * int(int(y[0]) / 5), int((int(y[-1]) + 5) / 5) * 5, 1)]
     z = []
+    z_text = []
     x = []
     j = 0
     decade = 1
-    z_ = []
+    z1 = []
+    z1_text = []
     for i in range(len(years)):
         if j < len(y) and int(y[j]) == years[i]:
-            z_.append(agg_ret[j])
+            z1.append(agg_ret_[j])
+            z1_text.append('{:.3f} %'.format(100 * agg_ret[j]))
             j += 1
         else:
-            z_.append(np.nan)
+            z1.append(None)
+            z1_text.append(None)
         if i % 5 == 4:
-            z.append(z_)
-            z_ = []
+            z.append(z1)
+            z_text.append(z1_text)
+            z1 = []
             x.append(decade)
             decade += 1
 
@@ -333,7 +357,8 @@ def year_heatmap(agg_ret: pd.Series) -> go.Figure:
                          # xgap=3,  # this
                          # ygap=3,  # and this is used to make the grid-like apperance
                          # text=z_text,
-                         # hovertext=z_text,
+                         hovertext=z_text,
+                         hoverinfo='x+y+text',
                          showscale=False,
                          )
     layout = dict(plot_bgcolor='#fff')
