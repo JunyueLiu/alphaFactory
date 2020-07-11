@@ -85,10 +85,11 @@ def get_layout(backtesting_result: dict):
     ]
     if has_benchmark:
         right_children.append(dcc.Markdown(benchmark_ss.to_markdown()))
+    right_children.append(html.Div('Top k drawdown'))
     right_children.append(
         dcc.Dropdown(id='top-k-drawdown',
-                     options=[{'label': i, 'value': i} for i in [1, 5, 10]],
-                     value=10))
+                     options=[{'label': i, 'value': i} for i in [1, 3,5, 10]],
+                     value=3, clearable=False))
     right_children.append(dcc.Markdown(id='top-k-markdown'))
 
 

@@ -12,7 +12,8 @@ from backtesting.dash_app import trading_history
 from backtesting.dash_app import dash_report
 
 from backtesting.dash_app.app import app
-from backtesting.plotting import aggregate_returns_heatmap, returns_distribution_plot, entry_and_exit_plot
+from backtesting.plotting import aggregate_returns_heatmap, returns_distribution_plot, entry_and_exit_plot, \
+    net_value_plot
 
 backtesting_result = None
 
@@ -101,11 +102,50 @@ def get_backtesting_report_dash_app(backtesting_result: dict):
             'Sharpe': "{:.2f}".format(sharpe_ratio(returns, risk_free_rate, annulizaed_factor)),
             'Sortino': "{:.2f}".format(sortino(returns, risk_free_rate, annulizaed_factor)),
 
-
         }
         general_ss = pd.Series(general_performance, name='Performance')
         return general_ss.to_markdown(),
-    
+
+    @app.callback([Output('top-k-markdown', 'children'),
+                   Output('top-max-drawdown', 'figure')],
+                  [Input('top-k-drawdown', 'value')])
+    def update_top_drawdown(top_k):
+        top_k = int(top_k)
+        strategy_net_value = backtesting_result['net_value']
+        table = backtesting_result['drawdown_detail'].sort_values(by='max drawdown')[:min(top_k, len(backtesting_result['drawdown_detail']))] # type: pd.DataFrame
+        table['max drawdown'] = table['max drawdown'].apply(lambda x: "{:.2f} %".format(100 *x))
+
+        # table['99% max drawdown'] = table['99% max drawdown'].apply(lambda x: "{:.2f} %".format(100 *x))
+        table.reset_index(inplace=True)
+        table.drop(columns=['99% max drawdown', 'index'], inplace=True)
+        fig = net_value_plot(strategy_net_value)
+
+        red_color = ['#CE0000', '#EA0000', '#FF0000',
+                     '#FF2D2D', '#FF2D2D', '#FF5151',
+                     '#FF7575', '#FF9797', '#FFB5B5',
+                     '#FFD2D2']
+        shapes = [
+            dict(
+                type="rect",
+                # x-reference is assigned to the x-values
+                xref="x",
+                # y-reference is assigned to the plot paper [0,1]
+                yref="paper",
+                x0=row['start'].replace('-', '/'),
+                y0=0,
+                x1=row['end'].replace('-', '/'),
+                y1=1,
+                fillcolor=red_color[idx],
+                opacity=0.5,
+                layer="below",
+                line_width=0,
+            ) for idx, row in table.iterrows()
+        ]
+        fig.update_layout(
+            shapes=shapes
+        )
+        return table.to_markdown(), fig
+
     # --------------- monthly page callback ---------------
     @app.callback([Output('title', 'children'),
                    Output('return-heatmap', 'figure'),
