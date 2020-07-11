@@ -5,7 +5,7 @@ import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output
 import pandas as pd
-from backtesting.backtesting_metric import aggregate_returns
+from backtesting.backtesting_metric import aggregate_returns, sharpe_ratio, sortino
 from backtesting.dash_app import entry_exit_analysis
 from backtesting.dash_app import monthly_analysis
 from backtesting.dash_app import trading_history
@@ -26,6 +26,7 @@ def get_backtesting_report_dash_app(backtesting_result: dict):
         html.Br(),
         dcc.Link('Monthly Analysis', href='/monthlyAnalysis'),
         html.Br(),
+        # todo holding position question
         dcc.Link('Entry and exit Detail', href='/details'),
         html.Br(),
         dcc.Link('Trading history', href='/history'),
@@ -52,6 +53,7 @@ def get_backtesting_report_dash_app(backtesting_result: dict):
         # todo 回测类型
         #
     ]),
+
     # --------------- index page callback ---------------
     @app.callback(Output('page-content', 'children'),
                   [Input('url', 'pathname')])
@@ -67,6 +69,43 @@ def get_backtesting_report_dash_app(backtesting_result: dict):
         else:
             return index_page
 
+    # --------------- general page callback ---------------
+    @app.callback([Output('general_markdown', 'children')],
+                  [Input('risk-free-rate', 'value'),
+                   Input('annul-factor', 'value')])
+    def update_general_performance(risk_free_rate, annulizaed_factor):
+        strategy_net_value = backtesting_result['net_value']
+        returns = backtesting_result['rate of return']
+        risk_free_rate = float(risk_free_rate)
+        annulizaed_factor = int(annulizaed_factor)
+        general_performance = {
+            'Initial capital': "{:.2f}".format(strategy_net_value[0]),
+            'End capital': "{:.2f}".format(strategy_net_value[-1]),
+
+            'Cumulative Return %': "{:.2f} %".format(100 * backtesting_result['cumulative_return']),
+            'CAGR %': "{:.2f} %".format(100 * backtesting_result['cagr']),
+
+            'First traded': backtesting_result['first_traded'],
+            'Last traded': backtesting_result['last_traded'],
+
+            'Num of trade': backtesting_result['num_trade'],
+            'Win rate %': "{:.2f} %".format(100 * backtesting_result['win_rate']),  # type: float
+            'Avg win': "{:.2f}".format(backtesting_result['avg_win']),
+            'Avg loss': "{:.2f}".format(backtesting_result['avg_loss']),
+            'Payoff ratio': "{:.2f}".format(backtesting_result['payoff_ratio']),
+
+            # returns statistics
+            'Volatility %': "{:.2f} %".format(100 * backtesting_result['volatility']),
+            'Skew': "{:.2f}".format(backtesting_result['skew']),
+            'Kurtosis': "{:.2f}".format(backtesting_result['Kurtosis']),
+            'Sharpe': "{:.2f}".format(sharpe_ratio(returns, risk_free_rate, annulizaed_factor)),
+            'Sortino': "{:.2f}".format(sortino(returns, risk_free_rate, annulizaed_factor)),
+
+
+        }
+        general_ss = pd.Series(general_performance, name='Performance')
+        return general_ss.to_markdown(),
+    
     # --------------- monthly page callback ---------------
     @app.callback([Output('title', 'children'),
                    Output('return-heatmap', 'figure'),
@@ -184,7 +223,7 @@ def get_backtesting_report_dash_app(backtesting_result: dict):
 
             }
             return 'Year Analysis', heatmap, displot, pd.Series(period_performance,
-                                                                   name='Yearly Key Performance').to_markdown()
+                                                                name='Yearly Key Performance').to_markdown()
 
     # --------------- entry exit page callback ---------------
     @app.callback(Output('timeframe', 'options'),
@@ -238,7 +277,7 @@ def get_backtesting_report_dash_app(backtesting_result: dict):
     # --------------- trade list page callback ---------------
     @app.callback(
         Output('table', 'data'),
-        [Input('date-picker-range', 'start_date'),Input('date-picker-range', 'end_date')])
+        [Input('date-picker-range', 'start_date'), Input('date-picker-range', 'end_date')])
     def update_output(date_from, date_to):
         if date_to is None or date_from is None:
             return
@@ -254,4 +293,4 @@ if __name__ == '__main__':
     with open(r'../backtesting_result_sample.pickle', 'rb') as f:
         backtesting_result = pickle.load(f)
     _app = get_backtesting_report_dash_app(backtesting_result)
-    _app.run_server(host='127.0.0.1', debug=True,port=8005)
+    _app.run_server(host='127.0.0.1', debug=True, port=8005)

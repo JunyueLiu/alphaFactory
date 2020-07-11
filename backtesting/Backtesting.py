@@ -89,6 +89,7 @@ class BacktestingBase:
                 for bar_type, path in bar_data.items():
                     self.data[symbol][bar_type] = self._load_data_from_csv(path, time_key)
         elif self.backtesting_setting['data_source'] == 'db':
+            time_key = self.backtesting_setting['time_key']
             pass
         self.quote_ctx.set_history_data(self.data)
 
@@ -163,6 +164,7 @@ class BacktestingBase:
             'parameter': self.strategy.strategy_parameters
 
         }
+        self.backtesting_result['backtesting_setting'] = self.backtesting_setting
         self.backtesting_result['risk free rate'] = self.risk_free_rate
         self.backtesting_result['first_traded'] = first_traded
         self.backtesting_result['last_traded'] = last_traded
