@@ -21,6 +21,7 @@ def get_layout(backtesting_result: dict):
             min_date_allowed=start,
             max_date_allowed=end,
             initial_visible_month=start,
+            start_date=start.date(),
             end_date=end.date()
         ),
         dash_table.DataTable(
