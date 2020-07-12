@@ -1,9 +1,10 @@
 import json
 import pickle
 import dash_table
+import inspect
 import dash_core_components as dcc
 import dash_html_components as html
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State
 import pandas as pd
 from backtesting.backtesting_metric import aggregate_returns, sharpe_ratio, sortino
 from backtesting.dash_app import entry_exit_analysis
@@ -15,7 +16,20 @@ from backtesting.dash_app.app import app
 from backtesting.plotting import aggregate_returns_heatmap, returns_distribution_plot, entry_and_exit_plot, \
     net_value_plot
 
-backtesting_result = None
+from technical_analysis import momentum
+from technical_analysis import pattern
+from technical_analysis import volume
+from technical_analysis import volatility
+from technical_analysis import overlap
+from technical_analysis import customization
+
+from technical_analysis.momentum import *
+from technical_analysis.pattern import *
+from technical_analysis.volume import *
+from technical_analysis.volatility import *
+from technical_analysis.overlap import *
+from technical_analysis.customization import *
+from technical_analysis.utils import *
 
 
 def get_backtesting_report_dash_app(backtesting_result: dict):
@@ -112,8 +126,9 @@ def get_backtesting_report_dash_app(backtesting_result: dict):
     def update_top_drawdown(top_k):
         top_k = int(top_k)
         strategy_net_value = backtesting_result['net_value']
-        table = backtesting_result['drawdown_detail'].sort_values(by='max drawdown')[:min(top_k, len(backtesting_result['drawdown_detail']))] # type: pd.DataFrame
-        table['max drawdown'] = table['max drawdown'].apply(lambda x: "{:.2f} %".format(100 *x))
+        table = backtesting_result['drawdown_detail'].sort_values(by='max drawdown')[
+                :min(top_k, len(backtesting_result['drawdown_detail']))]  # type: pd.DataFrame
+        table['max drawdown'] = table['max drawdown'].apply(lambda x: "{:.2f} %".format(100 * x))
 
         # table['99% max drawdown'] = table['99% max drawdown'].apply(lambda x: "{:.2f} %".format(100 *x))
         table.reset_index(inplace=True)
@@ -283,8 +298,12 @@ def get_backtesting_report_dash_app(backtesting_result: dict):
          Input('ohlc-line', 'value'),
          Input('entrust', 'value'),
          Input('trade_table', 'selected_rows'),
-         Input('submit', 'n_clicks')])
-    def update_entry_exit(start_date, end_date, symbol, timeframe, line, entrust, selected_rows, n_clicks):
+         Input('submit', 'n_clicks'),
+         Input('add-indicator', 'n_clicks'),
+         Input('remove-indicator', 'n_clicks')],
+        [State('ta-list', 'children')])
+    def update_entry_exit(start_date, end_date, symbol, timeframe, line, entrust, selected_rows, n_clicks, add, remove,
+                          ta_dict):
         data = backtesting_result['data'][symbol][timeframe]  # type: pd.DataFrame
         data = data[(data.index >= pd.to_datetime(start_date)) & (data.index <= pd.to_datetime(end_date))]
         trade = backtesting_result['trade_list']
@@ -311,10 +330,100 @@ def get_backtesting_report_dash_app(backtesting_result: dict):
         else:
             e = True
 
-        return entry_and_exit_plot(data, trade_graph, symbol, ohlc_graph, entrust=e), \
+        ta = json.loads(ta_dict)
+        return entry_and_exit_plot(data, trade_graph, symbol, ohlc_graph, entrust=e, ta_dict=ta), \
                trade.to_dict('records'), selected_cond
 
+    @app.callback(Output('indicator-name', 'options'),
+                  [Input('indicator-category', 'value')])
+    def update_ta(category):
+        l = []
+        if category == 'customization':
+            l = customization.__func__
+        elif category == 'momentum':
+            l = momentum.__func__
+        elif category == 'volatility':
+            l = volatility.__func__
+        elif category == 'overlap':
+            l = overlap.__func__
+        elif category == 'volume':
+            l = volume.__func__
+        elif category == 'pattern':
+            l = pattern.__func__
+
+        return [{'label': i, 'value': i} for i in l]
+
+    @app.callback(Output('parameter', 'children'),
+                  [Input('indicator-name', 'value')])
+    def update_ta_parameter(ta_name):
+        if ta_name is None:
+            return None
+        func = eval(str(ta_name))
+        para_dict = inspect.signature(func).parameters
+        children = []
+        for k, v in para_dict.items():
+            if k == 'inputs':
+                continue
+            else:
+                # todo can it possible to make it a line?
+                children.append(html.H6(k, style={'displace': 'inline-block'}))
+                if isinstance(v.default, MA_Type):
+                    value = v.default.name
+                    children.append(dcc.Dropdown(
+                        id=k,
+                        options=[
+                            {'label': label, 'value': label}
+                            for label, value_ in v.default._member_map_.items()
+                        ],
+                        value=value,
+
+                    ))
+                else:
+                    value = v.default
+                    children.append(dcc.Input(id=k, value=value, debounce=True))
+        return children
+
+    @app.callback([Output('ta-list', 'children'),
+                   Output('remove-name', 'options')],
+                  [
+                      Input('add-indicator', 'n_clicks', ),
+                      Input('remove-indicator', 'n_clicks')],
+                  [State('indicator-name', 'value'),
+                   State('parameter', 'children'),
+                   State('overlap', 'value'),
+                   State('remove-name', 'value'),
+                   State('ta-list', 'children')]
+                  )
+    def update_ta_list(add_clicks, remove_clicks, indicator, parameters, overlap, remove, ta_list):
+        if ta_list is None:
+            ta_dict = {}
+        else:
+            ta_dict = json.loads(ta_list)
+        if indicator is not None:
+            indicator_str = ''
+            indicator_str += indicator
+            indicator_str += '(inputs, '
+            for p in parameters:
+                if p['type'] == 'Input':
+                    indicator_str += p['props']['id']
+                    if isinstance(p['props']['value'], str):
+                        indicator_str += "='" + p['props']['value'] + "',"
+                    else:
+                        indicator_str += "=" + str(p['props']['value']) + ","
+                elif p['type'] == 'Dropdown':
+                    indicator_str += p['props']['id'] + '=MA_Type.' + p['props']['value'] + ','
+            indicator_str += ')'
+            ta_dict[indicator_str] = True if 'overlap' in overlap else False
+            if remove is not None:
+                del ta_dict[remove]
+            options = [{'label': i, 'value': i} for i in ta_dict.keys()]
+            return json.dumps(ta_dict), options
+        else:
+            options = [{'label': i, 'value': i} for i in ta_dict.keys()]
+            return json.dumps(ta_dict), options
+
     # --------------- trade list page callback ---------------
+
     @app.callback(
         Output('table', 'data'),
         [Input('date-picker-range', 'start_date'), Input('date-picker-range', 'end_date')])

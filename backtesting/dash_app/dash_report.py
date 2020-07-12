@@ -99,7 +99,6 @@ def get_layout(backtesting_result: dict):
                  style={
                      'width': '800px',
                      'margin-right': '18px',
-                     'margin-top': '-1.2rem',
                      'float': 'left'
                  }),
 
