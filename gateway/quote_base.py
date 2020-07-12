@@ -29,13 +29,13 @@ class QuoteBase:
     def unsubscribe(self, code_list, subtype_list, *args, **kwargs):
         pass
 
-    def unsubscribe_all(self):
+    def unsubscribe_all(self, *args, **kwargs):
         pass
 
-    def query_subscription(self):
+    def query_subscription(self, *args, **kwargs):
         pass
 
-    def get_stock_quote(self):
+    def get_stock_quote(self,*args, **kwargs):
         pass
 
     def get_cur_kline(self, symbol, num, ktype, *args, **kwargs):
