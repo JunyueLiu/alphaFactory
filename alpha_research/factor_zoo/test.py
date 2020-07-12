@@ -10,5 +10,5 @@ if __name__ == '__main__':
     # close_ = data['close']
     # volume_ = data['volume']
     # open_ = data['open']
-    print(alpha_4(data))
+    print(alpha_11(data))
 

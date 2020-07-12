@@ -40,7 +40,6 @@ def alpha_3(df: pd.DataFrame):
     _open = df['open']
     _volume = df['volume']
 
-    #window = 10全是Nan
 
     return (-1 * correlation(rank(_open), rank(_volume), 10))
 
@@ -65,6 +64,7 @@ def alpha_5(df: pd.DataFrame):
     _open = df['open']
     _close = df['close']
     _vwap = vwap(_close, _volume)
+
     return (rank((_open - (sum(_vwap, 10) / 10))) * ( - 1 * np.abs(rank((_close - _vwap)))))
 
 
@@ -86,7 +86,12 @@ def alpha_7(df: pd.DataFrame):
     :param df:
     :return:
     """
-    factor = np.where(adv(df['close'], df['volume'], 20) < df['volume'], -1 * ts_rank(np.abs(delta(df['close'], 7)), 60)) * np.sign(delta(df['close'], 7), -1)
+    rank = (-1 * ts_rank(np.abs(delta(df['close'], 7)), 60)).droplevel(0).sort_index()
+    factor = np.where(adv(df['close'], df['volume'], 20) < df['volume'],
+                      rank *
+                      np.sign(delta(df['close'], 7)), -1)
+
+    return pd.DataFrame(factor,index=df.index)
 
 
 def alpha_8(df: pd.DataFrame):
@@ -115,7 +120,8 @@ def alpha_9(df: pd.DataFrame, time_shift=1, rolling_windows=5):
     ans1 = df['close'] - df['close'].shift(1)
     factor = np.where(condition > 0, ans1, np.where(condition2 < 0, ans1, -1 * ans1))
     # print(factor)
-    return factor
+
+    return pd.DataFrame(factor,index=df.index)
 
 
 def alpha_10(df: pd.DataFrame):
@@ -126,9 +132,11 @@ def alpha_10(df: pd.DataFrame):
     """
     condition = ts_min(delta(df['close'], 1), 4)
     factor = np.where(condition > 0, delta(df['close'], 1), np.where(ts_max(delta(df['close'], 1), 4) < 0, delta(df['close'], 1), - 1 * delta(df['close'], 1)))
-    return factor
+    return pd.DataFrame(factor,index=df.index)
 
 
+
+# alpha_11 index
 def alpha_11(df: pd.DataFrame):
     """
     Alpha#11:((rank(ts_max((vwap - close), 3)) + rank(ts_min((vwap - close), 3))) * rank(delta(volume, 3)))
