@@ -12,6 +12,13 @@ import pandas as pd
 import plotly.io as pio
 from plotly.subplots import make_subplots
 
+from technical_analysis.momentum import *
+from technical_analysis.pattern import *
+from technical_analysis.volume import *
+from technical_analysis.volatility import *
+from technical_analysis.overlap import *
+from technical_analysis.customization import *
+
 pio.renderers.default = "browser"
 
 
@@ -43,12 +50,18 @@ def returns_distribution_plot(returns: pd.Series):
 
 
 def entry_and_exit_plot(ohlc_df, traded: pd.DataFrame, symbol: str, ohlc_graph=True, price_key='close', ohlc_key=None,
-                        entrust=False):
+                        entrust=False, ta_dict: None or dict = None):
     # traded columns:
     # code,order_time,order_price,order_qty,order_type,dealt_price,dealt_qty,order_direction,order_status,update_time,
     # exchange_order_id,order_id,cash_inflow
-    fig = go.Figure()
-
+    subplot_num = 1
+    if ta_dict is not None:
+        subplot_num += len([i for i in ta_dict.values() if i is False])
+    fig = make_subplots(
+        rows=subplot_num, cols=1,
+        shared_xaxes=True,
+        vertical_spacing=0.03,
+    )
     # filter out unrelated trade
     traded = traded[traded['code'] == symbol]
     long = traded[traded['order_direction'] == 'LONG']
@@ -56,24 +69,47 @@ def entry_and_exit_plot(ohlc_df, traded: pd.DataFrame, symbol: str, ohlc_graph=T
 
     if ohlc_graph:
         candles = candlestick(ohlc_df, ohlc_key=ohlc_key, symbol=symbol)
-        fig.add_trace(candles)
+        fig.add_trace(candles, 1, 1)
     else:
         prices = net_value_line(ohlc_df[price_key], color='#FFA500', name=symbol)
-        fig.add_trace(prices)
+        fig.add_trace(prices, 1, 1)
 
     long_dot = entry_exit_dot(long, True)
     short_dot = entry_exit_dot(short, False)
-    fig.add_trace(long_dot)
-    fig.add_trace(short_dot)
+    fig.add_trace(long_dot, 1, 1)
+    fig.add_trace(short_dot, 1, 1)
     if entrust:
         entrust_long = entrust_dot(long, True)
         entrust_short = entrust_dot(short, False)
-        fig.add_trace(entrust_long)
-        fig.add_trace(entrust_short)
+        fig.add_trace(entrust_long, 1, 1)
+        fig.add_trace(entrust_short, 1, 1)
     fig.update_layout(showlegend=False, yaxis=dict(
         autorange=True,
         fixedrange=False
     ))
+    if ta_dict is not None:
+        subplot_i = 2
+        for ta, overlap in ta_dict.items():
+            call_str = ta.replace('inputs', 'ohlc_df')
+            ta_indicator = eval(call_str)
+            if isinstance(ta_indicator, pd.Series):
+                index = ta_indicator.index.strftime('%Y/%m/%d %H:%M:%S')
+                if overlap is True:
+                    fig.add_trace(go.Scatter(x=index, y=ta_indicator, mode='lines'), 1, 1)
+                else:
+                    fig.add_trace(go.Scatter(x=index, y=ta_indicator, mode='lines'), subplot_i, 1)
+                    subplot_i += 1
+            elif isinstance(ta_indicator, pd.DataFrame):
+                index = ta_indicator.index.strftime('%Y/%m/%d %H:%M:%S')
+
+                if overlap is True:
+                    for col in ta_indicator.columns:
+                        fig.add_trace(go.Scatter(x=index, y=ta_indicator[col], mode='lines'), 1, 1)
+                else:
+                    for col in ta_indicator.columns:
+                        fig.add_trace(go.Scatter(x=index, y=ta_indicator[col], mode='lines'), subplot_i, 1)
+                    subplot_i += 1
+
     x_axis = fig.data[0].x
     tick_value = [x_axis[i] for i in range(0, len(x_axis), len(x_axis) // 5)]
     tick_text = [x_axis[i][0:10] for i in range(0, len(x_axis), len(x_axis) // 5)]
