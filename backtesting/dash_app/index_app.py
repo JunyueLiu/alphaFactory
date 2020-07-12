@@ -290,20 +290,17 @@ def get_backtesting_report_dash_app(backtesting_result: dict):
         [Output('entry-exit', 'figure'),
          Output('trade_table', 'data'),
          Output('trade_table', 'style_data_conditional')],
-
-        [Input('my-date-picker-range', 'start_date'),
-         Input('my-date-picker-range', 'end_date'),
-         Input('asset-selection', 'value'),
-         Input('timeframe', 'value'),
-         Input('ohlc-line', 'value'),
-         Input('entrust', 'value'),
-         Input('trade_table', 'selected_rows'),
-         Input('submit', 'n_clicks'),
-         Input('add-indicator', 'n_clicks'),
-         Input('remove-indicator', 'n_clicks')],
-        [State('ta-list', 'children')])
-    def update_entry_exit(start_date, end_date, symbol, timeframe, line, entrust, selected_rows, n_clicks, add, remove,
-                          ta_dict):
+        [
+            Input('submit', 'n_clicks'), Input('trade_table', 'selected_rows')],
+        [State('ta-list', 'children'),
+         State('my-date-picker-range', 'start_date'),
+         State('my-date-picker-range', 'end_date'),
+         State('asset-selection', 'value'),
+         State('timeframe', 'value'),
+         State('ohlc-line', 'value'),
+         State('entrust', 'value'),
+         ])
+    def update_entry_exit(n_clicks, selected_rows, ta_dict, start_date, end_date, symbol, timeframe, line, entrust):
         data = backtesting_result['data'][symbol][timeframe]  # type: pd.DataFrame
         data = data[(data.index >= pd.to_datetime(start_date)) & (data.index <= pd.to_datetime(end_date))]
         trade = backtesting_result['trade_list']
@@ -406,19 +403,31 @@ def get_backtesting_report_dash_app(backtesting_result: dict):
             for p in parameters:
                 if p['type'] == 'Input':
                     indicator_str += p['props']['id']
-                    if isinstance(p['props']['value'], str):
-                        indicator_str += "='" + p['props']['value'] + "',"
-                    else:
-                        indicator_str += "=" + str(p['props']['value']) + ","
+                    try:
+                        value = str(int(p['props']['value']))
+                    except ValueError:
+                        try:
+                            value = str(float(p['props']['value']))
+                        except ValueError:
+                            value = "'" + p['props']['value'] + "'"
+                    indicator_str += "=" + value + ','
                 elif p['type'] == 'Dropdown':
                     indicator_str += p['props']['id'] + '=MA_Type.' + p['props']['value'] + ','
             indicator_str += ')'
             ta_dict[indicator_str] = True if 'overlap' in overlap else False
             if remove is not None:
-                del ta_dict[remove]
+                try:
+                    del ta_dict[remove]
+                except:
+                    remove = None
             options = [{'label': i, 'value': i} for i in ta_dict.keys()]
             return json.dumps(ta_dict), options
         else:
+            if remove is not None:
+                try:
+                    del ta_dict[remove]
+                except:
+                    remove = None
             options = [{'label': i, 'value': i} for i in ta_dict.keys()]
             return json.dumps(ta_dict), options
 
