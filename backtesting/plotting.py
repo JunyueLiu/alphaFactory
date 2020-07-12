@@ -95,25 +95,26 @@ def entry_and_exit_plot(ohlc_df, traded: pd.DataFrame, symbol: str, ohlc_graph=T
             if isinstance(ta_indicator, pd.Series):
                 index = ta_indicator.index.strftime('%Y/%m/%d %H:%M:%S')
                 if overlap is True:
-                    fig.add_trace(go.Scatter(x=index, y=ta_indicator, mode='lines'), 1, 1)
+                    fig.add_trace(go.Scatter(x=index, y=ta_indicator, mode='lines', name=call_str), 1, 1)
                 else:
-                    fig.add_trace(go.Scatter(x=index, y=ta_indicator, mode='lines'), subplot_i, 1)
+                    fig.add_trace(go.Scatter(x=index, y=ta_indicator, mode='lines', name=call_str), subplot_i, 1)
                     subplot_i += 1
             elif isinstance(ta_indicator, pd.DataFrame):
                 index = ta_indicator.index.strftime('%Y/%m/%d %H:%M:%S')
 
                 if overlap is True:
                     for col in ta_indicator.columns:
-                        fig.add_trace(go.Scatter(x=index, y=ta_indicator[col], mode='lines'), 1, 1)
+                        fig.add_trace(go.Scatter(x=index, y=ta_indicator[col], mode='lines', name=col), 1, 1)
                 else:
                     for col in ta_indicator.columns:
-                        fig.add_trace(go.Scatter(x=index, y=ta_indicator[col], mode='lines'), subplot_i, 1)
+                        fig.add_trace(go.Scatter(x=index, y=ta_indicator[col], mode='lines', name=col), subplot_i, 1)
                     subplot_i += 1
 
     x_axis = fig.data[0].x
     tick_value = [x_axis[i] for i in range(0, len(x_axis), len(x_axis) // 5)]
     tick_text = [x_axis[i][0:10] for i in range(0, len(x_axis), len(x_axis) // 5)]
     fig.update_xaxes(ticktext=tick_text, tickvals=tick_value)
+    fig.update_layout(showlegend=True, xaxis_rangeslider_visible=False)
 
     return fig
 
