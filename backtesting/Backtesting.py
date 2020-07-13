@@ -5,9 +5,8 @@ import pandas as pd
 import numpy as np
 
 from backtesting.dash_app.index_app import get_backtesting_report_dash_app
+from db_wrapper.mongodb_utils import MongoConnection
 
-# from numba import njit
-# from backtesting.Exchange import *
 from strategy.DoubleMA import DoubleMA
 from gateway.quote_base import QuoteBase
 from gateway.brokerage_base import BrokerageBase
@@ -21,6 +20,7 @@ from bar_manager.BarManager import BarManager
 class BacktestingBase:
     def __init__(self, quote: BacktestingQuote, brokerage: BacktestingBrokerage, strategy: Strategy, strategy_parameter
                  , start=None, end=None, initial_capital=100, backtesting_setting=None):
+
         self.quote_ctx = quote
         self.brokerage_ctx = brokerage
         self.strategy = strategy
@@ -33,6 +33,7 @@ class BacktestingBase:
         self.backtesting_result = {}
 
         self.data = None
+        self.benchmark = None
 
         self.dealt_list = []
 
@@ -88,9 +89,22 @@ class BacktestingBase:
                 self.data[symbol] = dict()
                 for bar_type, path in bar_data.items():
                     self.data[symbol][bar_type] = self._load_data_from_csv(path, time_key)
-        elif self.backtesting_setting['data_source'] == 'db':
+            if 'benchmark' in self.backtesting_setting.keys():
+                self.benchmark = self._load_data_from_csv(self.backtesting_setting['benchmark'], time_key)
+        elif self.backtesting_setting['data_source'] == 'mongo':
             time_key = self.backtesting_setting['time_key']
-            pass
+            host = self.backtesting_setting['host']
+            port = self.backtesting_setting['port']
+            user = self.backtesting_setting['user']
+            password = self.backtesting_setting['password']
+            conn = MongoConnection(host, port, user, password)
+            for symbol, bar_data in self.backtesting_setting['data'].items():
+                self.data[symbol] = dict()
+                for bar_type, dbs in bar_data.items():
+                    self.data[symbol][bar_type] = self._load_data_from_db(conn, dbs['db'], dbs['collections'], time_key)
+            if 'benchmark' in self.backtesting_setting.keys():
+                self.benchmark = self._load_data_from_db(self.backtesting_setting['benchmark']['db'],
+                                                         self.backtesting_setting['benchmark']['collections'], time_key)
         self.quote_ctx.set_history_data(self.data)
 
     def _reset_data(self):
@@ -102,8 +116,17 @@ class BacktestingBase:
     def get_dealt_history(self):
         return self.brokerage_ctx.deal_order_list
 
-    def _load_data_from_db(self):
-        pass
+    def _load_data_from_db(self, conn: MongoConnection, db: str, collection: str, time_key: str):
+        # todo
+        if self.start is not None and self.end is not None:
+            bar = conn.read_mongo_df(db, collection, {time_key: {'$gt': self.start, '$lt': self.end}})
+        elif self.start is not None and self.end is None:
+            bar = conn.read_mongo_df(db, collection, {time_key: {'$gt': self.start}}, )
+        elif self.start is not None and self.end is None:
+            bar = conn.read_mongo_df(db, collection, {time_key: {'$lt': self.end}})
+        bar[time_key] = pd.to_datetime(bar[time_key])
+        bar.set_index(time_key, inplace=True)
+        return bar
 
     def _load_data_from_csv(self, path, time_key):
         bar = pd.read_csv(path)
@@ -114,6 +137,9 @@ class BacktestingBase:
         if self.end is not None:
             bar = bar[bar.index <= pd.to_datetime(self.end)]
         return bar
+
+    def _set_benchmark(self, series: pd.Series):
+        self.benchmark = series
 
     def calculate_result(self):
         # first make the all asset prices dataframe
@@ -169,6 +195,7 @@ class BacktestingBase:
         self.backtesting_result['first_traded'] = first_traded
         self.backtesting_result['last_traded'] = last_traded
         self.backtesting_result['trade_list'] = traded
+        self.backtesting_result['holding'] = joint['holding']
         self.backtesting_result['num_trade'] = num_trade(traded)
         self.backtesting_result['time_in_market'] = exposure(returns)
         self.backtesting_result['win_rate'] = win_rate(traded_pnl)
@@ -186,6 +213,7 @@ class BacktestingBase:
 
         # data here is pandas Series, save for future use
         self.backtesting_result['data'] = self.data
+        self.backtesting_result['benchmark'] = self.benchmark
         self.backtesting_result['net_value'] = net_value
         self.backtesting_result['rate of return'] = returns
         self.backtesting_result['drawdown_value'] = drawdown_metric
@@ -415,6 +443,7 @@ if __name__ == '__main__':
                 'K_1M': r'../HK.999010_2019-06-01 00:00:00_2020-05-30 03:00:00_K_1M_qfq.csv'
             }
         },
+        'benchmark': r'../HK.999010_2019-06-01 00:00:00_2020-05-30 03:00:00_K_1M_qfq.csv',
         'start': '2019-07-01',
         'end': '2020-04-30',
         'time_key': 'time_key'
@@ -459,5 +488,6 @@ if __name__ == '__main__':
 
     backtesting = VectorizedBacktesting(quote, broker, strategy, strategy_parameter,
                                         backtesting_setting=backtesting_setting)
+
     backtesting.run()
     backtesting.backtesting_result_save_pickle('backtesting_result_sample.pickle')

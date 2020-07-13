@@ -11,7 +11,7 @@ from backtesting.plotting import *
 def get_layout(backtesting_result: dict):
     has_benchmark = False
     strategy_net_value = backtesting_result['net_value']
-    if 'benchmark' in backtesting_result.keys():
+    if 'benchmark' in backtesting_result.keys() and backtesting_result['benchmark'] is not None:
         has_benchmark = True
         net_value = net_value_plot(strategy_net_value, benchmark=backtesting_result['benchmark'])
     else:
