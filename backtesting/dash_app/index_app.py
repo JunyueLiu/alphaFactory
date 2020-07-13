@@ -57,7 +57,10 @@ def get_backtesting_report_dash_app(backtesting_result: dict):
         html.Div(id='page-content'),
     ], style={'margin': '30px'})
 
+    profile = json.dumps(backtesting_result['strategy_profile'], indent=2)
+
     index_page = html.Div([
+        html.Pre(profile),
         # todo 行情profile
         # benchmark
         # each stock
@@ -402,7 +405,11 @@ def get_backtesting_report_dash_app(backtesting_result: dict):
             indicator_str += '(inputs, '
             for p in parameters:
                 if p['type'] == 'Input':
+                    if p['props']['value'] == '' or p['props']['value'] is None:
+                        continue
                     indicator_str += p['props']['id']
+
+
                     try:
                         value = str(int(p['props']['value']))
                     except ValueError:

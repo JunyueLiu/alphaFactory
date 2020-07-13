@@ -64,7 +64,6 @@ def get_layout(backtesting_result: dict):
         ], style={'width': '49%', 'display': 'inline-block'}),
         # graph
 
-        # todo dropdown to add technical indicator
         html.Div([
             html.H6('Technical indicator'),
             html.Div([

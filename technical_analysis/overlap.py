@@ -27,7 +27,7 @@ __func__ = ['BBANDS',
             'WMA']
 
 
-def BBANDS(inputs, period: int = 5, nbdevup: int = 2, nbdevdn: int = 2, matype: MA_Type = MA_Type.SMA,
+def BBANDS(inputs, period: int = 5, nbdevup: float = 2.0, nbdevdn: float = 2.0, matype: MA_Type = MA_Type.SMA,
            price_type: str = 'close'):
     """
     {'name': 'BBANDS',
