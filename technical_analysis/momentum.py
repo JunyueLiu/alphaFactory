@@ -63,7 +63,7 @@ def ADX(inputs, period=14, prices: list or None = None):
         prices = ['high', 'low', 'close']
     indicator = abstract.Function('ADX')
     if not utils.check(inputs, prices):
-        raise ValueError('')
+        raise ValueError('Expect {}, but get inputs {}'.format(str(prices), str(inputs)))
     return indicator(inputs, timeperiod=period, prices=prices)
 
 

@@ -70,5 +70,6 @@ __func__ = ['CDL2CROWS',
             'CDLUPSIDEGAP2CROWS',
             'CDLXSIDEGAP3METHODS']
 
+# todo pattern wrapper
 def CDL2CROWS(inputs):
     pass
