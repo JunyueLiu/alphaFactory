@@ -1,6 +1,7 @@
 import json
 import pickle
 import datetime
+import inspect
 import pandas as pd
 import numpy as np
 
@@ -250,6 +251,28 @@ class BacktestingBase:
 
     def bakctesting_result_to_json(self):
         return json.dumps(self.backtesting_result)
+
+    def save_backtesting_result_to_db(self, conn: MongoConnection, db: str, collections: str, ):
+        # todo why this slow
+        d = {
+            'strategy_name': self.strategy.strategy_name,
+            'strategy_version': self.strategy.strategy_version,
+            'strategy_para': json.dumps(self.strategy.strategy_parameters),
+            # because key has '.' mongodb doesn't allow this.
+            'strategy_logic': inspect.getsource(self.strategy.strategy_logic),
+
+            'backtesting_date': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'backtesting_setting': json.dumps(self.backtesting_setting),
+            # because key has '.' mongodb doesn't allow this.
+            # 'backtesting_result': {
+            #     # 'net_value': self.backtesting_result['net_value'].to_json(),
+            #     # 'holding': self.backtesting_result['holding'].to_json()
+            # }
+
+        }
+        # print(d)
+        r = conn.insert_from_dict(db, collections, d)
+        print('finish insert. Object id {}'.format(r.inserted_ids))
 
     def run(self):
         pass

@@ -28,7 +28,6 @@ def net_value_plot(strategy_net_value: pd.Series,
     fig = go.Figure()
     fig.add_trace(net_value_line(strategy_net_value / strategy_net_value[0], name=strategy_name, fill=fill))
     if benchmark is not None:
-        # todo benchmark fit with the strategy net value
         benchmark_copy = benchmark[(benchmark.index >= strategy_net_value.index[0]) & (benchmark.index <= strategy_net_value.index[-1])]
         fig.add_trace(net_value_line(benchmark_copy /benchmark_copy[0], color='#FFCC00', name='benchmark'))
 
@@ -45,6 +44,13 @@ def returns_distribution_plot(returns: pd.Series):
     fig.add_trace(returns_distribution(returns))
     fig.update_layout(
         title="Return Distribution", )
+    return fig
+
+def ret_verus_ret(rets: pd.DataFrame) -> go.Figure:
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=rets['close'], y=rets['equity'], mode='markers'))
+    fig.update_xaxes(title_text="benchmark returns")
+    fig.update_yaxes(title_text="strategy returns")
     return fig
 
 
