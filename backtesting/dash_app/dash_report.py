@@ -1,3 +1,4 @@
+import statsmodels.api as sm
 import dash_core_components as dcc
 import dash_html_components as html
 import dash_table
@@ -17,12 +18,10 @@ def get_layout(backtesting_result: dict):
     else:
         net_value = net_value_plot(strategy_net_value)
 
-
-    returns = backtesting_result['rate of return']
+    returns = backtesting_result['rate of return']  # type: pd.Series
 
     ret_dist = returns_distribution_plot(returns)
     under_water = maximum_drawdown_plot(backtesting_result['drawdown_percent'])
-
 
     draw_down_performance = {
         'Avg Drawdown': "{:.2f}".format(backtesting_result['drawdown_value'].mean()),
@@ -34,38 +33,15 @@ def get_layout(backtesting_result: dict):
         'Max. Drawdown Days': "{:.2f}".format(backtesting_result['drawdown_detail']['days'].max()),
         'Calmar': None,
     }
-
-
-
-
-
-
-    # todo
-    benchmark_ss = None
-    if has_benchmark:
-        benchmark_performance = {
-            'Benchmark Vol': None,
-            'Beta': None,
-            'Alpha': None,
-            'Cum Abnormal Return': None
-
-        }
-        benchmark_ss = pd.Series(benchmark_performance, name='benchmark')
-
-
     drawdown_ss = pd.Series(draw_down_performance, name='Drawdown')
 
     left_children = [
-            # todo log scale datetime selection
-            dcc.Graph(id='net-value', figure=net_value),
-            dcc.Graph(id='returns', figure=ret_dist),
-            dcc.Graph(id='underwater', figure=under_water),
+        # todo log scale datetime selection
+        dcc.Graph(id='net-value', figure=net_value),
+        dcc.Graph(id='returns', figure=ret_dist),
+        dcc.Graph(id='underwater', figure=under_water),
 
-        ]
-    if has_benchmark:
-        # todo 加个什么图
-        left_children.append(dcc.Graph(id='benchmark-graph'))
-    left_children.append(dcc.Graph(id='top-max-drawdown'))
+    ]
 
     right_children = [
         html.Div(children='Risk free rate %'),
@@ -80,16 +56,48 @@ def get_layout(backtesting_result: dict):
 
         # pd_to_dash_table(performance_df, id='key')
     ]
+
+    # todo
+    benchmark_ss = None
     if has_benchmark:
+        benchmark = backtesting_result['benchmark']  # type: pd.DataFrame
+        benchmark_ret = benchmark.pct_change()
+        j = returns.to_frame().join(benchmark_ret).sample(n=1000, random_state=1)
+        #                        equity     close
+        # time_key
+        # print(j)
+        X = sm.add_constant(benchmark_ret)  # constant is not added by default
+        model = sm.OLS(returns, X, missing='drop')
+        result = model.fit()
+        print(result.params)
+        benchmark_performance = {
+            'Bencnmark mean ret':  "{:.2f} %".format(100 * benchmark_ret.mean()),
+            'Benchmark Vol': "{:.2f} %".format(100 * benchmark_ret.std()),
+            'Beta': "{:.5f}".format(result.params[1]),
+            'Alpha': "{:.5f}".format(result.params[0]),
+            'Cum Abnormal Return': None
+
+        }
+        benchmark_ss = pd.Series(benchmark_performance, name='benchmark')
+
+        left_children.append(dcc.Graph(id='benchmark-graph', figure=ret_verus_ret(j)))
+
         right_children.append(dcc.Markdown(benchmark_ss.to_markdown()))
+        right_children.append(html.Br())
+        right_children.append(html.Br())
+        right_children.append(html.Br())
+        right_children.append(html.Br())
+        right_children.append(html.Br())
+        right_children.append(html.Br())
+        right_children.append(html.Br())
+
+    left_children.append(dcc.Graph(id='top-max-drawdown'))
     right_children.append(html.Div('Top k drawdown'))
     right_children.append(
         dcc.Dropdown(id='top-k-drawdown',
-                     options=[{'label': i, 'value': i} for i in [1, 3,5, 10]],
+                     options=[{'label': i, 'value': i} for i in [1, 3, 5, 10]],
                      value=3, clearable=False))
     right_children.append(dcc.Markdown(id='top-k-markdown'))
-
-
 
     layout = html.Div([
         html.Div(id='left', children=left_children,
