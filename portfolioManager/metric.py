@@ -1,6 +1,10 @@
 import numpy as np
 import pandas as pd
 
+from portfolioManager.plotting import net_values_plot, corr_heatmap, ret_heatmap
+import plotly.io as pio
+pio.renderers.default = "browser"
+
 def add_benchmark(net_values: pd.DataFrame, benchmark: pd.Series):
     benchmark.name = 'benchmark'
     net_values = net_values.join(benchmark)
@@ -33,3 +37,8 @@ if __name__ == '__main__':
     benchmark.set_index('Date', inplace=True)
     benchmark = benchmark['close']
     benchmark.name = 'benchmark'
+    net_values = add_benchmark(data, benchmark)
+    # fig = net_values_plot(net_values)
+    # fig.show()
+    # corr_heatmap(pairwise_corr(net_values)).show()
+    ret_heatmap(net_values).show()

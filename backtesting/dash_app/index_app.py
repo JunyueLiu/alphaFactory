@@ -36,6 +36,8 @@ def get_backtesting_report_dash_app(backtesting_result: dict):
     app.layout = html.Div([
         html.H2('Backtesting Result'),
         dcc.Location(id='url', refresh=False),
+        dcc.Link('Index', href='/'),
+        html.Br(),
         dcc.Link('General Performance', href='/btPerformance'),
         # dcc.Tab(),
         html.Br(),

@@ -40,7 +40,7 @@ def get_layout(backtesting_result: dict):
 
 
 
-
+    # todo
     benchmark_ss = None
     if has_benchmark:
         benchmark_performance = {
@@ -59,18 +59,15 @@ def get_layout(backtesting_result: dict):
             # todo log scale datetime selection
             dcc.Graph(id='net-value', figure=net_value),
             dcc.Graph(id='returns', figure=ret_dist),
-            # todo drawback picture
             dcc.Graph(id='underwater', figure=under_water),
-            # todo 参考别人那个html，用backtesting/plotting画图
 
         ]
     if has_benchmark:
+        # todo 加个什么图
         left_children.append(dcc.Graph(id='benchmark-graph'))
     left_children.append(dcc.Graph(id='top-max-drawdown'))
 
     right_children = [
-        # todo 参考别人那个html，画table，可能用markdown比较好吧
-        # todo table troublesome again
         html.Div(children='Risk free rate %'),
         dcc.Input(id='risk-free-rate',
                   value='0', type='number'),

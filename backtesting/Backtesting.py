@@ -42,6 +42,8 @@ class BacktestingBase:
         if self.end is None:
             self.end = self.backtesting_setting.get('end', None)
 
+        brokerage.cash = backtesting_setting['initial_capital']
+
     def _check_data_valid(self):
         """
         Check whether the data provided for backtesting is enough for strategy subscription
@@ -91,6 +93,7 @@ class BacktestingBase:
                     self.data[symbol][bar_type] = self._load_data_from_csv(path, time_key)
             if 'benchmark' in self.backtesting_setting.keys():
                 self.benchmark = self._load_data_from_csv(self.backtesting_setting['benchmark'], time_key)
+                self.benchmark = self.benchmark['close']
         elif self.backtesting_setting['data_source'] == 'mongo':
             time_key = self.backtesting_setting['time_key']
             host = self.backtesting_setting['host']
@@ -105,6 +108,7 @@ class BacktestingBase:
             if 'benchmark' in self.backtesting_setting.keys():
                 self.benchmark = self._load_data_from_db(self.backtesting_setting['benchmark']['db'],
                                                          self.backtesting_setting['benchmark']['collections'], time_key)
+                self.benchmark = self.benchmark['close']
         self.quote_ctx.set_history_data(self.data)
 
     def _reset_data(self):
@@ -431,7 +435,7 @@ if __name__ == '__main__':
 
     quote = BacktestingQuote()
 
-    broker = BacktestingBrokerage(100000)
+    broker = BacktestingBrokerage()
 
     strategy = DoubleMA()
     backtesting_setting = {
