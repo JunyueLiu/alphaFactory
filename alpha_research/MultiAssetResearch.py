@@ -1103,15 +1103,23 @@ if __name__ == '__main__':
         return df['close'].groupby(level=1).pct_change(5)
 
 
-    group = {'0001.HK': 1, '0002.HK': 1, '0003.HK': 1, '0005.HK': 1, '0006.HK': 1, '0011.HK': 1,
-             '0012.HK': 2, '0016.HK': 2, '0017.HK': 2, '0019.HK': 2, '0066.HK': 2, '0083.HK': 2,
-             '0101.HK': 3, '0151.HK': 3, '0175.HK': 3, '0267.HK': 3, '0386.HK': 3, '0388.HK': 3,
-             '0669.HK': 4, '0688.HK': 4, '0700.HK': 4, '0762.HK': 4, '0823.HK': 4, '0857.HK': 4,
-             '0883.HK': 5, '0939.HK': 5, '0941.HK': 5, '1038.HK': 5, '1044.HK': 5, '1088.HK': 5,
-             '1093.HK': 6, '1109.HK': 6, '1177.HK': 6, '1398.HK': 6, '1928.HK': 6, '2007.HK': 6,
-             '2018.HK': 7, '2313.HK': 7, '2318.HK': 7, '2319.HK': 7, '2382.HK': 7, '2388.HK': 7,
-             '2628.HK': 8, '3328.HK': 8, '3988.HK': 8, '1299.HK': 8, '0027.HK': 8, '0288.HK': 8,
-             '1113.HK': 9, '1997.HK': 9}
+    group = {'0001.HK': 'Commerce & Industry', '0002.HK': 'Utilities', '0003.HK': 'Utilities', '0005.HK': 'Finance',
+             '0006.HK': 'Utilities', '0011.HK': 'Finance',
+             '0012.HK': 'Properties', '0016.HK': 'Properties', '0017.HK': 'Properties',
+             '0019.HK': 'Commerce & Industry', '0066.HK': 'Commerce & Industry', '0083.HK': 'Properties',
+             '0101.HK': 'Properties', '0151.HK': 'Commerce & Industry', '0175.HK': 'Commerce & Industry',
+             '0267.HK': 'Commerce & Industry', '0386.HK': 'Commerce & Industry', '0388.HK': 'Finance',
+             '0669.HK': 'Commerce & Industry', '0688.HK': 'Properties', '0700.HK': 'Commerce & Industry',
+             '0762.HK': 'Commerce & Industry', '0823.HK': 'Properties', '0857.HK': 'Commerce & Industry',
+             '0883.HK': 'Commerce & Industry', '0939.HK': 'Finance', '0941.HK': 'Commerce & Industry',
+             '1038.HK': 'Utilities', '1044.HK': 'Commerce & Industry', '1088.HK': 'Commerce & Industry',
+             '1093.HK': 'Commerce & Industry', '1109.HK': 'Properties', '1177.HK': 'Commerce & Industry',
+             '1398.HK': 'Finance', '1928.HK': 'Commerce & Industry', '2007.HK': 'Properties',
+             '2018.HK': 'Commerce & Industry', '2313.HK': 'Commerce & Industry', '2318.HK': 'Finance',
+             '2319.HK': 'Commerce & Industry', '2382.HK': 'Commerce & Industry', '2388.HK': 'Finance',
+             '2628.HK': 'Finance', '3328.HK': 'Finance', '3988.HK': 'Finance', '1299.HK': 'Finance',
+             '0027.HK': 'Commerce & Industry', '0288.HK': 'Commerce & Industry',
+             '1113.HK': 'Properties', '1997.HK': 'Properties'}
     multi_study.set_asset_group(group)
     multi_study.set_benchmark(benchmark)
     multi_study.calculate_factor(momentum_alpha)
