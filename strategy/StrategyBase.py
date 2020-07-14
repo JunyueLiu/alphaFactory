@@ -222,15 +222,19 @@ class Strategy:
         pass
 
     def buy(self, symbol, price, vol, order_type, *args, **kwargs):
+        self.write_log_info('Buy {} at {}, amount {}'.format(symbol, price, str(vol)))
         self._brokerage_ctx.place_order(price, vol, symbol, 'LONG')
 
     def sell(self, symbol, price, vol, order_type, *args, **kwargs):
+        self.write_log_info('Sell {} at {}, amount {}'.format(symbol, price, str(vol)))
         self._brokerage_ctx.place_order(price, vol, symbol, 'SHORT')
 
     def short(self, symbol, price, vol, order_type, *args, **kwargs):
+        self.write_log_info('Short {} at {}, amount {}'.format(symbol, price, str(vol)))
         self._brokerage_ctx.place_order(price, vol, symbol, 'SHORT')
 
     def cover(self, symbol, price, vol, order_type, *args, **kwargs):
+        self.write_log_info('Cover {} at {}, amount {}'.format(symbol, price, str(vol)))
         self._brokerage_ctx.place_order(price, vol, symbol, 'LONG')
 
     def cancel_all(self):
