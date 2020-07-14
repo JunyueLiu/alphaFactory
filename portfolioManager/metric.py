@@ -3,13 +3,16 @@ import pandas as pd
 
 from portfolioManager.plotting import net_values_plot, corr_heatmap, ret_heatmap
 import plotly.io as pio
+
 pio.renderers.default = "browser"
+
 
 def add_benchmark(net_values: pd.DataFrame, benchmark: pd.Series):
     benchmark.name = 'benchmark'
     net_values = net_values.join(benchmark)
     net_values['benchmark'] = net_values['benchmark'] / net_values['benchmark'][0]
     return net_values
+
 
 def unstack_series(net_values: pd.Series) -> pd.DataFrame:
     return net_values.unstack(level=-1)

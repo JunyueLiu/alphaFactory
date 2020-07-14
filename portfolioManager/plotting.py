@@ -41,8 +41,11 @@ def corr_heatmap(corr_matrix: pd.DataFrame):
     return fig
 
 # return heatmap
-def ret_heatmap(net_values: pd.DataFrame):
-    ret = net_values.pct_change().groupby(pd.Grouper(freq='M')).sum()
+def ret_heatmap(net_values: pd.DataFrame, groupby='M'):
+    ret = net_values.pct_change().groupby(pd.Grouper(freq=groupby)).sum()
+    # todo subplot to better visualization
+
+
     x = ret.columns.to_list()
     y = ret.index.to_list()
     z = ret.values
