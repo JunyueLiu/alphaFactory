@@ -6,7 +6,7 @@ import numpy as np
 
 from technical_analysis import utils
 from technical_analysis.utils import MA_Type
-
+import pandas as pd
 __overlap__ = False
 __func__ = ['ADX',
             'ADXR',
@@ -811,3 +811,5 @@ if __name__ == '__main__':
             ind = eval(f)(inputs)
         except:
             print(f)
+
+    data = pd.DataFrame(inputs)
