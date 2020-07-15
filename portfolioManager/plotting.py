@@ -87,8 +87,26 @@ def holding_line_plot(pos: pd.DataFrame, instruments: str, start_date, end_date)
 
     return fig
 
+
 # overall exposure to some asset
 ## select day and see pie chart
+def selected_long_short_pie():
+    # todo period is too large for selection
+
+    pass
+
+
+def efficient_frontier_plot(net_values: pd.DataFrame):
+    # todo efficient frontier
+
+    daily_net = net_values.groupby(pd.Grouper(freq='D')).last().fillna(method='ffill')  # type: pd.DataFrame
+    daily_ret = daily_net.pct_change()
+    cov_matrix = daily_ret.cov()
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=daily_ret.std(), y=daily_ret.mean(), mode='markers'))
+    return fig
+
+    pass
 
 # trading activity global
 
