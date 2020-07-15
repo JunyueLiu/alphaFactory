@@ -4,6 +4,7 @@ import plotly.figure_factory as ff
 from graph.factor_component import line
 import numpy as np
 
+
 def net_values_plot(net_values: pd.DataFrame):
     fig = go.Figure()
     for col in net_values.columns:
@@ -17,6 +18,9 @@ def net_values_plot(net_values: pd.DataFrame):
 
 
 # rolling correlation?
+def rolling_corr(series_1: pd.Series, series_2: pd.Series, windows: int):
+    return series_1.rolling(windows).corr(series_2)
+
 
 # correlation heatmap
 def corr_heatmap(corr_matrix: pd.DataFrame):
@@ -40,11 +44,11 @@ def corr_heatmap(corr_matrix: pd.DataFrame):
                            )))
     return fig
 
+
 # return heatmap
 def ret_heatmap(net_values: pd.DataFrame, groupby='M'):
     ret = net_values.pct_change().groupby(pd.Grouper(freq=groupby)).sum()
     # todo subplot to better visualization
-
 
     x = ret.columns.to_list()
     y = ret.index.to_list()
@@ -67,6 +71,21 @@ def ret_heatmap(net_values: pd.DataFrame, groupby='M'):
     return fig
 
 
+# holding plot
+def holding_line_plot(pos: pd.DataFrame, instruments: str, start_date, end_date):
+    fig = go.Figure()
+    pos_ = pos.loc[(slice(None), instruments), :]  # type: pd.DataFrame
+    pos_.index = pos_.index.droplevel(1)
+    pos_ = pos_[(pos_.index >= pd.to_datetime(start_date)) & (pos_.index <= pd.to_datetime(end_date))]
+    for col in pos_.columns:
+        fig.add_trace(line(pos_[col], pos_.index, name=col))
+    x_axis = fig.data[0].x
+    tick_value = [x_axis[i] for i in range(0, len(x_axis), len(x_axis) // 10)]
+    tick_text = [x_axis[i][0:10] for i in range(0, len(x_axis), len(x_axis) // 10)]
+    fig.update_xaxes(ticktext=tick_text, tickvals=tick_value, title_text="time")
+    fig.update_yaxes(title_text='position')
+
+    return fig
 
 # overall exposure to some asset
 ## select day and see pie chart
