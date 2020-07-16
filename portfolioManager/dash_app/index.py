@@ -104,9 +104,12 @@ def get_pm_report_dash_app(portfolio: dict = None):
 
         # allocations_dict = allocations.to_dict()
         # print(weights_children)
+        returns_range = np.linspace(annualized_ret_mean.min(), annualized_ret_mean.max(), 100)
+        frontier = efficient_frontier(annualized_ret_mean, annualized_ret_cov, returns_range)
         ef = efficient_frontier_plot(annualized_ret_mean, annualized_ret_std,
                                      a1_ret, a1_std,
-                                     a2_ret, a2_std)
+                                     a2_ret, a2_std,
+                                     returns_range, frontier)
 
         return ef,
         pass

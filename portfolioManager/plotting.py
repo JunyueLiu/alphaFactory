@@ -98,19 +98,27 @@ def selected_long_short_pie():
 
 def efficient_frontier_plot(mean, std,
                             max_sharpe_ret, max_sharpe_std,
-                            min_var_ret, min_var_std):
-    # todo efficient frontier
+                            min_var_ret, min_var_std,
+                            frontier_targets=None,
+                            frontier=None,
+                            ):
 
-    # daily_net = net_values.groupby(pd.Grouper(freq='D')).last().fillna(method='ffill')  # type: pd.DataFrame
-    # daily_ret = daily_net.pct_change()
-    # cov_matrix = daily_ret.cov()
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=std, y=mean, mode='markers'))
-    fig.add_trace(go.Scatter(x=[max_sharpe_std], y=[max_sharpe_ret], mode='markers', marker={'symbol':'diamond'}))
-    fig.add_trace(go.Scatter(x=[min_var_std], y=[min_var_ret], mode='markers', marker={'symbol':'square'}))
-
+    fig.add_trace(go.Scatter(x=std, y=mean, mode='markers', name='assets'))
+    fig.add_trace(
+        go.Scatter(x=[max_sharpe_std], y=[max_sharpe_ret], mode='markers', marker={'symbol': 'diamond', 'size': 10},
+                   name='maximum sharpe'))
+    fig.add_trace(
+        go.Scatter(x=[min_var_std], y=[min_var_ret], mode='markers', marker={'symbol': 'square', 'size': 10},
+                   name='minimum variance'))
+    if frontier_targets is not None and frontier is not None:
+        # print(frontier)
+        fig.add_trace(
+            go.Scatter(x=[p['fun'] for p in frontier], y=frontier_targets,mode='lines', name='efficient frontier')
+        )
+    fig.update_xaxes(title='volatility')
+    fig.update_yaxes(title='rate of return')
     return fig
-
 
 # trading activity global
 
