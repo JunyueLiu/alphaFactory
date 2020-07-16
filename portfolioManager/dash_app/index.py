@@ -4,7 +4,7 @@ import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output, State
 from portfolioManager.dash_app.app import app
-from portfolioManager.plotting import net_values_plot, corr_heatmap, holding_line_plot
+from portfolioManager.plotting import net_values_plot, corr_heatmap, holding_line_plot, efficient_frontier_plot
 from portfolioManager.utils import *
 
 
@@ -29,7 +29,7 @@ def get_pm_report_dash_app(portfolio: dict = None):
     net_values_ts_plot = net_values_plot(net_values)
     rets = net_values.pct_change()
     corr_heatmap_plot = corr_heatmap(rets.corr())
-
+    ef = efficient_frontier_plot(net_values)
     app.layout = html.Div([
         html.H1('Strategy Comparison'),
         dcc.Graph(figure=net_values_ts_plot),
@@ -47,16 +47,19 @@ def get_pm_report_dash_app(portfolio: dict = None):
                             end_date=max_date
                             ),
         dcc.Graph(id='holding'),
-
-
+        # dcc.Dropdown(id='date-selection',
+        #              options=[
+        #                  {'label': i, 'value': i} for i in pos.index.get_level_values(0).unique().to_list()
+        #              ]),
+        dcc.Graph(id='holding-pie'),
+        dcc.Graph(id='efficient-frontier', figure=ef),
 
     ])
-
 
     @app.callback([Output('holding', 'figure')],
                   [Input('asset-selection', 'value'),
                    Input('date-range', 'start_date'),
-                   Input('date-range', 'end_date'),])
+                   Input('date-range', 'end_date'), ])
     def update_holding(instrument, start_date, end_date):
         return holding_line_plot(pos, instrument, start_date, end_date),
 
