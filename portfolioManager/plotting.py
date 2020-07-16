@@ -96,17 +96,21 @@ def selected_long_short_pie():
     pass
 
 
-def efficient_frontier_plot(net_values: pd.DataFrame):
+def efficient_frontier_plot(mean, std,
+                            max_sharpe_ret, max_sharpe_std,
+                            min_var_ret, min_var_std):
     # todo efficient frontier
 
-    daily_net = net_values.groupby(pd.Grouper(freq='D')).last().fillna(method='ffill')  # type: pd.DataFrame
-    daily_ret = daily_net.pct_change()
-    cov_matrix = daily_ret.cov()
+    # daily_net = net_values.groupby(pd.Grouper(freq='D')).last().fillna(method='ffill')  # type: pd.DataFrame
+    # daily_ret = daily_net.pct_change()
+    # cov_matrix = daily_ret.cov()
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=daily_ret.std(), y=daily_ret.mean(), mode='markers'))
+    fig.add_trace(go.Scatter(x=std, y=mean, mode='markers'))
+    fig.add_trace(go.Scatter(x=[max_sharpe_std], y=[max_sharpe_ret], mode='markers', marker={'symbol':'diamond'}))
+    fig.add_trace(go.Scatter(x=[min_var_std], y=[min_var_ret], mode='markers', marker={'symbol':'square'}))
+
     return fig
 
-    pass
 
 # trading activity global
 
