@@ -33,6 +33,8 @@ def get_layout(net_values):
         html.Button(id='update', children='update'),
         html.Div(weights, id='weights', style={'display': 'block'}),
         dcc.Graph(id='efficient-frontier'),
+        dcc.Graph(id='portfolio-netvalue'),
+        html.Div(children=net_values.to_json(), id='hidden-netvalue', style={'display': 'none'}),
         html.Div(children=daily_ret.to_json(), id='hidden-ret', style={'display': 'none'}),
         html.Div(children=daily_ret.to_json(), id='hidden-cov', style={'display': 'none'}),
         html.Div(children=allocations.to_json(), id='hidden-weights', style={'display': 'none'})
