@@ -85,35 +85,63 @@ def get_pm_report_dash_app(portfolio: dict = None):
 
     # ------------------ allocation page ------------------
 
-    @app.callback([Output('efficient-frontier', 'figure')],
-                  [Input('hidden-ret', 'children'),
-                   Input('hidden-cov', 'children'),
-                   Input('hidden-weights', 'children'),
-                   Input('annualized-factor', 'value')])
-    def update_weights(ret, cov, weights, factor):
+    @app.callback([Output('efficient-frontier', 'figure'),
+                   ],
+                  [Input('update', 'n_clicks')],
+                  [State('hidden-ret', 'children'),
+                   State('hidden-cov', 'children'),
+                   State('weights', 'children'),
+                   State('hidden-weights', 'children'),
+                   State('annualized-factor', 'value'),
+                   State('efficient-frontier', 'figure')],
+                  )
+    def update_efficient_frontier(n_clicks, ret, cov, weights, hidden_weights, factor, ef):
         ret = pd.read_json(ret)
         cov_matrix = pd.read_json(cov)
-        # allocation = pd.read_json(weights)
+
         annualized_ret_mean = int(factor) * ret.mean()
         annualized_ret_cov = int(factor) * cov_matrix.cov()
         annualized_ret_std = np.sqrt(factor) * ret.std()
-        allocations1 = calculate_max_sharp_weights(annualized_ret_mean, annualized_ret_cov)
-        a1_ret, a1_std = calculate_portfolio_ret_std(allocations1.values.reshape(-1), annualized_ret_mean, annualized_ret_cov)
-        allocations2 = calculate_min_variance_weights(annualized_ret_mean, annualized_ret_cov)
-        a2_ret, a2_std = calculate_portfolio_ret_std(allocations2.values.reshape(-1), annualized_ret_mean, annualized_ret_cov)
 
-        # allocations_dict = allocations.to_dict()
-        # print(weights_children)
-        returns_range = np.linspace(annualized_ret_mean.min(), annualized_ret_mean.max(), 100)
-        frontier = efficient_frontier(annualized_ret_mean, annualized_ret_cov, returns_range)
-        ef = efficient_frontier_plot(annualized_ret_mean, annualized_ret_std,
-                                     a1_ret, a1_std,
-                                     a2_ret, a2_std,
-                                     returns_range, frontier)
+        weights_dict = {}
+        for w in weights:
+            if w['type'] == 'Input':
+                id = w['props']['id']
+                value = float(w['props']['value']) / 100
+                weights_dict[id] = value
 
+        allocation = pd.DataFrame([weights_dict])
+        allocation = allocation.T
+        allocation.columns = ['allocation']
+        hidden_allocation = pd.read_json(hidden_weights).apply(lambda x: round(x, 4))
+        if ef is None or allocation.to_dict() != hidden_allocation.to_dict():
+            ef = efficient_frontier_plot(annualized_ret_mean, annualized_ret_cov, annualized_ret_std, allocation)
         return ef,
-        pass
+
+    @app.callback([Output('portfolio-netvalue', 'figure')],
+                  [Input('update', 'n_clicks')],
+                  [State('weights', 'children'),
+                   State('hidden-netvalue', 'children')])
+    def update_net_value(n_clicks, weights, net_value):
+
+        weights_dict = {}
+        net_value = pd.read_json(net_value)
+        for w in weights:
+            if w['type'] == 'Input':
+                id = w['props']['id']
+                value = float(w['props']['value']) / 100
+                weights_dict[id] = value
+        net_value_ = net_value.copy()
+        for col in net_value.columns:
+            net_value_[col] = net_value_[col] * weights_dict[col]
+        net_value['portfolio'] = net_value_.sum(axis=1)
+        net_value['portfolio'] = net_value['portfolio'] / net_value['portfolio'][0]
+        # print(net_value_.sum(axis=1))
+        nv_plot = net_values_plot(net_value)
+        return nv_plot,
+
     return app
+
 
 if __name__ == '__main__':
     portfolio = load_result_from_pickles(r'../sample_data')
