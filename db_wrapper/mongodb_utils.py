@@ -1,4 +1,4 @@
-from pymongo import MongoClient, database
+from pymongo import MongoClient, database, CursorType
 from pymongo.results import UpdateResult
 import pandas as pd
 import os
@@ -13,13 +13,13 @@ class MongoConnection:
 
     def read_mongo_df(self, db: str, collection: str, query=None, projection=None, no_id=True):
         """ Read from Mongo and Store into DataFrame """
-        if projection is None:
-            projection = {}
-        if query is None:
-            query = {}
+        # if projection is None:
+        #     projection = {}
+        # if query is None:
+        #     query = {}
         # pymango的查找: The `projection` argument is used to specify a subset
         # of fields that should be included in the result documents.
-        cursor = self.client[db][collection].find(query, projection)
+        cursor = self.client[db][collection].find(query, projection, cursor_type=CursorType.EXHAUST)
 
         df = pd.DataFrame.from_records(cursor)
         #df = pd.DataFrame(list(cursor))  # todo This is problematic because of efficiency.
@@ -39,6 +39,10 @@ class MongoConnection:
         records = df.to_dict('records')
 
         result = self.client[db][collection_name].insert_many(records)
+        return result
+
+    def insert_from_dict(self, db: str, collection_name: str, data:dict):
+        result = self.client[db][collection_name].insert_one(data)
         return result
 
     def get_ohlc_dataframe(self, db, collection, query=None, no_id=True, field_name_set=None) -> pd.DataFrame:
@@ -73,10 +77,10 @@ if __name__ == '__main__':
     # con.insert_from_dataframe('test', '0001_HKEX_1d', df)
 
     # 1 是读的时候选了这列，0不选这列，也可以用True or False表示
-
-    df = con.read_mongo_df('quant', 'hsi_1_min', {}, {'time_key': 1, 'close': 1, 'open': 1,
-                                                      'high': 1, 'low': 1, 'turnover': 1})
-    print(df)
+    #
+    # df = con.read_mongo_df('quant', 'hsi_1_min', {}, {'time_key': 1, 'close': 1, 'open': 1,
+    #                                                   'high': 1, 'low': 1, 'turnover': 1})
+    # print(df)
 
 # df = con.get_ohlc_dataframe('quant', 'hsi_futures_1_min', {"time_key": {"$gt": "2020-05-01"}})
 
