@@ -155,14 +155,14 @@ class BacktestingBrokerage(BrokerageBase):
                     deal_price = open_price
                     dealt_list.append((order_id, deal_price, order.order_qty))
                     # self.order_deal(order_id, deal_price, order.order_qty)
-                elif order.order_price <= high_price:
+                elif high_price >= order.order_price >= low_price:
                     deal_price = order.order_price
                     dealt_list.append((order_id, deal_price, order.order_qty))
             elif order.order_direction == 'SHORT':
                 if order.order_price <= open_price:
                     deal_price = open_price
                     dealt_list.append((order_id, deal_price, order.order_qty))
-                elif order.order_price >= low_price:
+                elif low_price <= order.order_price <= high_price:
                     deal_price = order.order_price
                     dealt_list.append((order_id, deal_price, order.order_qty))
         return dealt_list
@@ -173,8 +173,6 @@ class BacktestingBrokerage(BrokerageBase):
         if order.order_status == 'SUBMITTED' and order.order_type == 'STOP':
             pass
         return dealt_list
-
-
 
     def match_working_order(self, bar_state):
         dealt_list = []

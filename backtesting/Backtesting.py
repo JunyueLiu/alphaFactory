@@ -253,26 +253,47 @@ class BacktestingBase:
         return json.dumps(self.backtesting_result)
 
     def save_backtesting_result_to_db(self, conn: MongoConnection, db: str, collections: str, ):
-        # todo why this slow
         d = {
             'strategy_name': self.strategy.strategy_name,
             'strategy_version': self.strategy.strategy_version,
-            'strategy_para': json.dumps(self.strategy.strategy_parameters),
+            'strategy_para': json.dumps(self.strategy.strategy_parameters).replace(),
             # because key has '.' mongodb doesn't allow this.
             'strategy_logic': inspect.getsource(self.strategy.strategy_logic),
 
             'backtesting_date': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             'backtesting_setting': json.dumps(self.backtesting_setting),
             # because key has '.' mongodb doesn't allow this.
-            # 'backtesting_result': {
-            #     # 'net_value': self.backtesting_result['net_value'].to_json(),
-            #     # 'holding': self.backtesting_result['holding'].to_json()
-            # }
+            'backtesting_result': {
+                'first_traded': self.backtesting_result['first_traded'],
+                'last_traded': self.backtesting_result['last_traded'],
+
+                'num_trade': self.backtesting_result['num_trade'],
+                'time_in_market': self.backtesting_result['time_in_market'],
+                'win_rate': self.backtesting_result['win_rate'],
+                'avg_win': self.backtesting_result['avg_win'],
+                'avg_loss': self.backtesting_result['avg_loss'],
+                'payoff_ratio': self.backtesting_result['payoff_ratio'],
+                'cagr': self.backtesting_result['cagr'],
+                'cumulative_return': self.backtesting_result['cumulative_return'],
+                'sharpe': self.backtesting_result['sharpe'],
+                'sortino': self.backtesting_result['sortino'],
+                'volatility': self.backtesting_result['volatility'],
+                'skew': self.backtesting_result['skew'],
+                'Kurtosis': self.backtesting_result['Kurtosis'],
+
+                'kelly': self.backtesting_result['kelly'],
+                'value_at_risk': self.backtesting_result['value_at_risk'],
+                'max_drawdown_value': self.backtesting_result['drawdown_value'].min(),
+                'max_drawdown_percent': self.backtesting_result['drawdown_percent'].min(),
+                'Avg Drawdown Days': "{:.2f}".format(self.backtesting_result['drawdown_detail']['days'].mean()),
+                'Max Drawdown Days': "{:.2f}".format(self.backtesting_result['drawdown_detail']['days'].max()),
+
+            }
 
         }
         # print(d)
         r = conn.insert_from_dict(db, collections, d)
-        print('finish insert. Object id {}'.format(r.inserted_ids))
+        print('finish insert. Object id {}'.format(r.inserted_id))
 
     def run(self):
         pass

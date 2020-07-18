@@ -3,6 +3,7 @@ import pandas as pd
 from backtesting.VectorizationBacktesting import VectorizedBacktesting
 from backtesting.BacktestingBrokerage import BacktestingBrokerage
 from backtesting.BacktestingQuote import BacktestingQuote
+from db_wrapper.mongodb_utils import MongoConnection
 from order.Order import Order
 from strategy.StrategyBase import Strategy
 from bar_manager.BarManager import BarManager
@@ -110,4 +111,7 @@ if __name__ == '__main__':
                                         backtesting_setting=backtesting_setting)
 
     backtesting.run()
-    backtesting.backtesting_result_save_pickle(strategy.strategy_name + '_' + strategy.strategy_version + '_2.pickle')
+    # backtesting.backtesting_result_save_pickle(strategy.strategy_name + '_' + strategy.strategy_version + '_2.pickle')
+    conn = MongoConnection('120.55.45.12', 27017, 'root', 'AlphaFactory2020')
+    print('save db')
+    backtesting.save_backtesting_result_to_db(conn, 'backtesting', 'ljy')
