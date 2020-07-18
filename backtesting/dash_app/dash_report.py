@@ -69,7 +69,7 @@ def get_layout(backtesting_result: dict):
         X = sm.add_constant(benchmark_ret)  # constant is not added by default
         model = sm.OLS(returns, X, missing='drop')
         result = model.fit()
-        print(result.params)
+        # print(result.params)
         benchmark_performance = {
             'Bencnmark mean ret':  "{:.2f} %".format(100 * benchmark_ret.mean()),
             'Benchmark Vol': "{:.2f} %".format(100 * benchmark_ret.std()),

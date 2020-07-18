@@ -28,8 +28,9 @@ def net_value_plot(strategy_net_value: pd.Series,
     fig = go.Figure()
     fig.add_trace(net_value_line(strategy_net_value / strategy_net_value[0], name=strategy_name, fill=fill))
     if benchmark is not None:
-        benchmark_copy = benchmark[(benchmark.index >= strategy_net_value.index[0]) & (benchmark.index <= strategy_net_value.index[-1])]
-        fig.add_trace(net_value_line(benchmark_copy /benchmark_copy[0], color='#FFCC00', name='benchmark'))
+        benchmark_copy = benchmark[
+            (benchmark.index >= strategy_net_value.index[0]) & (benchmark.index <= strategy_net_value.index[-1])]
+        fig.add_trace(net_value_line(benchmark_copy / benchmark_copy[0], color='#FFCC00', name='benchmark'))
 
     x_axis = fig.data[0].x
     tick_value = [x_axis[i] for i in range(0, len(x_axis), len(x_axis) // 5)]
@@ -45,6 +46,7 @@ def returns_distribution_plot(returns: pd.Series):
     fig.update_layout(
         title="Return Distribution", )
     return fig
+
 
 def ret_verus_ret(rets: pd.DataFrame) -> go.Figure:
     fig = go.Figure()
@@ -88,10 +90,7 @@ def entry_and_exit_plot(ohlc_df, traded: pd.DataFrame, symbol: str, ohlc_graph=T
         entrust_short = entrust_dot(short, False)
         fig.add_trace(entrust_long, 1, 1)
         fig.add_trace(entrust_short, 1, 1)
-    fig.update_layout(showlegend=False, yaxis=dict(
-        autorange=True,
-        fixedrange=False
-    ))
+
     if ta_dict is not None:
         subplot_i = 2
         for ta, overlap in ta_dict.items():
@@ -119,8 +118,13 @@ def entry_and_exit_plot(ohlc_df, traded: pd.DataFrame, symbol: str, ohlc_graph=T
     tick_value = [x_axis[i] for i in range(0, len(x_axis), len(x_axis) // 5)]
     tick_text = [x_axis[i][0:10] for i in range(0, len(x_axis), len(x_axis) // 5)]
     fig.update_xaxes(ticktext=tick_text, tickvals=tick_value)
-    fig.update_layout(showlegend=True, xaxis_rangeslider_visible=False)
-
+    # fig.update_layout(showlegend=True, xaxis_rangeslider_visible=False)
+    fig.update_layout(showlegend=True, yaxis1=dict(
+        autorange=True,
+        fixedrange=False), yaxis2=dict(
+        autorange=True,
+        fixedrange=False), xaxis_rangeslider_visible=False
+                      )
     return fig
 
 
