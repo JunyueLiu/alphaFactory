@@ -255,11 +255,12 @@ def returns_by_group_distplot(group_ret_ts: pd.DataFrame):
         for group in grouped:
             group_labels.append(ret_col + ' ' + str(group[0]) + group_ret_ts.index.get_level_values(0).name)
             hist_data.append(group[1].dropna().values)
-        fig1 = ff.create_distplot(hist_data, group_labels, bin_size=.1)
+        fig1 = ff.create_distplot(hist_data, group_labels, bin_size=.001)
         # fig1 has multi graph object
         for i in range(len(fig1.data)):
             fig.add_trace(fig1.data[i], row=count, col=1)
         count += 1
+    fig.update_layout(height=300 * len(group_ret_ts.columns),)
     return fig
 
 
