@@ -7,6 +7,7 @@ import numpy as np
 from technical_analysis import utils
 from technical_analysis.utils import MA_Type
 import pandas as pd
+
 __overlap__ = False
 __func__ = ['ADX',
             'ADXR',
@@ -63,7 +64,10 @@ def ADX(inputs, period=14, prices: list or None = None):
         prices = ['high', 'low', 'close']
     indicator = abstract.Function('ADX')
     if not utils.check(inputs, prices):
-        raise ValueError('Expect {}, but get inputs {}'.format(str(prices), str(inputs)))
+        raise ValueError('Expect {} in the inputs. But only {}'.format(str(prices),
+                                                                       str(inputs.columns)
+                                                                       if isinstance(inputs, pd.DataFrame)
+                                                                       else inputs.keys()))
     return indicator(inputs, timeperiod=period, prices=prices)
 
 
