@@ -270,7 +270,7 @@ def MIDPRICE(inputs, period: int = 14, prices=None):
     return indicator(inputs, timeperiod=period, prices=prices)
 
 
-def SAR(inputs, acceleration: float = 0, period: int = 14, prices=None):
+def SAR(inputs, acceleration: float = 0.02, period: int = 14, prices=None):
     """
     {'name': 'SAR',
      'group': 'Overlap Studies',
