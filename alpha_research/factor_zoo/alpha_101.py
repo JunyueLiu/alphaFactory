@@ -115,7 +115,7 @@ def alpha_9(df: pd.DataFrame, time_shift=1, rolling_windows=5):
     ans1 = df['close'] - df['close'].shift(1)
     factor = np.where(condition > 0, ans1, np.where(condition2 < 0, ans1, -1 * ans1))
     # print(factor)
-    return factor
+    return pd.Series(factor, index=df.index)
 
 
 def alpha_10(df: pd.DataFrame):

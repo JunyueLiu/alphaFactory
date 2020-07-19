@@ -236,7 +236,10 @@ def ts_max(x: pd.Series, d: int or float) -> pd.Series:
     """
     if isinstance(d, float):
         d = math.floor(d)
-    return x.groupby(level=1).rolling(d).max()
+    if isinstance(x.index, pd.MultiIndex):
+        return x.groupby(level=1).rolling(d).max()
+    else:
+        return x.rolling(d).max()
 
 
 def ts_argmax(x: pd.Series, d: int or float) -> pd.Series:

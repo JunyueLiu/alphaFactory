@@ -1,6 +1,7 @@
 import pandas as pd
 from scipy import stats
 import numpy as np
+import inspect
 
 
 def calculate_forward_returns(data: pd.DataFrame, periods: list, price_key='close') -> pd.DataFrame:
@@ -249,3 +250,7 @@ def get_valid_quantile(quantile_str: str):
     if ll[-1] < 100:
         ll.append(100)
     return ll
+
+
+def print_code(func):
+    print(inspect.getsource(func))
