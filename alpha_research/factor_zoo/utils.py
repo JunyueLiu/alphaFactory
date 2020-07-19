@@ -41,8 +41,9 @@ def adv(prices: pd.Series, volume, d: int) -> pd.Series:
     :param volume:
     :return:
     """
+
     if isinstance(prices.index, pd.MultiIndex):
-        return (prices * volume).groupby(level=1).rolling(d).mean()
+        return (prices * volume).groupby(level=1).rolling(d).mean().droplevel(0).sort_index()
     else:
         return (prices * volume).rolling(d).mean()
 
@@ -283,6 +284,7 @@ def ts_rank(x: pd.Series, d: int or float) -> pd.Series:
         d = math.floor(d)
 
     def func(a):
+        # 这里sort两次是啥意思？
         return a.argsort().argsort()[-1] + 1
 
     if isinstance(x.index, pd.MultiIndex):
@@ -323,7 +325,7 @@ def sum(x: pd.Series, d: int or float) -> pd.Series:
         d = math.floor(d)
 
     if isinstance(x.index, pd.MultiIndex):
-        return x.groupby(level=1).rolling(d).sum()
+        return x.groupby(level=1).rolling(d).sum().droplevel(0).sort_index()
     else:
         return x.rolling(d).sum()
 
