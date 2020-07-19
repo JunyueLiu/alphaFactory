@@ -4,6 +4,7 @@ from alpha_research.SingleAssetResearch import *
 import pandas as pd
 import pickle
 import inspect
+import datetime
 import traceback
 
 # from db_wrapper.mongodb_utils import *
@@ -19,14 +20,16 @@ JAPAN = 'JP'
 
 
 class AlphaStorage:
-    def __init__(self, name: str,
-                 alpha_function,  # can be defined using the liquidity profile, such as TOP50, TOP100, TOP200, TOP1500
+    def __init__(self, name: str, author: str,
+                 alpha_function,
                  alpha_parameter: dict,
                  alpha_idea: str,
-                 alpha_regions: str or list,
+                 alpha_regions: str or list,# can be defined using the liquidity profile, such as TOP50, TOP100, TOP200, TOP1500
                  alpha_universe: str or list,  # index
                  performance_parameter: dict):
         self.name = name
+        self.author = author
+        self.include_time = datetime.datetime.now()
         if isinstance(alpha_function, str):
             self.alpha_function = alpha_function
         elif hasattr(alpha_function, '__call__'):
@@ -57,7 +60,23 @@ class AlphaStorage:
         dic = vars(self)
 
         if isinstance(dic['performance_parameter']['data'], pd.DataFrame):
-            dic['performance_parameter']['data'] = dic['performance_parameter']['data'].to_json()
+            df = dic['performance_parameter']['data']
+            save_dict = {}
+            if isinstance(df.index, pd.MultiIndex):
+                save_dict['code'] = df.index.get_level_values(1).unique().to_list()
+                time = df.index.get_level_values(0).unique().sort_values()
+
+                save_dict['start'] = time[0]
+                save_dict['end'] = time[-1]
+            elif isinstance(df.index, pd.Index):
+                if 'code' in df.columns:
+                    save_dict['code'] = df['code'][0]
+                time = df.index.unique().sort_values()
+                save_dict['star'] = time[0]
+                save_dict['end'] = time[-1]
+            dic['performance_parameter']['data'] = save_dict
+        elif isinstance(dic['performance_parameter']['data'], dict):
+            pass
 
         return dic
 
@@ -95,7 +114,7 @@ class AlphaManager:
             traceback.print_exc()
 
     def from_dict_to_alphaStorage(self, input_dict: dict) -> AlphaStorage:
-        alphaStorage = AlphaStorage(input_dict['name'],
+        alphaStorage = AlphaStorage(input_dict['name'], input_dict['author'],
                                     input_dict['alpha_function'],
                                     input_dict['alpha_parameter'],
                                     input_dict['alpha_idea'],
@@ -105,10 +124,26 @@ class AlphaManager:
         return alphaStorage
 
     def query_alpha_by_datasets(self, db, collection,
-                                datasets: str or pd.DataFrame):
+                                datasets: dict or pd.DataFrame):
+
+        search_dict = {}
         if isinstance(datasets, pd.DataFrame):
-            datasets = datasets.to_json()
-        alpha_storage_list = self.query_alpha(db, collection, {'performance_parameter': {'data': datasets}})
+            if isinstance(datasets.index, pd.MultiIndex):
+                search_dict['code'] = datasets.index.get_level_values(1).unique().to_list()
+                time = datasets.index.get_level_values(0).unique().sort_values()
+
+                search_dict['start'] = time[0]
+                search_dict['end'] = time[-1]
+            elif isinstance(datasets.index, pd.Index):
+                if 'code' in datasets.columns:
+                    search_dict['code'] = datasets['code'][0]
+                time = datasets.index.unique().sort_values()
+                search_dict['star'] = time[0]
+                search_dict['end'] = time[-1]
+        elif isinstance(datasets, dict):
+            search_dict = dict
+
+        alpha_storage_list = self.query_alpha(db, collection, {'performance_parameter': {'data': search_dict}})
         return alpha_storage_list
 
     def query_alpha_by_alpha_name(self, db: str, collection: str,
@@ -136,36 +171,50 @@ class AlphaManager:
         pass
 
 
-
 # todo:添加时间，作者
 # 查的时候可以查出alpha有多少
 # todo:测试alpha
 if __name__ == '__main__':
     # sample data
-    # data_path = r'../HK.999010_2019-06-01 00:00:00_2020-05-30 03:00:00_K_1M_qfq.csv'
-    # df = pd.read_csv(data_path)
-    # df['time_key'] = pd.to_datetime(df['time_key'])
-    # df.set_index('time_key', inplace=True)
-    # data = df[-100:]
-
+    data_path = r'../../HK.999010_2019-06-01 00:00:00_2020-05-30 03:00:00_K_1M_qfq.csv'
+    df = pd.read_csv(data_path)
+    df['time_key'] = pd.to_datetime(df['time_key'])
+    df.set_index('time_key', inplace=True)
+    data = df[-1000:]
+    #
     # factor_study = SingleAssetResearch(df)
     # factor = factor_study.calculate_factor(alpha_6, **{'time_lag': 5})
     # func = alpha_6
+    # key_performance = factor_study.key_performance_dict()
 
     # connect mongodb
     connect = MongoConnection('120.55.45.12', 27017, 'root', 'AlphaFactory2020')
     # print('connect')
-    # alpha_storage = AlphaStorage('alpha_1', alpha_1, {},
+    # alpha_storage = AlphaStorage('alpha_6', 'alpha researcher',alpha_6, {'select_parameter': {'time_lag': 5}},
     #                              'test',
-    #                              CHINA, 'CSI300', {'data': data})
+    #                              HK, 'hsi futures', {'data': data, 'key_performance': key_performance})
     db = 'test'
     collection = 'alphatest'
     manager = AlphaManager(connect)
     # manager.add_alpha(db, collection, alpha_storage)
-    query = {'name': 'alpha_1'}
-    alphaStorage_list = manager.query_alpha(db, collection, query)
-    print(alphaStorage_list)
 
+    # query = {'name': 'alpha_1'}
+    # alphaStorage_list = manager.query_alpha(db, collection, query)
+    # todo 主要写查询这些的前端吧
+    ll = manager.query_alpha_by_alpha_idea(db, collection, 'test')
+    print(ll)
+    ll = manager.query_alpha_by_alpha_name(db, collection, 'alpha_6')
+    print(ll)
+    ll = manager.query_alpha_by_datasets(db, collection, data)
+    print(ll)
+    # todo 这么查有问题
+    ll = manager.query_alpha_by_datasets(db, collection, {'start': data.index[0], 'end': data.index[-1], 'code': data['code'][0]})
+    print(ll)
+    ll = manager.query_alpha_by_regions(db, collection, HK)
+    print(ll)
+    ll = manager.query_alpha_by_universe(db, collection, 'hsi futures')
+    print(ll)
 
+    # print(alphaStorage_list)
 
     # 返回是一个list list中每个对象是dict
