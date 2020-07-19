@@ -67,6 +67,21 @@ class SingleAssetResearch(AlphaResearch):
                 self.factor = pd.Series(factor, index=self.in_sample.index)
         return self.factor
 
+    def key_performance_dict(self, forward_return_lag=None):
+        key_performance = {}
+        if forward_return_lag is None:
+            forward_return_lag = [1, 5, 10]
+        returns = calculate_forward_returns(self.in_sample, forward_return_lag)
+        summary = factor_summary(self.factor, self.factor_name)
+        key_performance['summary'] = summary.to_dict()
+        key_performance['ic'] = calculate_ts_information_coefficient(self.factor, returns).to_dict()
+        key_performance['beta'] = factor_ols_regression(self.factor, returns).to_dict()
+        factor_returns = calculate_ts_factor_returns(self.in_sample, self.factor, forward_return_lag)
+        # cum_ret = calculate_cumulative_returns(factor_returns, 1)
+        # cum_ret.index = cum_ret.index.strftime('%Y-%m-%d %H:%M:%S')
+        # key_performance['cum_ret'] = cum_ret.values
+        return key_performance
+
     def evaluate_alpha(self, forward_return_lag: list = None):
 
         if forward_return_lag is None:
