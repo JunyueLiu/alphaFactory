@@ -83,6 +83,8 @@ def correlation(x: pd.Series, y: pd.Series, d: int) -> pd.Series:
     :return:
     """
     # todo multiindex
+    if isinstance(d, float):
+        d = math.floor(d)
     if isinstance(x.index, pd.MultiIndex):
         x.name = 'x'
         y.name = 'y'
@@ -129,6 +131,8 @@ def delta(x: pd.Series, d: int) -> pd.Series:
     :return:
     """
     assert d > 0
+    if isinstance(d, float):
+        d = math.floor(d)
     if isinstance(x.index, pd.MultiIndex):
         return x.groupby(level=1).diff(d)
     else:
