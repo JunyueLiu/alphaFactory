@@ -97,7 +97,7 @@ def correlation(x: pd.Series, y: pd.Series, d: int) -> pd.Series:
             b = g[1][y.name]
             r = a.rolling(window=d).corr(b)
             res.append(r)
-        return pd.concat(res)
+        return pd.concat(res).reorder_levels([1, 0])
     else:
         return x.rolling(window=d).corr(y)
 
@@ -119,7 +119,7 @@ def covariance(x: pd.Series, y: pd.Series, d) -> pd.Series:
             b = g[1][y.name]
             r = a.rolling(window=d).cov(b)
             res.append(r)
-        return pd.concat(res)
+        return pd.concat(res).reorder_levels([1, 0])
     else:
         return x.rolling(window=d).cov(y)
 
@@ -257,7 +257,7 @@ def ts_argmax(x: pd.Series, d: int or float) -> pd.Series:
     if isinstance(d, float):
         d = math.floor(d)
     if isinstance(x.index, pd.MultiIndex):
-        return x.groupby(level=1).rolling(d).apply(lambda r: d - np.nanargmax(r))
+        return x.groupby(level=1).rolling(d).apply(lambda r: d - np.nanargmax(r)).droplevel(0).sort_index()
     else:
         return x.rolling(d).apply(lambda r: d - np.nanargmax(r))
 
@@ -272,7 +272,7 @@ def ts_argmin(x: pd.Series, d: int or float) -> pd.Series:
     if isinstance(d, float):
         d = math.floor(d)
     if isinstance(x.index, pd.MultiIndex):
-        return x.groupby(level=1).rolling(d).apply(lambda r: d - np.nanargmin(r))
+        return x.groupby(level=1).rolling(d).apply(lambda r: d - np.nanargmin(r)).droplevel(0).sort_index()
     else:
         return x.rolling(d).apply(lambda r: d - np.nanargmin(r))
 
@@ -292,7 +292,7 @@ def ts_rank(x: pd.Series, d: int or float) -> pd.Series:
         return a.argsort().argsort()[-1] + 1
 
     if isinstance(x.index, pd.MultiIndex):
-        return x.groupby(level=1).rolling(d).apply(func)
+        return x.groupby(level=1).rolling(d).apply(func).droplevel(0).sort_index()
     else:
         return x.rolling(d).apply(func)
 

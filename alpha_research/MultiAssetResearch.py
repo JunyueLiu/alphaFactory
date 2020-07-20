@@ -221,7 +221,7 @@ class MultiAssetResearch(AlphaResearch):
         fig = cumulative_returns_by_group_plot(cum_ret_by_group['1_period_return'])
         fig.show()
 
-    def get_evaluation_dash_app(self):
+    def get_evaluation_dash_app(self,dash=None):
         # demand:
         # change forward return parameter
         # change alpha universe and redo the calculation
@@ -230,7 +230,10 @@ class MultiAssetResearch(AlphaResearch):
         # split section by analysis type:
 
         external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
-        app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
+        if dash is None:
+            app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
+        else:
+            app = dash
 
         url_bar_and_content_div = html.Div(children=[
             html.H1(children=self.factor_name + ' evaluation',
@@ -524,8 +527,8 @@ class MultiAssetResearch(AlphaResearch):
         ], style={'margin': '0 20px'})
 
         # for switching the pages
-        @app.callback(dash.dependencies.Output('page-content', 'children'),
-                      [dash.dependencies.Input('url', 'pathname')])
+        @app.callback(Output('page-content', 'children'),
+                      [Input('url', 'pathname')])
         def display_page(pathname):
             if pathname == '/general':
                 return general_div
@@ -658,7 +661,7 @@ class MultiAssetResearch(AlphaResearch):
                 factor_table = pd_to_dash_table(factor_summary(factor), 'summary')
 
                 ic = calculate_cs_information_coefficient(merged_data)
-                display(information_analysis(ic))
+                # display(information_analysis(ic))
 
                 ic_table = pd_to_dash_table(pd.DataFrame(calculate_ts_information_coefficient(factor, returns),
                                                          columns=[self.factor_name]), 'ic')
