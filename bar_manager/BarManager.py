@@ -7,6 +7,7 @@ from technical_analysis.volatility import *
 from technical_analysis.volume import *
 from technical_analysis.momentum import *
 from technical_analysis.pattern import *
+from technical_analysis.statistic_function import *
 from technical_analysis.customization import *
 from technical_analysis.utils import MA_Type
 

@@ -236,13 +236,13 @@ class BacktestingBase:
         # returns.to_csv('sample_returns.csv')
         # qs.reports.html(returns, title=self.strategy.strategy_name, output='report.html')
 
-    def get_dash_report(self):
+    def get_dash_report(self, dash_app=None):
         # from self.backtesting_result data generate report
-        return get_backtesting_report_dash_app(self.backtesting_result)
+        return get_backtesting_report_dash_app(self.backtesting_result, dash_app)
 
     @staticmethod
-    def get_dash_report_from_backtesting_result(backtesting_result: dict):
-        return get_backtesting_report_dash_app(backtesting_result)
+    def get_dash_report_from_backtesting_result(backtesting_result: dict, dash_app=None):
+        return get_backtesting_report_dash_app(backtesting_result, dash_app)
 
     def backtesting_result_save_pickle(self, file: str):
         with open(file, 'wb') as f:
@@ -291,7 +291,6 @@ class BacktestingBase:
             }
 
         }
-        # print(d)
         r = conn.insert_from_dict(db, collections, d)
         print('finish insert. Object id {}'.format(r.inserted_id))
 
