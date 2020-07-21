@@ -32,7 +32,10 @@ from technical_analysis.customization import *
 from technical_analysis.utils import *
 
 
-def get_backtesting_report_dash_app(backtesting_result: dict):
+def get_backtesting_report_dash_app(backtesting_result: dict, dash_app=None):
+    # global app
+    if dash_app is not None:
+        app = dash_app
     app.layout = html.Div([
         html.H2('Backtesting Result'),
         dcc.Location(id='url', refresh=False),

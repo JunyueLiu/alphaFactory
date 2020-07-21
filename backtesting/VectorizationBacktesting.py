@@ -3,6 +3,7 @@ import pickle
 import datetime
 import pandas as pd
 import numpy as np
+from tqdm import tqdm
 
 from backtesting.Backtesting import BacktestingBase
 from backtesting.dash_app.index_app import get_backtesting_report_dash_app
@@ -170,7 +171,7 @@ class VectorizedBacktesting(BacktestingBase):
         # last_state = self.strategy.lookback_period.copy()
         self.update_state(init=True)
         start = datetime.datetime.now()
-        for t in self.time_list:
+        for t in tqdm(self.time_list):
             # if t is in the smallest timestamp the strategy should make decision
             self.brokerage_ctx.update_time(t)
             if t == self.min_timestamp:
@@ -192,5 +193,6 @@ class VectorizedBacktesting(BacktestingBase):
                 print(datetime.datetime.now() - start)
                 break
             if updated is False:
-                print('skip kline for look back')
+                pass
+                # print('skip kline for look back')
         self.calculate_result()
