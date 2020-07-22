@@ -7,6 +7,17 @@ import inspect
 import datetime
 import traceback
 
+import dash
+import dash_core_components as dcc
+import dash_html_components as html
+from dash.dependencies import Input, Output, State
+from alpha_research.AlphaManager.app import app
+import base64
+import datetime
+import io
+import dash_table
+
+
 # from db_wrapper.mongodb_utils import *
 
 HK = 'HK'
@@ -15,8 +26,6 @@ US = 'US'
 EUROPE = 'EU'
 JAPAN = 'JP'
 
-
-# 把函数放入list 直接把函数名称append进去就好了 https://www.cnblogs.com/xudashu/p/3831600.html
 
 
 class AlphaStorage:
@@ -171,31 +180,181 @@ class AlphaManager:
         pass
 
 
-# todo:添加时间，作者
+class AlphaManagerPage:
+
+    def connect_server(self,ip, port, username, password):
+        self.connect = MongoConnection(ip, port, username, password)
+        self.manager = AlphaManager(self.connect)
+        return self.connect.client.list_database_names()
+        # db = 'test'
+        # collection = 'alphatest'
+        # ll = manager.query_alpha_by_alpha_idea(db, collection, 'test')
+        # return ll
+
+    def dash_webpage(self):
+        """
+        :return:
+        """
+
+        app.layout = html.Div(children=[
+            html.H1('Alpha manager'),
+            html.Div(['IP  ', dcc.Input(id='ip_address', value='120.55.45.12', type='text'),
+                      'Port  ', dcc.Input(id='port_number', value='27017', type='number')]),
+            html.Div(['User  ', dcc.Input(id='username', value='root', type='text'),
+                      'Possword  ', dcc.Input(id='password', value='AlphaFactory2020', type='password')]),
+            html.Button(id='connect-button', n_clicks=0, children='Connect server'),
+            html.Div(id='connect-result'),
+            html.Hr(),
+            html.Div(['Database:  ', dcc.Input(id='database', value='test', type='text'),'  ',
+                      html.Button(id='connect_database_button', n_clicks=0, children='Connect database')]),
+            html.Div(id='table-name'),
+            html.Div(['Table:  ', dcc.Input(id='table', value='alphatest', type='text')]),
+            html.Hr(),
+            html.Div(['Alpha idea:  ', dcc.Input(id='alpha_idea', value='test', type='text'),'  ',
+                      html.Button(id='query_by_idea_button', n_clicks=0, children='Query by idea')]),
+            html.Div(id='query-result'),
+            html.Div(['Alpha name:  ', dcc.Input(id='alpha_name', value='alpha_6', type='text'), '  ',
+                      html.Button(id='query_by_name_button', n_clicks=0, children='Query by name')]),
+
+
+
+            html.Div(id='query-result2'),
+            # upload box
+            dcc.Upload(id='upload-data',
+                children=html.Div([
+                    'Query by ',
+                    html.A('Datasets')
+                ]),       style={
+            'width': '300px',
+            'height': '60px',
+            'lineHeight': '60px',
+            'borderWidth': '1px',
+            'borderStyle': 'dashed',
+            'borderRadius': '5px',
+            'textAlign': 'center',
+            'margin': '10px'}),
+            html.Div(id='query-result3'),
+            html.Div(id='output-data-upload'),
+
+
+        ], style={'margin': '20px'})
+
+
+
+        @app.callback(Output('connect-result', 'children'),
+                      [Input('connect-button', 'n_clicks')],
+                      [State('ip_address', 'value'),
+                       State('port_number', 'value'),
+                       State('username', 'value'),
+                       State('password', 'value'),
+                       ])
+        def connect_server(n_clicks, ip, port, username, password):
+            if n_clicks != 0:
+                namelist = self.connect_server(ip, int(port), username, password)
+                return str(namelist)
+
+
+        @app.callback(Output('table-name', 'children'),
+                      [Input('connect_database_button', 'n_clicks')],
+                      [State('database', 'value')])
+        def connect_db(n_clicks, database):
+            if n_clicks != 0:
+                tablelist = self.connect.client[database].list_collection_names()
+                return str(tablelist)
+
+        @app.callback(Output('query-result', 'children'),
+                      [Input('query_by_idea_button', 'n_clicks')],
+                      [State('database', 'value'),
+                       State('table', 'value'),
+                       State('alpha_idea', 'value')
+                       ])
+        def query_by_idea(n_clicks, db,collection,alpha_idea):
+            if n_clicks != 0:
+                result = self.manager.query_alpha_by_alpha_idea(db, collection, alpha_idea)
+                return str(result)
+
+        @app.callback(Output('query-result2', 'children'),
+                      [Input('query_by_name_button', 'n_clicks')],
+                      [State('database', 'value'),
+                       State('table', 'value'),
+                       State('alpha_name', 'value')
+                       ])
+        def query_by_name(n_clicks, db, collection, alpha_name):
+            if (n_clicks != 0):
+                result = self.manager.query_alpha_by_alpha_name(db, collection, alpha_name)
+                return str(result)
+
+        # read scv file
+        def parse_contents(contents, filename, date):
+            content_type, content_string = contents.split(',')
+
+            decoded = base64.b64decode(content_string)
+            try:
+                if 'csv' in filename:
+                    # Assume that the user uploaded a CSV file
+                    df = pd.read_csv(
+                        io.StringIO(decoded.decode('utf-8')))
+                    df['time_key'] = pd.to_datetime(df['time_key'])
+                    df.set_index('time_key', inplace=True)
+                    self.data = df[-1000:]
+                elif 'xls' in filename:
+                    # Assume that the user uploaded an excel file
+                    df = pd.read_excel(io.BytesIO(decoded))
+            except Exception as e:
+                print(e)
+                return html.Div([
+                    'There was an error processing this file.'
+                ])
+
+            return html.Div([
+                html.H5(filename),
+                html.H6(datetime.datetime.fromtimestamp(date)),
+
+                dash_table.DataTable(
+                    data=df.to_dict('records'),
+                    columns=[{'name': i, 'id': i} for i in df.columns]
+                )
+            ])
+
+        @app.callback(Output('query-result3', 'children')
+                       # ,Output('output-data-upload', 'children')
+                       ,
+                      [Input('upload-data', 'contents')],
+                      [State('database', 'value'),
+                       State('table', 'value'),
+                       State('upload-data', 'filename'),
+                       State('upload-data', 'last_modified')])
+
+        def update_output(list_of_contents, db, collection, list_of_names, list_of_dates):
+            if list_of_contents is not None:
+
+                parse_contents(list_of_contents, list_of_names, list_of_dates)
+
+                result = self.manager.query_alpha_by_datasets(db, collection, self.data)
+                return str(result)
+
+
+        return app
+
 # 查的时候可以查出alpha有多少
 # todo:测试alpha
 if __name__ == '__main__':
+
     # sample data
-    data_path = r'../../HK.999010_2019-06-01 00:00:00_2020-05-30 03:00:00_K_1M_qfq.csv'
-    df = pd.read_csv(data_path)
-    df['time_key'] = pd.to_datetime(df['time_key'])
-    df.set_index('time_key', inplace=True)
-    data = df[-1000:]
-    #
-    # factor_study = SingleAssetResearch(df)
-    # factor = factor_study.calculate_factor(alpha_6, **{'time_lag': 5})
-    # func = alpha_6
-    # key_performance = factor_study.key_performance_dict()
+    # data_path = r'../HK.999010_2019-06-01 00:00:00_2020-05-30 03:00:00_K_1M_qfq.csv'
+    # df = pd.read_csv(data_path)
+    # df['time_key'] = pd.to_datetime(df['time_key'])
+    # df.set_index('time_key', inplace=True)
+    # data = df[-1000:]
 
     # connect mongodb
-    connect = MongoConnection('120.55.45.12', 27017, 'root', 'AlphaFactory2020')
+    AlphaManagerPage().dash_webpage().run_server(debug=True)
+
+#    connect = MongoConnection('120.55.45.12', 27017, 'root', 'AlphaFactory2020')
     # print('connect')
     # alpha_storage = AlphaStorage('alpha_6', 'alpha researcher',alpha_6, {'select_parameter': {'time_lag': 5}},
     #                              'test',
     #                              HK, 'hsi futures', {'data': data, 'key_performance': key_performance})
-    db = 'test'
-    collection = 'alphatest'
-    manager = AlphaManager(connect)
     # manager.add_alpha(db, collection, alpha_storage)
 
     # query = {'name': 'alpha_1'}
@@ -207,14 +366,13 @@ if __name__ == '__main__':
     print(ll)
     ll = manager.query_alpha_by_datasets(db, collection, data)
     print(ll)
-    # todo 这么查有问题
-    ll = manager.query_alpha_by_datasets(db, collection, {'start': data.index[0], 'end': data.index[-1], 'code': data['code'][0]})
-    print(ll)
-    ll = manager.query_alpha_by_regions(db, collection, HK)
-    print(ll)
-    ll = manager.query_alpha_by_universe(db, collection, 'hsi futures')
-    print(ll)
 
-    # print(alphaStorage_list)
+    # # todo 这么查有问题
+    # ll = manager.query_alpha_by_datasets(db, collection, {'start': data.index[0], 'end': data.index[-1], 'code': data['code'][0]})
+    # print(ll)
+    # ll = manager.query_alpha_by_regions(db, collection, HK)
+    # print(ll)
+    # ll = manager.query_alpha_by_universe(db, collection, 'hsi futures')
+    # print(ll)
 
-    # 返回是一个list list中每个对象是dict
+

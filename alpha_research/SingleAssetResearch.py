@@ -20,7 +20,7 @@ pio.renderers.default = "browser"
 
 
 class SingleAssetResearch(AlphaResearch):
-    # data是传进去的
+
     def __init__(self, data: pd.DataFrame, out_of_sample: pd.DataFrame = None, split_ratio: float = 0.3,
                  factor_parameters=None):
         super().__init__()
@@ -397,7 +397,7 @@ class DemoSingleAssetFactor(SingleAssetResearch):
 
 
 if __name__ == '__main__':
-    data_path = r'../HK.999010_2019-06-01 00:00:00_2020-05-30 03:00:00_K_1M_qfq.csv'
+    data_path = r'/Users/silviaysy/Desktop/project/alphaFactory/alpha_research/HK.999010_2019-06-01 00:00:00_2020-05-30 03:00:00_K_1M_qfq.csv'
 
     df = pd.read_csv(data_path)
     df['time_key'] = pd.to_datetime(df['time_key'])
