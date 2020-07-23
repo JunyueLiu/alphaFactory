@@ -2,7 +2,7 @@ from gateway.quote_base import QuoteBase
 import yfinance as yf
 import pandas as pd
 import threading
-
+import numpy as np
 import time
 
 
@@ -27,7 +27,7 @@ class DemoQuote(QuoteBase):
 
         quote = self
 
-        class myThread(threading.Thread):  # 继承父类threading.Thread
+        class myThread(threading.Thread):
             def __init__(self):
                 threading.Thread.__init__(self)
                 self.time_list = None
@@ -113,6 +113,34 @@ class DemoQuote(QuoteBase):
         data.index = data.index.droplevel(1)
         data['code'] = symbol
         return 0, data
+
+    def get_order_book(self, symbol, *args, **kwargs):
+        if symbol not in self.cur_data.index.get_level_values(1):
+            return 1, pd.DataFrame()
+        data = self.cur_data.loc[(slice(None), [symbol]), :]
+        close = data['close'][-1]
+        bid = round(close - (np.random.randint(0, 10) / 100), 2)
+        ask = round(close + (np.random.randint(0, 10) / 100), 2)
+        bid_amount = np.random.randint(100, 10000)
+        ask_amount = np.random.randint(100, 10000)
+        ret = {
+            'Code': symbol,
+            'Bid': bid,
+            'Ask': ask,
+            'Bid Amount': bid_amount,
+            'Ask Amount': ask_amount
+
+        }
+        return 0, pd.DataFrame([ret])
+
+    def get_market_snapshot(self, symbol_list, *args, **kwargs):
+        time = self.cur_data.index.get_level_values(0).unique().to_list()[-1]
+        # print(time)
+        data = self.cur_data.loc[(time, symbol_list), :]
+        data.reset_index(level=1, inplace=True)
+        return 0, data
+
+
 
 
 if __name__ == '__main__':
