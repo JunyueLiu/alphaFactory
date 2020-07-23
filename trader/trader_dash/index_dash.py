@@ -13,13 +13,13 @@ import futu
 
 from dash.dependencies import Input, Output, State
 import pandas as pd
+import numpy as np
 
 from gateway.brokerage_base import BrokerageBase
 from gateway.quote_base import QuoteBase
 from graph.bar_component import candlestick
 from graph.indicator_component import volume
 from graph.stock_graph import stick_and_volume
-
 
 from trader.trader_dash.demoQuote import DemoQuote
 
@@ -65,20 +65,18 @@ def get_live_dash_app(quote: QuoteBase, brokerage: BrokerageBase = None, holding
         ),
 
         html.Div([
-
             html.Div([
                 html.Div([dcc.Input(id='unlock-token', placeholder='password to unlock'),
                           html.Button(children='unlock', id='unlock-button')]),
-                html.Div('Strategy Group'),
-                dcc.Dropdown(id='strategy-selection'),
 
+                html.H4('Holding PnL'),
                 dash_table.DataTable(
                     id='holding',
-                    columns=[{"name": i, "id": i} for i in ['Code', 'Amount', 'Cost', 'Equity', 'PnL', 'Percentage']],
+                    columns=[{"name": i, "id": i} for i in ['Code', 'Amount', 'Cost', 'Equity', 'PnL', 'Pct']],
                 )
 
-            ], style={'overflow': 'auto', 'height': '200px'}),
-
+            ], style={'overflow': 'auto', 'height': '250px'}),
+            html.H4('Orderbook'),
             html.Div(
                 dash_table.DataTable(
                     id='sub-live',
@@ -120,7 +118,7 @@ def get_live_dash_app(quote: QuoteBase, brokerage: BrokerageBase = None, holding
 
         dcc.Interval(
             id='interval-component-second',
-            interval=5 * 1000,  # in milliseconds
+            interval=1 * 1000,  # in milliseconds
             n_intervals=0
         ),
         # hidden
@@ -149,8 +147,8 @@ def get_live_dash_app(quote: QuoteBase, brokerage: BrokerageBase = None, holding
                 option = [{'label': i, 'value': i} for i in subscribed.keys()]
                 return 'success:'.format(init_subscribe), json.dumps(init_subscribe), option
 
-        else:
-            return None, json.dumps({}), []
+            else:
+                return None, json.dumps({}), []
 
         subscribed = json.loads(subscribed)
         ret = quote.subscribe([code], sub_type)
@@ -191,11 +189,11 @@ def get_live_dash_app(quote: QuoteBase, brokerage: BrokerageBase = None, holding
         # print(data)
         bar = candlestick(data, symbol=code)
         volume_c = volume(data, )
-        fig = stick_and_volume(bar, volume_c,)
-        layout = dict(plot_bgcolor='#fff', width=700, height=500,showlegend=False, xaxis_rangeslider_visible=False,)
+        fig = stick_and_volume(bar, volume_c, )
+        layout = dict(plot_bgcolor='#fff', width=700, height=500, showlegend=False, xaxis_rangeslider_visible=False, )
         layout['xaxis1'] = dict(
-                showline=False, showgrid=False
-            )
+            showline=False, showgrid=False
+        )
         layout['yaxis1'] = dict(
             showline=False, showgrid=False
         )
@@ -206,10 +204,71 @@ def get_live_dash_app(quote: QuoteBase, brokerage: BrokerageBase = None, holding
             showline=False, showgrid=False
         )
 
-
         fig.update_layout(layout
                           )
         return fig
+
+    @app.callback([Output('sub-live', 'data')],
+                  [Input('interval-component-second', 'n_intervals')],
+                  [State('subscribed', 'children')])
+    def update_orderbook(n, subscribed):
+        if subscribed is None:
+            return None,
+
+        subscribed = json.loads(subscribed)
+        order_book = pd.DataFrame()
+        for code in subscribed.keys():
+            ret, data = quote.get_order_book(code)
+            if ret == 0:
+                order_book = order_book.append(data)
+        return order_book.to_dict('records'),
+
+    @app.callback([Output('holding', 'data')],
+                  [Input('interval-component-second', 'n_intervals')],
+
+                  )
+    def update_holding(n, ):
+        if holding is None:
+            return None,
+
+        symbols = list(holding.keys())
+        symbols.remove('cash')
+        holding_pd = pd.DataFrame(holding).T
+
+
+        ret, data = quote.get_market_snapshot(symbols)
+        if ret == 1:
+            return None,
+
+        data.reset_index(inplace=True)
+        data = data[['code', 'close']]
+        data.set_index('code', inplace=True)
+        df = holding_pd.join(data).drop_duplicates()
+        df['Equity'] = df['close'] * df['Amount']
+        df['PnL'] = (df['close'] - df['Cost']) * df['Amount']
+        df['Pct'] = (df['close'] - df['Cost']) / df['Cost']
+        # print(df)
+        df.index.name = 'Code'
+        df.reset_index(inplace=True)
+        df = df[['Code', 'Amount', 'Cost', 'Equity', 'PnL', 'Pct']]
+        total = pd.DataFrame([{'Code': 'Total',
+
+                               'Equity': np.nansum(df['Equity']) + holding['cash']['Amount'],
+                               'PnL': df['PnL'].sum(),
+                               'Pct': df['Equity'].sum() / (np.sum(df['Cost'] * df['Amount']))  - 1}])
+        df = df.append(total)
+        df['Equity'] = df['Equity'].apply(lambda x: '{:.2f}'.format(x))
+        df['PnL'] = df['PnL'].apply(lambda x: '{:.2f}'.format(x))
+        df['Pct'] = df['Pct'].apply(lambda x: '{:.2f} %'.format(100 * x))
+
+        return df.to_dict('records'),
+
+
+
+
+
+
+
 
     # @app.callback([Output('sub-info', 'children')],
     #               [Input('unsub', 'n_clicks')],
@@ -231,6 +290,31 @@ if __name__ == '__main__':
         '9988.HK': ["K_1M"],
 
     }
+    holding = {
+        '0700.HK': {
+            'Amount': 100,
+            'Cost': 454.0,
+        },
+        '1810.HK': {
+            'Amount': 5000,
+            'Cost': 13.6,
+        },
+        '3690.HK': {
+            'Amount': 400,
+            'Cost': 202.3,
+        },
+        '9988.HK': {
+            'Amount': 300,
+            'Cost': 242.5,
+
+        },
+        'cash': {
+            'Amount': 100000,
+            'Cost': 0.0,
+
+        }
+
+    }
     quote = DemoQuote()
-    app_ = get_live_dash_app(quote, init_subscribe=sub)
+    app_ = get_live_dash_app(quote, init_subscribe=sub, holding=holding)
     app_.run_server(host='localhost', port=8050, debug=True)
