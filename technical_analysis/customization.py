@@ -1,3 +1,6 @@
+from scipy import sparse
+from scipy.sparse.linalg import spsolve
+
 from technical_analysis.momentum import MOM
 from technical_analysis import utils
 import numpy as np
@@ -31,6 +34,7 @@ def DUALTHRUST(inputs, period: int = 14, k1=0.1, k2=0.1):
     else:
         return inputs_[['buy_line', 'sell_line']]
 
+
 def MAMOM_CLIP(inputs, period: int = 2, price_type: str = 'MA-10'):
     indicator = MOM(inputs, period, price_type=price_type)
     if not utils.check(inputs, [price_type]):
@@ -41,3 +45,18 @@ def MAMOM_CLIP(inputs, period: int = 2, price_type: str = 'MA-10'):
 
 def SECONDARY_MOM(inputs, period: int = 2, price_type: str = 'close'):
     pass
+
+
+def hpfilter(X, lamb=1600):
+    X = np.asarray(X, float)
+    if X.ndim > 1:
+        X = X.squeeze()
+    nobs = len(X)
+    I = sparse.eye(nobs, nobs)
+    offsets = np.array([0, 1, 2])
+    data = np.repeat([[1.], [-2.], [1.]], nobs, axis=1)
+    K = sparse.dia_matrix((data, offsets), shape=(nobs - 2, nobs))
+    use_umfpack = True
+    trend = spsolve(I + lamb * K.T.dot(K), X, use_umfpack=use_umfpack)
+    cycle = X - trend
+    return trend, cycle
