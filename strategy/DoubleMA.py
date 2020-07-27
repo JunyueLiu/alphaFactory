@@ -38,13 +38,8 @@ class DoubleMA(Strategy):
             elif self.position == 0:
                 self.short(self.traded_code, 0.99 * price, 1, None)
 
-
-    def process_kline(self, data: pd.DataFrame):
-        super(DoubleMA, self).process_kline(data)
-
     def on_1min_bar(self, bar: dict):
         self.strategy_logic(bar[self.traded_code])
-
 
     def on_order_status_change(self, dealt_list: list):
         self.write_log_info('Order change, deal: {}'.format(dealt_list))
@@ -54,6 +49,7 @@ class DoubleMA(Strategy):
                     self.position += 1
                 else:
                     self.position -= 1
+
 
 if __name__ == '__main__':
     quote = BacktestingQuote()
