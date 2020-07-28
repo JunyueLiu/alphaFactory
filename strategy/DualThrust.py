@@ -89,9 +89,9 @@ if __name__ == '__main__':
                 "K_1M": {
                     "DUAL": {
                         "indicator": "DUALTHRUST",
-                        "period": 30,
-                        "k1": 0.2,
-                        "k2": 0.2
+                        "period": 50,
+                        "k1": 0.5,
+                        "k2": 0.5
                     },
                 }
 
@@ -104,4 +104,5 @@ if __name__ == '__main__':
                                         backtesting_setting=backtesting_setting)
 
     backtesting.run()
-    backtesting.backtesting_result_save_pickle(strategy.strategy_name + '_' + strategy.strategy_version + '_1.pickle')
+    # backtesting.backtesting_result_save_pickle(strategy.strategy_name + '_' + strategy.strategy_version + '_1.pickle')
+    backtesting.get_dash_report().run_server('127.0.0.1',)
