@@ -312,27 +312,3 @@ def value_at_risk(returns, sigma=1, confidence=0.95):
     return norm.ppf(1 - confidence, mu, sigma)
 
 
-# related to benchmark backtesting metric
-
-
-if __name__ == '__main__':
-    # traded = pd.read_csv('traded_group_sample.csv')
-    # start, end = first_last_trade_time(traded)
-    # print(start, end)
-    # df = pd.read_csv('sample_returns.csv')
-    # df['time_key'] = pd.to_datetime(df['time_key'])
-    # df.set_index('time_key', inplace=True)
-    # # compounded return
-    # print(compund_return(df['equity']))
-    # print(sharpe_ratio(df['equity'], 0.01, ))
-    # net_value = df['equity'].add(1).cumprod()
-    # np.random.seed(0)
-    # returns = np.random.randn(10000) / 100
-    # returns[0] = 0
-    # net_value = (1 + returns).cumprod()
-    # net_value = pd.Series(net_value, index=pd.date_range(start='2020/01/01', periods=10000, freq='min'))
-    # dd, ddp = drawdown(net_value)
-    # ans = drawdown_details(dd)
-    # print(ans)
-    traded = pd.read_csv('traded_sample.csv')
-    traded_pnl = get_traded_pnl(traded)

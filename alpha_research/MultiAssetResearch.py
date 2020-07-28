@@ -1126,7 +1126,5 @@ if __name__ == '__main__':
     multi_study.set_asset_group(group)
     multi_study.set_benchmark(benchmark)
     multi_study.calculate_factor(momentum_alpha)
-    # multi_study.evaluate_alpha()
     multi_study.get_evaluation_dash_app().run_server(host='127.0.0.1', debug=True)
-    # j = multi_study.factor.reset_index().to_json(orient='index')
-    # factor = pd.read_json(j, orient='index', typ='series')
+

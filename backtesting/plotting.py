@@ -431,24 +431,3 @@ def aggregate_returns_heatmap(agg_ret: pd.Series, period):
         return year_heatmap(agg_ret)
 
 
-if __name__ == '__main__':
-    traded_pnl = pd.read_csv('traded_pnl_sample.csv')
-    net_value = pd.read_csv('net_value_sample.csv', squeeze=True, index_col=0)
-    traded = pd.read_csv('traded_sample.csv')
-    traded = traded[-100:]
-
-    net_value.index = pd.to_datetime(net_value.index)
-    benchmark = pd.read_csv(r'../HK.999010_2019-06-01 00:00:00_2020-05-30 03:00:00_K_1M_qfq.csv')
-    benchmark['time_key'] = pd.to_datetime(benchmark['time_key'])
-    benchmark.set_index('time_key', inplace=True)
-    # benchmark = benchmark[benchmark.index >= net_value.index[0]]
-    # benchmark = benchmark[benchmark.index <= net_value.index[-1]]
-    # benchmark = benchmark[-1000:]
-    # returns['time_key'] = pd.to_datetime(returns['time_key'])
-    # returns.set_index('time_key', inplace=True)
-
-    # fig = returns_distribution_plot(traded_pnl['cash_inflow'])
-
-    fig = net_value_plot(net_value, benchmark['close'])
-    # fig = entry_and_exit_plot(benchmark, traded, 'HK_FUTURE.999010', False, entrust=True)
-    fig.show()

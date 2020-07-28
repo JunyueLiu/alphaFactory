@@ -297,7 +297,3 @@ class BacktestingBase:
     def run(self):
         pass
 
-
-class DayTradeBacktesting(BacktestingBase):
-    def __init__(self, quote: QuoteBase, brokerage: BrokerageBase, strategy: Strategy, strategy_parameter):
-        super(DayTradeBacktesting, self).__init__(quote, brokerage, strategy, strategy_parameter)

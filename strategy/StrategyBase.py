@@ -114,7 +114,7 @@ class Strategy:
             if self.backtesting:
                 for sub in sub_types:
                     num = self.lookback_period[symbol][sub]
-                    self.write_log_info('load backtesting data: {}:{} number:{}'.format(symbol, sub, num))
+                    self.write_log_info('load data: {}:{} number:{}'.format(symbol, sub, num))
                     _, data = self._quote_ctx.get_history_kline(symbol, kline_type=sub, num=num)
                     self.__dict__[sub.lower()][symbol].init_with_pandas(data)
             else:
@@ -215,7 +215,7 @@ class Strategy:
     def on_quote(self, quote):
         pass
 
-    def on_order_send(self):
+    def on_order_send(self, *args, **kwargs):
         pass
 
     def on_order_status_change(self, *args, **kwargs):

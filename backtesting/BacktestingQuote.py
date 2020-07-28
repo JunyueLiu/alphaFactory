@@ -72,15 +72,3 @@ class BacktestingQuote(QuoteBase):
     def get_market_snapshot(self, symbol_list, date=None, **kwargs):
         pass
 
-
-if __name__ == '__main__':
-    data = pd.read_csv(
-        '/Users/liujunyue/PycharmProjects/ljquant/hkex_data/HK.999010_2019-06-01 00:00:00_2020-05-30 03:00:00_K_1M_qfq.csv')
-    data['time_key'] = pd.to_datetime(data['time_key'])
-    data.set_index('time_key', inplace=True)
-
-    sub_symbol = 'HK.999010'
-    sub_type = 'k_1M'
-    history_data = {sub_symbol: {sub_type: data}}
-    quote = BacktestingQuote(history_data)
-    quote.subscribe([sub_symbol], [sub_type])
