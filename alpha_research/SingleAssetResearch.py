@@ -146,15 +146,15 @@ class SingleAssetResearch(AlphaResearch):
         fig = observed_qq_plot(self.factor, self.out_of_sample_factor)
         fig.show()
 
-    def get_evaluation_dash_app(self, dash=None):
+    def get_evaluation_dash_app(self, dash_=None):
         """
         :return:
         """
         external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
-        if dash is None:
+        if dash_ is None:
             app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
         else:
-            app = dash
+            app = dash_
         # forward_returns_period = [1, 2, 5, 10]  # period list
         # forward_str = str(forward_returns_period).replace('[', '').replace(']', '')
 
