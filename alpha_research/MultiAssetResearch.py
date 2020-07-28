@@ -221,7 +221,7 @@ class MultiAssetResearch(AlphaResearch):
         fig = cumulative_returns_by_group_plot(cum_ret_by_group['1_period_return'])
         fig.show()
 
-    def get_evaluation_dash_app(self,dash=None):
+    def get_evaluation_dash_app(self,dash_=None):
         # demand:
         # change forward return parameter
         # change alpha universe and redo the calculation
@@ -230,10 +230,10 @@ class MultiAssetResearch(AlphaResearch):
         # split section by analysis type:
 
         external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
-        if dash is None:
+        if dash_ is None:
             app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
         else:
-            app = dash
+            app = dash_
 
         url_bar_and_content_div = html.Div(children=[
             html.H1(children=self.factor_name + ' evaluation',
