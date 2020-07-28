@@ -36,6 +36,8 @@ class Strategy:
         self.k_60m = None
         self.k_4h = None
         self.k_8h = None
+        self.k_1d = None
+        self.k_1w = None
 
         # parameter setting
         self.ta_parameters = {}
@@ -73,7 +75,6 @@ class Strategy:
             for sub_type in value:
                 sub_type_lower = sub_type.lower()
                 if sub_type[0] == 'K':
-                    # bar_name = sub_type
                     if self.__dict__[sub_type_lower] is None:
                         self.__dict__[sub_type_lower] = dict()
                     self.__dict__[sub_type_lower][key] = BarManager(sub_type, self.lookback_period[key][sub_type],
@@ -124,7 +125,6 @@ class Strategy:
             code = row['code']
             if row['k_type'] == 'K_1M':
                 if self.last_bar['K_1M'] < ix:  # new bar comes in
-                    # self.same_bar_traded = False
                     self.on_1min_bar(self.k_1m)
                     self.last_bar['K_1M'] = ix
                     self.k_1m[code].update_with_pandas(row, time_key='time_key')
@@ -223,19 +223,19 @@ class Strategy:
 
     def buy(self, symbol, price, vol, order_type, *args, **kwargs):
         self.write_log_info('Buy {} at {}, amount {}'.format(symbol, price, str(vol)))
-        self._brokerage_ctx.place_order(price, vol, symbol, 'LONG')
+        self._brokerage_ctx.place_order(price, vol, symbol, 'LONG', order_type=order_type)
 
     def sell(self, symbol, price, vol, order_type, *args, **kwargs):
         self.write_log_info('Sell {} at {}, amount {}'.format(symbol, price, str(vol)))
-        self._brokerage_ctx.place_order(price, vol, symbol, 'SHORT')
+        self._brokerage_ctx.place_order(price, vol, symbol, 'SHORT', order_type=order_type)
 
     def short(self, symbol, price, vol, order_type, *args, **kwargs):
         self.write_log_info('Short {} at {}, amount {}'.format(symbol, price, str(vol)))
-        self._brokerage_ctx.place_order(price, vol, symbol, 'SHORT')
+        self._brokerage_ctx.place_order(price, vol, symbol, 'SHORT', order_type=order_type)
 
     def cover(self, symbol, price, vol, order_type, *args, **kwargs):
         self.write_log_info('Cover {} at {}, amount {}'.format(symbol, price, str(vol)))
-        self._brokerage_ctx.place_order(price, vol, symbol, 'LONG')
+        self._brokerage_ctx.place_order(price, vol, symbol, 'LONG', order_type=order_type)
 
     def cancel_all(self):
         self._brokerage_ctx.cancel_all_order()

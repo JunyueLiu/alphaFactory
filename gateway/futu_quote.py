@@ -86,6 +86,7 @@ class FutuQuote(QuoteBase):
         ret,data = self.context.get_order_book(symbol,num=num)
         return ret,data
 
-
+    def set_handler(self, handler):
+        self.context.set_handler(handler)
 
 

@@ -43,3 +43,6 @@ class QuoteBase:
 
     def get_order_book(self, symbol, *args, **kwargs):
         pass
+
+    def set_handler(self, handler):
+        pass
