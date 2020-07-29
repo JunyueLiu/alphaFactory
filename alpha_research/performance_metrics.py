@@ -200,21 +200,19 @@ def mean_return_by_group(merged_data: pd.DataFrame) -> tuple:
 
 
 
-def get_monthly_ic(returns: pd.DataFrame, factor: pd.DataFrame, periods: list) -> pd.DataFrame:
+def get_monthly_ic(returns: pd.DataFrame, factor: pd.Series, periods: list) -> pd.DataFrame:
     # 先把factor和return合并，再切片
+    factor_name = factor.name
     concat = pd.concat([returns, factor], axis=1)
-    concat.rename(columns={'close': 'factor'}, inplace=True)
+    concat.dropna(inplace=True)
     columnnames = [str(i) + '_period_return_ic' for i in periods]
     information_coefficient = pd.DataFrame(columns=columnnames)
     year = []
     month = []
 
     for i in concat.groupby(pd.Grouper(freq='M')):
-        # i[0] is timestamp i[1] is dataframe
-        # 因为factor这列传进来的是series 没有取名 列名用0来定位
-
-        monthfactor = i[1][0]
-        monthreturn = i[1].drop(0, axis=1)
+        monthfactor = i[1][factor_name]
+        monthreturn = i[1].drop(factor_name, axis=1)
 
         ic = calculate_ts_information_coefficient(monthfactor, monthreturn)
         information_coefficient = information_coefficient.append(ic, ignore_index=True)
