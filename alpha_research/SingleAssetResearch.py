@@ -14,10 +14,6 @@ from alpha_research.utils import *
 from alpha_research.factor_zoo.alpha_101 import *
 from IPython.display import display
 
-import plotly.io as pio
-
-pio.renderers.default = "browser"
-
 
 class SingleAssetResearch(AlphaResearch):
 
@@ -51,6 +47,12 @@ class SingleAssetResearch(AlphaResearch):
         self.factor_name = factor_name
 
     def calculate_factor(self, func, **kwargs) -> pd.Series:
+        """
+        Call this to calculate the factor before evaluation
+        :param func: python function which return a pd.Series object
+        :param kwargs:
+        :return:
+        """
         self.alpha_func = func
         self.alpha_func_paras = kwargs
         if kwargs is not None:
@@ -68,6 +70,11 @@ class SingleAssetResearch(AlphaResearch):
         return self.factor
 
     def key_performance_dict(self, forward_return_lag=None):
+        """
+        Calculate key performance and return a key
+        :param forward_return_lag:
+        :return:
+        """
         key_performance = {}
         if forward_return_lag is None:
             forward_return_lag = [1, 5, 10]
@@ -76,13 +83,14 @@ class SingleAssetResearch(AlphaResearch):
         key_performance['summary'] = summary.to_dict()
         key_performance['ic'] = calculate_ts_information_coefficient(self.factor, returns).to_dict()
         key_performance['beta'] = factor_ols_regression(self.factor, returns).to_dict()
-        factor_returns = calculate_ts_factor_returns(self.in_sample, self.factor, forward_return_lag)
-        # cum_ret = calculate_cumulative_returns(factor_returns, 1)
-        # cum_ret.index = cum_ret.index.strftime('%Y-%m-%d %H:%M:%S')
-        # key_performance['cum_ret'] = cum_ret.values
         return key_performance
 
     def evaluate_alpha(self, forward_return_lag: list = None):
+        """
+        After the alpha calculation to evaluate the alpha.
+        :param forward_return_lag:
+        :return:
+        """
 
         if forward_return_lag is None:
             forward_return_lag = [1, 5, 10]
@@ -133,7 +141,11 @@ class SingleAssetResearch(AlphaResearch):
         fig.show()
 
     def out_of_sample_evaluation(self):
-        # self.factor是insample的 self.outofsamplefactor是outofsample的
+        """
+        To compare with the performance in the out of sample
+        Not quite function well. More functionality should be added.
+        :return:
+        """
 
         self.out_of_sample_factor = self.alpha_func(self.out_of_sample, **self.alpha_func_paras)
         # test whether the two time have same distribution
@@ -148,6 +160,7 @@ class SingleAssetResearch(AlphaResearch):
 
     def get_evaluation_dash_app(self, dash_=None):
         """
+        Evaluation dass app.
         :return:
         """
         external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
@@ -390,14 +403,8 @@ class SingleAssetResearch(AlphaResearch):
         return app
 
 
-class DemoSingleAssetFactor(SingleAssetResearch):
-    def __init__(self, data: pd.DataFrame, out_of_sample: pd.DataFrame = None, split_ratio: float = 0.3,
-                 factor_parameters=None):
-        super(DemoSingleAssetFactor, self).__init__(data, out_of_sample, split_ratio, factor_parameters)
-
-
 if __name__ == '__main__':
-    data_path = r'/Users/silviaysy/Desktop/project/alphaFactory/alpha_research/HK.999010_2019-06-01 00:00:00_2020-05-30 03:00:00_K_1M_qfq.csv'
+    data_path = r'../HK.999010_2019-06-01 00:00:00_2020-05-30 03:00:00_K_1M_qfq.csv'
 
     df = pd.read_csv(data_path)
     df['time_key'] = pd.to_datetime(df['time_key'])
@@ -407,12 +414,5 @@ if __name__ == '__main__':
 
     factor_study = SingleAssetResearch(df)
 
-    # def ma5_ma10(df, time_lag_1 = 5, time_lag2= 10):
-    #     pass
-    #
     factor_study.calculate_factor(alpha_6, **{'time_lag': 5})
-    # factor_study.evaluate_alpha()
-    # factor_study.out_of_sample_evaluation()
     factor_study.get_evaluation_dash_app().run_server('127.0.0.1', debug=True)
-    # json = factor_study.factor.to_json(date_format='iso', orient='split')
-    # df = pd.read_json(json, orient='split', typ='series')

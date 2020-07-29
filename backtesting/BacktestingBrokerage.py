@@ -147,6 +147,14 @@ class BacktestingBrokerage(BrokerageBase):
                 self.cash += order.dealt_avg_price * order.deal_qty
 
     def limit_order_matching(self, order_id, open_price, high_price, low_price):
+        """
+        Match the limit order
+        :param order_id:
+        :param open_price:
+        :param high_price:
+        :param low_price:
+        :return:
+        """
         order = self.working_order[order_id]
         dealt_list = []
         if order.order_status == 'SUBMITTED' and (order.order_type is None or order.order_type == 'NORMAL'):
