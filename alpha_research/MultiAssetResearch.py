@@ -1099,8 +1099,10 @@ if __name__ == '__main__':
         return factor
 
 
-    def cheating_alpha(df: pd.DataFrame):
-        return df['close'].groupby(level=1).pct_change().groupby(level=1).shift(-1)
+    def cheating_alpha(df: pd.DataFrame, time_lag=1):
+        factor = - df['close'].groupby(level=1).diff(-time_lag)
+        factor += 10 * np.random.randn(len(factor))
+        return factor
 
 
     def price_average_alpha(df: pd.DataFrame):
@@ -1130,5 +1132,5 @@ if __name__ == '__main__':
              '1113.HK': 'Properties', '1997.HK': 'Properties'}
     multi_study.set_asset_group(group)
     multi_study.set_benchmark(benchmark)
-    multi_study.calculate_factor(momentum_alpha)
+    multi_study.calculate_factor(cheating_alpha, **{'time_lag':5})
     multi_study.get_evaluation_dash_app().run_server(host='127.0.0.1', debug=True)
