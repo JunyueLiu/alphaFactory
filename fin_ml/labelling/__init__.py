@@ -1,11 +1,17 @@
 # TRIPLE - BARRIER LABELING METHOD
 import pandas as pd
 import numpy as np
+def getDailyVol(df,span0=100):
+    #return
+    df['return']=df.groupby(['code'])['close'].apply(lambda x:x/x.shift(1)-1)
+    #estimated volatility
+    sigma = df.groupby(['code'])['return'].apply(lambda x: x.ewm(span=span0).std())
+    return sigma
+
 def TBL(df,barrier,width):
     upwidth,downwidth = width
     barrier_ = barrier
     result = barrier_[['code','time_key','vb']].copy(deep=True)
-
     if upwidth>0:
         barrier_['ub'] = upwidth*barrier_['volume']
     else:
@@ -25,8 +31,7 @@ def TBL(df,barrier,width):
             result.loc[result.index[(result.time_key==time_key) & (result.code==code)],'dt'] = \
             df0[df0['return']<barrier0[barrier0.time_key==time_key]['db'].iloc[0]]['time_key'].min()
     return result
-def get_first_touch(df,barrier,width,minvolume):
-    #barrier = [barrier.volume>minvolume]
+def get_first_touch(df,barrier,width):
     result = TBL(df,barrier,width)
     result['first'] = result[['vb','ut','dt']].dropna(how='all').min(axis=1)
     return result
