@@ -2,6 +2,10 @@ import pandas as pd
 import numpy as np
 
 
+# The codes in this file are directly copied from the implementation in the book "Advances in financial machine learning"
+# All rights are belong to original authors.
+
+
 # =======================================================
 # sample according the uniqueness over the events lifespan
 def mpNumCoEvents(closeIdx, t1, molecule):
@@ -98,7 +102,7 @@ def mpSampleW(t1, numCoEvents, close, molecule):
 def getTimeDecay(tW, clfLastW=1.):
     # apply piecewise-linear decay to observed uniqueness (tW)
     # newest observation gets weight=1, oldest observation gets weight=clfLastW
-    clfW=tW.sort_index().cumsum()
+    clfW = tW.sort_index().cumsum()
     if clfLastW >= 0:
         slope = (1. - clfLastW) / clfW.iloc[-1]
     else:
