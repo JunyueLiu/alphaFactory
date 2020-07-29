@@ -564,6 +564,7 @@ def alpha_48(df: pd.DataFrame):
     :param df:
     :return:
     """
+    raise NotImplementedError
     # todo
     factor = (indneutralize(((correlation(delta(df['close'], 1), delta(delay(df['close'], 1), 1), 250) * delta(
         df['close'], 1)) / df['close']), IndClass.subindustry) / sum(
@@ -702,6 +703,8 @@ def alpha_59(df: pd.DataFrame):
     :param df:
     :return:
     """
+    raise NotImplementedError
+
     factor = (-1 * ts_rank(decay_linear(correlation(indneutralize(
         ((vwap(df['close'], df['volume']) * 0.728317) + (vwap(df['close'], df['volume']) * (1 - 0.728317))),
         IndClass.industry), df['volume'], 4.25197), 16.2289), 8.19648))
@@ -751,6 +754,7 @@ def alpha_63(df: pd.DataFrame):
     :return:
     """
     # todo
+    raise NotImplementedError
 
     factor = ((rank(decay_linear(delta(indneutralize(df['close'], IndClass.industry), 2.25164), 8.22237)) - rank(
         decay_linear(correlation(((vwap(df['close'], df['volume']) * 0.318108) + (df['open'] * (1 - 0.318108))),
@@ -805,6 +809,7 @@ def alpha_67(df: pd.DataFrame):
     :return:
     """
     # todo
+    raise NotImplementedError
 
     factor = ((rank((df['high'] - ts_min(df['high'], 2.14593))) ^ rank(correlation(indneutralize(vwap, IndClass.sector),
                                                                                    indneutralize(
@@ -832,6 +837,8 @@ def alpha_69(df: pd.DataFrame):
     :return:
     """
     # todo
+    raise NotImplementedError
+
     # SignedPower(Ts_Rank((vwap - ts_max(vwap, 15.3217)), 20.7127), delta(close, 4.96796))
     factor = ((rank(
         ts_max(delta(indneutralize(vwap(df['close'], df['volume']), IndClass.industry), 2.72412), 4.79344)) ^ ts_rank(
@@ -848,6 +855,8 @@ def alpha_70(df: pd.DataFrame):
     :return:
     """
     # todo
+    raise NotImplementedError
+
     factor = ((rank(delta(vwap(df['close'], df['volume']), 1.29456)) ^ ts_rank(
         correlation(indneutralize(df['close'], IndClass.industry), adv(df['close'], df['volume'], 50), 17.8256),
         17.9171)) * -1)
@@ -942,6 +951,7 @@ def alpha_76(df: pd.DataFrame):
     :return:
     """
     # todo
+    raise NotImplementedError
     factor = (max(rank(decay_linear(delta(vwap(df['close'], df['volume']), 1.24383), 11.8259)), ts_rank(decay_linear(
         ts_rank(correlation(indneutralize(df['low'], IndClass.sector), adv(df['close'], df['volume'], 81), 8.14941),
                 19.569), 17.1543), 19.383)) * -1)
@@ -982,6 +992,8 @@ def alpha_79(df: pd.DataFrame):
     :return:
     """
     # todo
+    raise NotImplementedError
+
     factor = []
     return factor
 
@@ -994,6 +1006,8 @@ def alpha_80(df: pd.DataFrame):
     :return:
     """
     # todo bug
+    raise NotImplementedError
+
     factor = ((rank(np.Sign(
         delta(indneutralize(((df['open'] * 0.868128) + (df['high'] * (1 - 0.868128))), IndClass.industry),
               4.04545))) ^ ts_rank(correlation(df['high'], adv(df['close'], df['volume'], 10), 5.11456), 5.53756)) * -1)
@@ -1080,6 +1094,8 @@ def alpha_87(df: pd.DataFrame):
     :return:
     """
     # todo
+    raise NotImplementedError
+
     factor = (max(rank(
         decay_linear(delta(((df['close'] * 0.369701) + (vwap(df['close'], df['volume']) * (1 - 0.369701))), 1.91233),
                      2.65461)), ts_rank(decay_linear(
@@ -1110,6 +1126,8 @@ def alpha_89(df: pd.DataFrame):
     :return:
     """
     # todo
+    raise NotImplementedError
+
     factor = (ts_rank(decay_linear(
         correlation(((df['low'] * 0.967285) + (df['low'] * (1 - 0.967285))), adv(df['close'], df['volume'], 10),
                     6.94279), 5.51607), 3.79744) - ts_rank(
@@ -1125,6 +1143,8 @@ def alpha_90(df: pd.DataFrame):
     :return:
     """
     # todo
+    raise NotImplementedError
+
     factor = ((rank((df['close'] - ts_max(df['close'], 4.66719))) ^ ts_rank(
         correlation(indneutralize(adv(df['close'], df['volume'], 40), IndClass.subindustry), df['low'], 5.38375),
         3.21856)) * -1)
@@ -1138,6 +1158,8 @@ def alpha_91(df: pd.DataFrame):
     :return:
     """
     # todo
+    raise NotImplementedError
+
     factor = ((ts_rank(decay_linear(
         decay_linear(correlation(indneutralize(df['close'], IndClass.industry), df['volume'], 9.74928), 16.398),
         3.83219), 4.8667) - rank(
@@ -1166,6 +1188,8 @@ def alpha_93(df: pd.DataFrame):
     :return:
     """
     # todo
+    raise NotImplementedError
+
     factor = (ts_rank(decay_linear(correlation(indneutralize(vwap(df['close'], df['volume']), IndClass.industry),
                                                adv(df['close'], df['volume'], 81), 17.4193), 19.848), 7.54455) / rank(
         decay_linear(delta(((df['close'] * 0.524434) + (vwap(df['close'], df['volume']) * (1 - 0.524434))), 2.77377),
@@ -1217,6 +1241,8 @@ def alpha_97(df: pd.DataFrame):
     :return:
     """
     # todo
+    raise NotImplementedError
+
     factor = ((rank(decay_linear(delta(
         indneutralize(((df['low'] * 0.721001) + (vwap(df['close'], df['volume']) * (1 - 0.721001))), IndClass.industry),
         3.3705), 20.4523)) - ts_rank(decay_linear(
@@ -1260,6 +1286,8 @@ def alpha_100(df: pd.DataFrame):
     :return:
     """
     # todo
+    raise NotImplementedError
+
     factor = 0 - (1 * (((1.5 * scale(indneutralize(indneutralize(
         rank(((((df['close'] - df['low']) - (df['high'] - df['close'])) / (df['high'] - df['low'])) * df['volume'])),
         IndClass.subindustry), IndClass.subindustry))) - scale(indneutralize(

@@ -5,9 +5,6 @@ from scipy.stats import (
     norm as norm, linregress as linregress
 )
 
-pd.set_option('max_columns', None)
-pd.set_option('max_rows', 300)
-
 
 def first_last_trade_time(traded: pd.DataFrame, time_key='time_key'):
     """
@@ -107,8 +104,6 @@ def cagr(net_value):
     """
 
     :param net_value:
-    :param rf:
-    :param compounded:
     :return:
     """
     years = (net_value.index[-1] - net_value.index[0]).days / 365.
@@ -300,7 +295,7 @@ def kelly(traded_pnl):
 
 def value_at_risk(returns, sigma=1, confidence=0.95):
     """
-    calculats the daily value-at-risk
+    calculates the daily value-at-risk
     (variance-covariance calculation with confidence n)
     """
     mu = returns.mean()
