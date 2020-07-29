@@ -67,6 +67,7 @@ class SingleAssetResearch(AlphaResearch):
                 self.factor = factor
             else:
                 self.factor = pd.Series(factor, index=self.in_sample.index)
+        self.factor.name = self.factor_name
         return self.factor
 
     def key_performance_dict(self, forward_return_lag=None):
@@ -165,7 +166,7 @@ class SingleAssetResearch(AlphaResearch):
         """
         external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
         if dash_ is None:
-            app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
+            app = dash.Dash(__name__, external_stylesheets=external_stylesheets, suppress_callback_exceptions=True)
         else:
             app = dash_
         # forward_returns_period = [1, 2, 5, 10]  # period list
@@ -410,9 +411,17 @@ if __name__ == '__main__':
     df['time_key'] = pd.to_datetime(df['time_key'])
     df.set_index('time_key', inplace=True)
     df = df[-10000:-5000]
-    parameter = {'short_period': 5, 'long_period': 10}
+    # parameter = {'short_period': 5, 'long_period': 10}
 
     factor_study = SingleAssetResearch(df)
 
-    factor_study.calculate_factor(alpha_6, **{'time_lag': 5})
+
+    def cheating_alpha(data, time_lag=5):
+        factor = data['close'].shift(-time_lag) - data['close']
+        factor += np.random.randn(len(factor))
+        factor.fillna(0, inplace=True)
+        return factor
+
+
+    factor_study.calculate_factor(cheating_alpha, **{'time_lag': 5})
     factor_study.get_evaluation_dash_app().run_server('127.0.0.1', debug=True)
