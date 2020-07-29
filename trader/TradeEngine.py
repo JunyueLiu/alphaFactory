@@ -1,5 +1,6 @@
 import json
 import pandas as pd
+import datetime
 from futu import CurKlineHandlerBase, RET_OK, TradeOrderHandlerBase, TradeDealHandlerBase
 
 from gateway.brokerage_base import BrokerageBase
@@ -17,7 +18,6 @@ class TraderBase:
         self.strategy = strategy
         self.trade_setting = None
         self.strategy_parameter = strategy_parameter
-
 
     def _initial_strategy(self):
         """
@@ -41,18 +41,17 @@ class TraderBase:
             if key in self.trade_setting.keys():
                 d[key] = self.trade_setting[key]
 
-
     def run(self):
-        pass
+        self._initial_strategy()
+        self.strategy.on_strategy_init(datetime.datetime.now())
 
 
 class FutuTrader(TraderBase):
     def __init__(self, quote: FutuQuote, brokerage: FutuBrokerage, strategy: Strategy, strategy_parameter):
         super().__init__(quote, brokerage, strategy, strategy_parameter)
 
-
     def run(self):
-        self._initial_strategy()
+        super(FutuTrader, self).run()
 
         class CurKline(CurKlineHandlerBase):
             strategy = self.strategy
@@ -95,8 +94,6 @@ class FutuTrader(TraderBase):
                     self.strategy.on_order_status_change(content)
                 else:
                     self.strategy.write_log_error('trade deal error: {}'.format(content))
-
-
 
         handler = CurKline()
         trade_handler = TradeOrder()

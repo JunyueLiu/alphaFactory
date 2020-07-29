@@ -13,6 +13,7 @@ def merge_single_asset(paths, time_key='Date', code_key = 'code'):
     return merged
 
 if __name__ == '__main__':
-    files = os.listdir('/Users/liujunyue/PycharmProjects/alphaFactory/local_data')
-    paths = [os.path.join('/Users/liujunyue/PycharmProjects/alphaFactory/local_data', f) for f in files]
+    files = os.listdir(r'../local_data')
+    paths = [os.path.join(r'../local_data', f) for f in files]
     df = merge_single_asset(paths)
+    df.to_csv(r'../hsi_component.csv')

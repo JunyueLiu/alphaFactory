@@ -136,7 +136,6 @@ def get_pm_report_dash_app(portfolio: dict = None):
             net_value_[col] = net_value_[col] * weights_dict[col]
         net_value['portfolio'] = net_value_.sum(axis=1)
         net_value['portfolio'] = net_value['portfolio'] / net_value['portfolio'][0]
-        # print(net_value_.sum(axis=1))
         nv_plot = net_values_plot(net_value)
         return nv_plot,
 
@@ -148,4 +147,4 @@ if __name__ == '__main__':
     portfolio = normalized_net_value(portfolio)
     # print(portfolio)
     app_ = get_pm_report_dash_app(portfolio)
-    app.run_server(host='127.0.0.1', debug=True)
+    app.run_server(host='127.0.0.1', debug=True, port=8065)

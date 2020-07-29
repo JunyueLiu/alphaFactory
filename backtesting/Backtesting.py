@@ -67,6 +67,11 @@ class BacktestingBase:
         self.strategy.set_brokerage_context(self.brokerage_ctx)
 
     def _load_setting(self, setting: dict or str):
+        """
+        Load the setting from dictionary or JSON file.
+        :param setting:
+        :return:
+        """
         if isinstance(setting, dict):
             self.backtesting_setting = setting
         elif isinstance(setting, str):
@@ -81,7 +86,7 @@ class BacktestingBase:
 
     def _load_data(self):
         """
-
+        helper function to load the data
         :return:
         """
         self.data = dict()
@@ -121,7 +126,14 @@ class BacktestingBase:
         return self.brokerage_ctx.deal_order_list
 
     def _load_data_from_db(self, conn: MongoConnection, db: str, collection: str, time_key: str):
-        # todo
+        """
+        helper function to load data from database
+        :param conn:
+        :param db:
+        :param collection:
+        :param time_key:
+        :return:
+        """
         if self.start is not None and self.end is not None:
             bar = conn.read_mongo_df(db, collection, {time_key: {'$gt': self.start, '$lt': self.end}})
         elif self.start is not None and self.end is None:
@@ -133,6 +145,12 @@ class BacktestingBase:
         return bar
 
     def _load_data_from_csv(self, path, time_key):
+        """
+        helper function to load data from csv
+        :param path:
+        :param time_key:
+        :return:
+        """
         bar = pd.read_csv(path)
         bar[time_key] = pd.to_datetime(bar[time_key])
         bar.set_index(time_key, inplace=True)
@@ -146,6 +164,10 @@ class BacktestingBase:
         self.benchmark = series
 
     def calculate_result(self):
+        """
+        calculate the backtesting result
+        :return:
+        """
         # first make the all asset prices dataframe
         dfs = []
         for code, ktype_data in self.data.items():
@@ -156,7 +178,6 @@ class BacktestingBase:
         asset_price.set_index([self.backtesting_setting['time_key'], 'code'], inplace=True)
 
         self.dealt_list = self.get_dealt_history()
-        # todo evaluate backtesting result
         traded = pd.DataFrame([order.order_dict() for order in self.dealt_list])
         # make the dealt_qty with +- sign
         traded['dealt_qty'] = np.where(traded['order_direction'] == 'LONG', traded['dealt_qty'], -traded['dealt_qty'])
@@ -227,29 +248,40 @@ class BacktestingBase:
         self.backtesting_result['kelly'] = kelly(traded_pnl)
         self.backtesting_result['value_at_risk'] = value_at_risk(returns)
 
-        # todo daily analysis if the average holding time is less than a day
-
-        # todo monthly analysis
-
-        # todo yearly analysis
-
-        # returns.to_csv('sample_returns.csv')
-        # qs.reports.html(returns, title=self.strategy.strategy_name, output='report.html')
 
     def get_dash_report(self, dash_app=None):
-        # from self.backtesting_result data generate report
+        """
+        from self.backtesting_result data generate report
+        :param dash_app:
+        :return:
+        """
         return get_backtesting_report_dash_app(self.backtesting_result, dash_app)
 
     @staticmethod
     def get_dash_report_from_backtesting_result(backtesting_result: dict, dash_app=None):
+        """
+
+        :param backtesting_result:
+        :param dash_app:
+        :return:
+        """
         return get_backtesting_report_dash_app(backtesting_result, dash_app)
 
     def backtesting_result_save_pickle(self, file: str):
+        """
+
+        :param file:
+        :return:
+        """
         with open(file, 'wb') as f:
             pickle.dump(self.backtesting_result, f, protocol=pickle.HIGHEST_PROTOCOL)
             print('Save to {} success.'.format(file))
 
     def bakctesting_result_to_json(self):
+        """
+
+        :return:
+        """
         return json.dumps(self.backtesting_result)
 
     def save_backtesting_result_to_db(self, conn: MongoConnection, db: str, collections: str, ):
@@ -295,9 +327,9 @@ class BacktestingBase:
         print('finish insert. Object id {}'.format(r.inserted_id))
 
     def run(self):
+        """
+        To run the backtesting, one should implement this function.
+        :return:
+        """
         pass
 
-
-class DayTradeBacktesting(BacktestingBase):
-    def __init__(self, quote: QuoteBase, brokerage: BrokerageBase, strategy: Strategy, strategy_parameter):
-        super(DayTradeBacktesting, self).__init__(quote, brokerage, strategy, strategy_parameter)

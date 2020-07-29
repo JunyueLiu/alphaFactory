@@ -5,7 +5,13 @@ import inspect
 
 
 def calculate_forward_returns(data: pd.DataFrame, periods: list, price_key='close') -> pd.DataFrame:
-    # 取了两个周期 periods=[1,2] shift 1天和2天
+    """
+    Calculate the different steps forward return
+    :param data:
+    :param periods: list of int
+    :param price_key:
+    :return:
+    """
     returns = pd.DataFrame(index=data.index)
     for period in periods:
         if type(data.index) == pd.MultiIndex:
@@ -20,6 +26,13 @@ def calculate_forward_returns(data: pd.DataFrame, periods: list, price_key='clos
 
 
 def calculate_cumulative_returns(returns, starting_value=0, out=None):
+    """
+    calculate_cumulative_returns from returns df
+    :param returns:
+    :param starting_value:
+    :param out:
+    :return:
+    """
     if len(returns) < 1:
         return returns.copy()
 
@@ -52,6 +65,11 @@ def calculate_cumulative_returns(returns, starting_value=0, out=None):
 
 
 def calculate_cumulative_returns_by_group(quantile_ret_ts: pd.DataFrame):
+    """
+    The group information is in the level 0 of index
+    :param quantile_ret_ts:
+    :return:
+    """
     #                             1_period_return  5_period_return  10_period_return
     # factor_quantile Date
     # 1               2010-06-17         0.002230         0.021172         -0.014775
@@ -167,9 +185,18 @@ def calculate_cross_section_factor_returns(data: pd.DataFrame, position: pd.Seri
     return factor_returns
 
 
-# here
 def calculate_ts_factor_returns(data: pd.DataFrame, factor: pd.Series, periods: list,
                                 price_key='close', factor_name='factor') -> pd.DataFrame:
+    """
+    Calculate the time series factor returns
+
+    :param data:
+    :param factor:
+    :param periods:
+    :param price_key:
+    :param factor_name:
+    :return:
+    """
     factor_returns = pd.DataFrame(index=data.index)
 
     # for time series factor
@@ -199,11 +226,20 @@ def calculate_ts_factor_returns(data: pd.DataFrame, factor: pd.Series, periods: 
 
 
 def get_returns_columns(df: pd.DataFrame) -> list:
+    """
+    Return the returns columns
+    :param df:
+    :return:
+    """
     return [col for col in df.columns if '_period_return' in col]
 
 
 def infer_factor_time_frame(data: pd.DatetimeIndex):
-    # fix bug
+    """
+    Infer factor time frame from the index
+    :param data:
+    :return:
+    """
     # This is to deal with multiIndex case, which the datetimeIndex is not unique
     unique_index = np.unique(data.values)
     unique_index.sort()
@@ -253,4 +289,9 @@ def get_valid_quantile(quantile_str: str):
 
 
 def print_code(func):
+    """
+    print the code from the function object
+    :param func:
+    :return:
+    """
     print(inspect.getsource(func))

@@ -93,6 +93,12 @@ class MultiAssetResearch(AlphaResearch):
         self.benchmark = series
 
     def calculate_factor(self, func, **kwargs):
+        """
+        Call this to calculate the factor before evaluation
+        :param func: python function which return a pd.Series object
+        :param kwargs:
+        :return:
+        """
         self.alpha_func = func
         self.alpha_func_paras = kwargs
         if kwargs is not None:
@@ -129,7 +135,7 @@ class MultiAssetResearch(AlphaResearch):
 
     def evaluate_alpha(self, forward_return_lag: list = None):
         """
-
+        After the alpha calculation to evaluate the alpha.
         :param forward_return_lag:
         :return:
         """
@@ -221,13 +227,12 @@ class MultiAssetResearch(AlphaResearch):
         fig = cumulative_returns_by_group_plot(cum_ret_by_group['1_period_return'])
         fig.show()
 
-    def get_evaluation_dash_app(self,dash_=None):
-        # demand:
-        # change forward return parameter
-        # change alpha universe and redo the calculation
-        # change quantile or bin number
-        # select and look at specific month performance
-        # split section by analysis type:
+    def get_evaluation_dash_app(self, dash_=None):
+        """
+
+        :param dash_: can give another dash object. To support Jupyter notebook usage.
+        :return:
+        """
 
         external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
         if dash_ is None:
@@ -1126,7 +1131,4 @@ if __name__ == '__main__':
     multi_study.set_asset_group(group)
     multi_study.set_benchmark(benchmark)
     multi_study.calculate_factor(momentum_alpha)
-    # multi_study.evaluate_alpha()
     multi_study.get_evaluation_dash_app().run_server(host='127.0.0.1', debug=True)
-    # j = multi_study.factor.reset_index().to_json(orient='index')
-    # factor = pd.read_json(j, orient='index', typ='series')

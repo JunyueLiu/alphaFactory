@@ -33,6 +33,3 @@ def download_kline_and_save(futu_context: OpenQuoteContext, code,
     path = os.path.join(save_folder, '{}_{}_{}_{}_{}.csv'.format(code, start, end, klinetype, autype))
     df.to_csv(path, index=False)
     print('finish download: {}_{}_{}_{}_{}'.format(code, start, end, klinetype, autype))
-
-if __name__ == '__main__':
-    futu_context = OpenQuoteContext()
