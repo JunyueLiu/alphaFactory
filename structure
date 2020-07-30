@@ -1,0 +1,130 @@
+.
+|-- alpha_research
+|   |-- AlphaManager
+|   |   |-- AlphaManager.py
+|   |   |-- DataPage.py
+|   |   |-- __init__.py
+|   |   `-- app.py
+|   |-- MultiAssetResearch.py
+|   |-- SingleAssetResearch.py
+|   |-- __init__.py
+|   |-- factor_transformation.py
+|   |-- factor_zoo
+|   |   |-- __init__.py
+|   |   |-- alpha_101.py
+|   |   |-- test.py
+|   |   `-- utils.py
+|   |-- performance_metrics.py
+|   |-- plotting.py
+|   `-- utils.py
+|-- backtesting
+|   |-- Backtesting.py
+|   |-- BacktestingBrokerage.py
+|   |-- BacktestingQuote.py
+|   |-- Exchange.py
+|   |-- VectorizationBacktesting.py
+|   |-- __init__.py
+|   |-- backtesting_metric.py
+|   |-- backtesting_result_sample.pickle
+|   |-- dash_app
+|   |   |-- __init__.py
+|   |   |-- app.py
+|   |   |-- dash_report.py
+|   |   |-- entry_exit_analysis.py
+|   |   |-- index_app.py
+|   |   |-- monthly_analysis.py
+|   |   `-- trading_history.py
+|   `-- plotting.py
+|-- bar_manager
+|   |-- BarManager.py
+|   `-- __init__.py
+|-- data_downloader
+|   |-- __init__.py
+|   |-- futu_downloader.py
+|   |-- fxcm_downloader.py
+|   |-- multi_asset_data_merger.py
+|   `-- yfinance_downloader.py
+|-- db_wrapper
+|   |-- __init__.py
+|   |-- command
+|   `-- mongodb_utils.py
+|-- example
+|   |-- multi_asset_alpha.ipynb
+|   |-- presentation_5.ipynb
+|   |-- single_asset_alpha.ipynb
+|   `-- strategy_example.ipynb
+|-- fin_ml
+|   |-- __init__.py
+|   |-- bar_maker
+|   |   |-- BarMaker.py
+|   |   `-- __init__.py
+|   |-- labelling
+|   |   |-- __init__.py
+|   |   `-- labeler.py
+|   |-- sampling
+|   |   |-- __init__.py
+|   |   `-- sampling.py
+|   `-- utils.py
+|-- gateway
+|   |-- __init__.py
+|   |-- brokerage_base.py
+|   |-- futu_brokerage.py
+|   |-- futu_quote.py
+|   `-- quote_base.py
+|-- graph
+|   |-- __init__.py
+|   |-- backtesting_component.py
+|   |-- bar_component.py
+|   |-- factor_component.py
+|   |-- indicator_component.py
+|   `-- stock_graph.py
+|-- hsi_component.csv
+|-- local_data
+|-- logs
+|-- order
+|   |-- Order.py
+|   `-- __init__.py
+|-- portfolioManager
+|   |-- __init__.py
+|   |-- dash_app
+|   |   |-- __init__.py
+|   |   |-- app.py
+|   |   |-- index.py
+|   |   `-- strategy_allocation.py
+|   |-- metric.py
+|   |-- plotting.py
+|   |-- sample_data
+|   `-- utils.py
+|-- requirements.txt
+|-- strategy
+|   |-- 1_min_hsi_futures_setting.json
+|   |-- AlgoTrading.py
+|   |-- DoubleMA.py
+|   |-- DualThrust.py
+|   |-- StrategyBase.py
+|   `-- __init__.py
+|-- technical_analysis
+|   |-- __init__.py
+|   |-- customization.py
+|   |-- momentum.py
+|   |-- overlap.py
+|   |-- pattern.py
+|   |-- statistic_function.py
+|   |-- utils.py
+|   |-- volatility.py
+|   `-- volume.py
+|-- trader
+|   |-- TradeEngine.py
+|   |-- __init__.py
+|   `-- trader_dash
+|       |-- __init__.py
+|       |-- constant.py
+|       |-- demoQuote.py
+|       `-- index_dash.py
+`-- web
+    |-- __init__.py
+    |-- app.py
+    |-- hsi_intraday_app.py
+    |-- run.py
+    |-- static
+    `-- templates
