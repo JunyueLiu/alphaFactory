@@ -13,11 +13,7 @@ class MongoConnection:
 
     def read_mongo_df(self, db: str, collection: str, query=None, projection=None, no_id=True):
         """ Read from Mongo and Store into DataFrame """
-        # if projection is None:
-        #     projection = {}
-        # if query is None:
-        #     query = {}
-        # pymango的查找: The `projection` argument is used to specify a subset
+        # The `projection` argument is used to specify a subset
         # of fields that should be included in the result documents.
         cursor = self.client[db][collection].find(query, projection, cursor_type=CursorType.EXHAUST)
 
@@ -56,34 +52,4 @@ class MongoConnection:
         records = df.to_dict('records')
         self.client[db][collection_name].insert_many(records)
         self.client[db][collection_name].create_index(time_key, unique=True)
-
-
-
-if __name__ == '__main__':
-
-    #connect mangodb
-    con = MongoConnection('120.55.45.12', 27017, 'root', 'AlphaFactory2020')
-
-
-    # cursor = con.client['test']['0001_HKEX_1d'].find()
-    #
-    # print(pd.DataFrame(list(cursor)))
-
-    #
-    # files = os.listdir('/Users/silviaysy/Desktop/local_data')
-    # paths = [os.path.join('/Users/silviaysy/Desktop/local_data', f) for f in files]
-    #
-    # df = merge_single_asset(paths)
-    # con.insert_from_dataframe('test', '0001_HKEX_1d', df)
-
-    # 1 是读的时候选了这列，0不选这列，也可以用True or False表示
-    #
-    # df = con.read_mongo_df('quant', 'hsi_1_min', {}, {'time_key': 1, 'close': 1, 'open': 1,
-    #                                                   'high': 1, 'low': 1, 'turnover': 1})
-    # print(df)
-
-# df = con.get_ohlc_dataframe('quant', 'hsi_futures_1_min', {"time_key": {"$gt": "2020-05-01"}})
-
-
-
 
