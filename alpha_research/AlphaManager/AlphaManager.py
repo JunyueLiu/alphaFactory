@@ -350,16 +350,6 @@ if __name__ == '__main__':
     # connect mongodb
     AlphaManagerPage().dash_webpage().run_server(debug=True)
 
-#    connect = MongoConnection('120.55.45.12', 27017, 'root', 'AlphaFactory2020')
-    # print('connect')
-    # alpha_storage = AlphaStorage('alpha_6', 'alpha researcher',alpha_6, {'select_parameter': {'time_lag': 5}},
-    #                              'test',
-    #                              HK, 'hsi futures', {'data': data, 'key_performance': key_performance})
-    # manager.add_alpha(db, collection, alpha_storage)
-
-    # query = {'name': 'alpha_1'}
-    # alphaStorage_list = manager.query_alpha(db, collection, query)
-    # todo 主要写查询这些的前端吧
     ll = manager.query_alpha_by_alpha_idea(db, collection, 'test')
     print(ll)
     ll = manager.query_alpha_by_alpha_name(db, collection, 'alpha_6')
@@ -367,12 +357,5 @@ if __name__ == '__main__':
     ll = manager.query_alpha_by_datasets(db, collection, data)
     print(ll)
 
-    # # todo 这么查有问题
-    # ll = manager.query_alpha_by_datasets(db, collection, {'start': data.index[0], 'end': data.index[-1], 'code': data['code'][0]})
-    # print(ll)
-    # ll = manager.query_alpha_by_regions(db, collection, HK)
-    # print(ll)
-    # ll = manager.query_alpha_by_universe(db, collection, 'hsi futures')
-    # print(ll)
 
 
