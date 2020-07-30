@@ -411,7 +411,7 @@ if __name__ == '__main__':
     df['time_key'] = pd.to_datetime(df['time_key'])
     df.set_index('time_key', inplace=True)
     df = df[-10000:-5000]
-    # parameter = {'short_period': 5, 'long_period': 10}
+    # parameter = {'short_period': 5, 'long_peri od': 10}
 
     factor_study = SingleAssetResearch(df)
 

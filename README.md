@@ -6,6 +6,19 @@ It shortens the process of developing a quantitative trading strategy.
 The modules could be divided into four part, alpha_research, fin_ml, backtesting and trader.
 
 ## Quick Start
+### Installation
+```shell script
+pip install -r requirement.txt
+
+```
+Troublesome:
+
+If you see this during installation, you need to install ta-lib
+```shell script
+warnings.warn('Cannot find ta-lib library, installation may fail.')
+```
+Please follow the instruction of https://github.com/mrjbq7/ta-lib.
+
 
 ### Alpha research
 
