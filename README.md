@@ -31,10 +31,11 @@ factor_study.get_evaluation_dash_app().run_server('127.0.0.1', debug=True)
 ```
 For multi Asset
 ```python
-# df is pandas Dataframe, with MultiIndex (level 0 DatetimeIndex, level 1 Asset Code)
 import pandas as pd
 import numpy as np
 from alpha_research.MultiAssetResearch import MultiAssetResearch
+
+# df is pandas Dataframe, with MultiIndex (level 0 DatetimeIndex, level 1 Asset Code)
 df = ...
 multi_study = MultiAssetResearch(df)
 # benchmark is pandas Dataframe, with index in DatetimeIndex
@@ -57,4 +58,4 @@ multi_study.get_evaluation_dash_app().run_server(host='127.0.0.1', debug=True)
 
 ```
 
-For more examples, see example
+For more examples, see example.
