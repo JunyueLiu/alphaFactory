@@ -179,6 +179,26 @@ class BacktestingBrokerage(BrokerageBase):
         order = self.working_order[order_id]
         dealt_list = []
         if order.order_status == 'SUBMITTED' and order.order_type == 'STOP':
+            if order.order_direction == 'LONG':
+                if order.order_price <= open_price:
+                    deal_price = open_price
+                    dealt_list.append((order_id, deal_price, order.order_qty))
+                    # self.order_deal(order_id, deal_price, order.order_qty)
+                elif high_price >= order.order_price >= low_price:
+                    deal_price = order.order_price
+                    dealt_list.append((order_id, deal_price, order.order_qty))
+            elif order.order_direction == 'SHORT':
+                if order.order_price >= open_price:
+                    deal_price = open_price
+                    dealt_list.append((order_id, deal_price, order.order_qty))
+                elif low_price <= order.order_price <= high_price:
+                    deal_price = order.order_price
+                    dealt_list.append((order_id, deal_price, order.order_qty))
+
+
+
+
+
             pass
         return dealt_list
 
@@ -193,6 +213,7 @@ class BacktestingBrokerage(BrokerageBase):
             # limit order matching
             dealt_list.extend(self.limit_order_matching(order_id, open_price, high_price, low_price))
             # todo add stop order logic
+            dealt_list.extend(self.stop_order_matching(order_id, open_price, high_price, low_price))
             # todo update current position balance price
         for order_id, deal_price, deal_qty in dealt_list:
             dealt_order_list.append(self.working_order[order_id])
