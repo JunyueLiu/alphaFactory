@@ -82,9 +82,44 @@ def tick_plot(tick_df, freq='1T'):
     fig.update_xaxes(showspikes=True, spikemode='across', spikesnap='data', showline=True, spikedash='solid')
     fig.update_layout(yaxis_tickformat='g')
 
-
     fig.show()
     return fig
+
+def cumulative_volume(rt_df):
+    grouped_rt = rt_df.groupby(['ticker_direction', 'price']).agg({'volume': 'sum'}).reset_index()
+    neutral = grouped_rt[grouped_rt['ticker_direction'] == 'NEUTRAL']
+    buy = grouped_rt[grouped_rt['ticker_direction'] == 'BUY']
+    sell = grouped_rt[grouped_rt['ticker_direction'] == 'SELL']
+    neutral_bar = go.Bar(
+        x=neutral['volume'],
+        y=neutral['price'],
+        orientation='h', name='Neutral', marker=dict(
+            color='grey', ), )
+    buy_bar = go.Bar(
+        x=buy['volume'],
+        y=buy['price'],
+        orientation='h', name='Buy', marker=dict(
+            color='green', ), )
+    sell_bar = go.Bar(
+        x=sell['volume'],
+        y=sell['price'],
+        orientation='h', name='Sell', marker=dict(
+            color='red', ), )
+
+    fig = go.Figure(data=[neutral_bar, buy_bar, sell_bar])
+    fig.update_layout(barmode='stack')
+    fig.show()
+    return fig
+
+    pass
+
+
+
+
+def order_flow_plot(tick_df):
+    # template = 'plotly_dark'
+    pass
+
 
 def bid_ask_plot():
     pass
@@ -126,4 +161,5 @@ if __name__ == '__main__':
     rt_df['hours'] = rt_df['time'].apply(lambda x: x.hour)
 
     rt_df = rt_df[(rt_df['hours'] >= 9) & (rt_df['hours'] <= 12)]
-    tick_plot(rt_df)
+    # tick_plot(rt_df)
+    cumulative_volume(rt_df)
