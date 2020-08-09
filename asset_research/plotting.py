@@ -186,6 +186,7 @@ def order_flow_plot(tick_df, freq='1T'):
     sell_to_bid = vol_df.loc[(slice(None), ['SELL']), :]
     sell_to_bid = sell_to_bid.unstack()
     sell_to_bid = sell_to_bid.groupby(pd.Grouper(freq=freq, level=0)).sum()
+    sell_to_bid = - sell_to_bid
     sell_to_bid['ticker_direction'] = 'SELL'
 
     buy_by_ask = vol_df.loc[(slice(None), ['BUY']), :]
@@ -224,16 +225,19 @@ def order_flow_plot(tick_df, freq='1T'):
 
                   ]
     # of_heatmap = ff.create_annotated_heatmap(z=orderflow_table, zmin=-10, zmax=10,)
+    x = orderflow_table.columns.format(sparsify=False)
     of_heatmap = go.Heatmap(
         z=orderflow_table, zmin=-10, zmax=10,
-        x=orderflow_table.columns,
+        x=x,
         y=orderflow_table.index,
         colorscale=colorscale, showscale=False, text=orderflow_table)
     fig = go.Figure(of_heatmap)
+    tick_value = [x[i] for i in range(0, len(x), 10)]
+    tick_text = [x[i][11:19] for i in range(0, len(x), 10)]
+    fig.update_xaxes(ticktext=tick_text, tickvals=tick_value, title_text="time")
+
+    fig.update_layout(template='plotly_dark', yaxis_tickformat='g')
     return fig
-
-
-    pass
 
 
 def bid_ask_plot():
@@ -279,79 +283,13 @@ if __name__ == '__main__':
     # tick_plot(rt_df)
     # cumulative_volume(rt_df)
     # order_flow_plot(rt_df)
+    records = []
+    with open('2020-07-31.json', 'r') as file:
+        for line in file.readlines():
+            dic = json.loads(line)
+            records.append(dic)
+    orderbook_df = pd.DataFrame(records)
+    orderbook_df = orderbook_df[-10000:]
+    orderbook_heatmap(orderbook_df, code='HK.999010').show()
+    order_flow_plot(rt_df).show()
 
-    vol_df = rt_df.groupby(['time', 'ticker_direction', 'price']).agg({'volume': 'sum'})
-    # vol_df['time'] = pd.to_datetime(vol_df['time'])
-    # prices = vol_df['price'].unique()
-    # prices.sort()
-    sell_to_bid = vol_df.loc[(slice(None), ['SELL']), :]
-    sell_to_bid = sell_to_bid.unstack()
-    sell_to_bid = sell_to_bid.groupby(pd.Grouper(freq='30S', level=0)).sum()
-    sell_to_bid = -sell_to_bid
-    sell_to_bid['ticker_direction'] = 'SELL'
-
-    buy_by_ask = vol_df.loc[(slice(None), ['BUY']), :]
-    buy_by_ask = buy_by_ask.unstack()
-    buy_by_ask = buy_by_ask.groupby(pd.Grouper(freq='30S', level=0)).sum()
-    buy_by_ask['ticker_direction'] = 'BUY'
-
-    orderflow_table = sell_to_bid.append(buy_by_ask).replace(np.NAN, 0)
-    orderflow_table = orderflow_table.set_index('ticker_direction', append=True).sort_index()
-
-    v = orderflow_table.values
-    a = np.empty(v.shape, dtype='bool')
-    for i in range(len(v)):
-        nonzero_idx = np.nonzero(v[i])[0]
-        c = v[i] != 0
-        try:
-            c[nonzero_idx[0]: nonzero_idx[-1]] = True
-        except:
-            print(nonzero_idx)
-        a[i] = c
-
-
-    orderflow_table.where(a, None, inplace=True)
-    orderflow_table = orderflow_table.T.droplevel(0).sort_index(ascending=False).sort_index(axis=1,
-                                                                                            ascending=[True, False])
-    colorscale = [[0, '#CE0000'],
-                  [0.1, '#EA0000'],
-                  [0.2, '#FF2D2D'],
-                  [0.3, '#FF7575'],
-                  [0.4, '#FF9797'],
-                  [0.5, '#FFFFFF'],
-                  [0.6, '#02DF82'],
-                  [0.7, '#01B468'],
-                  [0.8, '#019858'],
-                  [0.9, '#01814A'],
-                  [1, '#006030']
-
-                  ]
-    # of_heatmap = ff.create_annotated_heatmap(z=orderflow_table, zmin=-10, zmax=10,)
-    of_heatmap = go.Heatmap(
-        z=orderflow_table, zmin=-10, zmax=10,
-        x=orderflow_table.columns,
-        y=orderflow_table.index,
-        colorscale=colorscale, showscale=False, text=orderflow_table)
-
-    fig = go.Figure(of_heatmap)
-    fig.update_layout(template='plotly_dark', yaxis_tickformat='g')
-    fig.show()
-    # table = go.Table(
-    #
-    #     header=dict(values=orderflow_table.columns),
-    #     cells=dict(values=orderflow_table.values.T)
-    #
-    # )
-    #
-    # fig = go.Figure([table])
-    # fig.show()
-    # records = []
-    # with open('2020-07-31.json', 'r') as file:
-    #     for line in file.readlines():
-    #         dic = json.loads(line)
-    #         records.append(dic)
-    # df = pd.DataFrame(records)[-30000:]
-    #
-    # orderbook_df = df[df['code'] == 'HK.999010'].drop('_id', axis=1)
-    #
-    # orderbook_heatmap(orderbook_df, freq='5s')
