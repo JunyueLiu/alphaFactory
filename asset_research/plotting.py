@@ -78,10 +78,12 @@ def orderbook_heatmap(orderbook_df, code=None, freq='1T'):
     prices = np.array(orderbook_df["Bid"].agg(lambda x: np.array(x)[:, 0]).to_list()).flatten()
     prices = np.append(prices, np.array(orderbook_df["Ask"].agg(lambda x: np.array(x)[:, 0]).to_list()).flatten())
     prices = np.unique(prices)
-
-    grouped = orderbook_df.groupby(pd.Grouper(freq=freq))['Bid', 'Ask'].agg(lambda x: np.sum(x))
-    grouped = grouped[grouped['Bid'] != 0]
-    grouped = grouped[grouped['Ask'] != 0]
+    if freq is not None:
+        grouped = orderbook_df.groupby(pd.Grouper(freq=freq))['Bid', 'Ask'].agg(lambda x: np.sum(x))
+        grouped = grouped[grouped['Bid'] != 0]
+        grouped = grouped[grouped['Ask'] != 0]
+    else:
+        grouped = orderbook_df
 
     def col_func(x):
         a = np.array(x)
@@ -290,6 +292,6 @@ if __name__ == '__main__':
             records.append(dic)
     orderbook_df = pd.DataFrame(records)
     orderbook_df = orderbook_df[-10000:]
-    orderbook_heatmap(orderbook_df, code='HK.999010').show()
+    orderbook_heatmap(orderbook_df,code='HK.999010', freq=None).show()
     order_flow_plot(rt_df).show()
 
