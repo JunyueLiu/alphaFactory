@@ -68,7 +68,7 @@ def realtime_orderbook_heatmap(orderbook_df, code=None, ):
         colorscale='magma', showscale=False, )
 
     fig = go.Figure([bid, ask, best_bid_plot, best_ask_plot])
-    fig.update_layout(yaxis_tickformat='g')
+    fig.update_layout(yaxis_tickformat='g', template='plotly_dark')
     fig.update_layout(
         shapes=[dict(
             x0=now, x1=now, y0=0, y1=1, xref='x', yref='paper',
@@ -80,6 +80,12 @@ def realtime_orderbook_heatmap(orderbook_df, code=None, ):
     # fig.show()
 
     return fig
+
+
+def realtime_orderflow(tick_df, code=None, ):
+    pass
+
+
 
 
 if __name__ == '__main__':

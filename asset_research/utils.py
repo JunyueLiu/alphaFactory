@@ -16,6 +16,11 @@ def read_orderbook_json(path: str) -> list:
 def get_orderbook_df(path: str) -> pd.DataFrame:
     return pd.DataFrame(read_orderbook_json(path))
 
+def get_order_flow_table():
+    pass
+
+
+
 
 if __name__ == '__main__':
     # df = pd.read_json('2020-07-31.json')
