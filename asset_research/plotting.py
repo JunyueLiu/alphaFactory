@@ -63,7 +63,7 @@ def orderbook_plot(orderbook):
     return fig
 
 
-def orderbook_heatmap(orderbook_df, code=None, freq='1T'):
+def orderbook_heatmap(orderbook_df, code=None, freq='1T', zmax = 10):
     if code is not None:
         orderbook_df = orderbook_df[orderbook_df['code'] == code]
     orderbook_df['svr_recv_time_ask'] = pd.to_datetime(orderbook_df['svr_recv_time_ask'])
@@ -78,10 +78,12 @@ def orderbook_heatmap(orderbook_df, code=None, freq='1T'):
     prices = np.array(orderbook_df["Bid"].agg(lambda x: np.array(x)[:, 0]).to_list()).flatten()
     prices = np.append(prices, np.array(orderbook_df["Ask"].agg(lambda x: np.array(x)[:, 0]).to_list()).flatten())
     prices = np.unique(prices)
-
-    grouped = orderbook_df.groupby(pd.Grouper(freq=freq))['Bid', 'Ask'].agg(lambda x: np.sum(x))
-    grouped = grouped[grouped['Bid'] != 0]
-    grouped = grouped[grouped['Ask'] != 0]
+    if freq is not None:
+        grouped = orderbook_df.groupby(pd.Grouper(freq=freq))['Bid', 'Ask'].agg(lambda x: np.sum(x))
+        grouped = grouped[grouped['Bid'] != 0]
+        grouped = grouped[grouped['Ask'] != 0]
+    else:
+        grouped = orderbook_df
 
     def col_func(x):
         a = np.array(x)
@@ -95,13 +97,13 @@ def orderbook_heatmap(orderbook_df, code=None, freq='1T'):
 
     # print(grouped['Ask'].index)
     bid = go.Heatmap(
-        z=np.array(grouped['Bid'].to_list()), zmin=0, zmax=10,
+        z=np.array(grouped['Bid'].to_list()), zmin=0, zmax=zmax,
         x=grouped['Bid'].index,
         y=prices, transpose=True,
         colorscale='Greens', showscale=False)
 
     ask = go.Heatmap(
-        z=np.array(grouped['Ask'].to_list()), zmin=0, zmax=10,
+        z=np.array(grouped['Ask'].to_list()), zmin=0, zmax=zmax,
         x=grouped['Ask'].index,
         y=prices, transpose=True,
         colorscale='Reds', showscale=False, )
@@ -172,7 +174,7 @@ def cumulative_volume(rt_df):
     return fig
 
 
-def order_flow_plot(tick_df, freq='1T'):
+def order_flow_plot(tick_df, freq='1T', zmax = 10):
     # template = 'plotly_dark'
 
     # fig.add_trace(go.Violin(x=df['day'][df['smoker'] == 'Yes'],
@@ -226,11 +228,19 @@ def order_flow_plot(tick_df, freq='1T'):
                   ]
     # of_heatmap = ff.create_annotated_heatmap(z=orderflow_table, zmin=-10, zmax=10,)
     x = orderflow_table.columns.format(sparsify=False)
+    # annotation_text = np.where(orderflow_table == None, '', orderflow_table)
     of_heatmap = go.Heatmap(
-        z=orderflow_table, zmin=-10, zmax=10,
+        z=orderflow_table, zmin=-zmax, zmax=zmax,
         x=x,
         y=orderflow_table.index,
-        colorscale=colorscale, showscale=False, text=orderflow_table)
+        colorscale=colorscale, showscale=False)
+    # fig = ff.create_annotated_heatmap(z=orderflow_table.values,
+    #                                   x=x,
+    #                                   y=orderflow_table.index.to_list(),
+    #                                   annotation_text=annotation_text,
+    #                                   colorscale=colorscale, showscale=False, zmin=-10, zmax=10,
+    #                                   )
+
     fig = go.Figure(of_heatmap)
     tick_value = [x[i] for i in range(0, len(x), 10)]
     tick_text = [x[i][11:19] for i in range(0, len(x), 10)]
@@ -238,6 +248,38 @@ def order_flow_plot(tick_df, freq='1T'):
 
     fig.update_layout(template='plotly_dark', yaxis_tickformat='g')
     return fig
+
+
+def order_flow_table(tick_df, freq='1T'):
+    vol_df = tick_df.groupby(['time', 'ticker_direction', 'price']).agg({'volume': 'sum'})
+    sell_to_bid = vol_df.loc[(slice(None), ['SELL']), :]
+    sell_to_bid = sell_to_bid.unstack()
+    sell_to_bid = sell_to_bid.groupby(pd.Grouper(freq=freq, level=0)).sum()
+    sell_to_bid = - sell_to_bid
+    sell_to_bid['ticker_direction'] = 'SELL'
+
+    buy_by_ask = vol_df.loc[(slice(None), ['BUY']), :]
+    buy_by_ask = buy_by_ask.unstack()
+    buy_by_ask = buy_by_ask.groupby(pd.Grouper(freq=freq, level=0)).sum()
+    buy_by_ask['ticker_direction'] = 'BUY'
+
+    orderflow_table = buy_by_ask.append(sell_to_bid).replace(np.NAN, 0)
+    orderflow_table = orderflow_table.set_index('ticker_direction', append=True).sort_index()
+
+    v = orderflow_table.values
+    a = np.empty(v.shape, dtype='bool')
+    for i in range(len(v)):
+        nonzero_idx = np.nonzero(v[i])[0]
+        c = v[i] != 0
+        try:
+            c[nonzero_idx[0]: nonzero_idx[-1]] = True
+        except:
+            pass
+        a[i] = c
+
+    orderflow_table.where(a, None, inplace=True)
+    orderflow_table = orderflow_table.T.droplevel(0).sort_index(ascending=False).sort_index(axis=1,
+                                                                                            ascending=[True, False])
 
 
 def bid_ask_plot():
@@ -274,22 +316,22 @@ if __name__ == '__main__':
     #                   [24485.0, 7, 5],
     #                   [24486.0, 3, 3]]}
     # # orderbook_plot(sample).show()
-    rt_df = pd.read_csv('2020-07-30.csv')
-    rt_df = rt_df[rt_df['code'] == 'HK.999010']
+    rt_df = pd.read_csv('2020-08-19_tick.csv')
+    rt_df = rt_df[rt_df['code'] == 'HK.01810']
     rt_df['time'] = pd.to_datetime(rt_df['time'])
-    rt_df['hours'] = rt_df['time'].apply(lambda x: x.hour)
-
-    rt_df = rt_df[(rt_df['hours'] >= 9) & (rt_df['hours'] <= 12)]
+    # rt_df['hours'] = rt_df['time'].apply(lambda x: x.hour)
+    #
+    # rt_df = rt_df[(rt_df['hours'] >= 9) & (rt_df['hours'] <= 12)]
     # tick_plot(rt_df)
     # cumulative_volume(rt_df)
     # order_flow_plot(rt_df)
     records = []
-    with open('2020-07-31.json', 'r') as file:
+    with open('2020-08-19.json', 'r') as file:
         for line in file.readlines():
             dic = json.loads(line)
             records.append(dic)
     orderbook_df = pd.DataFrame(records)
-    orderbook_df = orderbook_df[-10000:]
-    orderbook_heatmap(orderbook_df, code='HK.999010').show()
-    order_flow_plot(rt_df).show()
-
+    orderbook_df = orderbook_df[orderbook_df['code'] == 'HK.01810']
+    # orderbook_df = orderbook_df[:10000]
+    # orderbook_heatmap(orderbook_df,code='HK.01810',freq=None,zmax=int(1.0e6)).show()
+    order_flow_plot(rt_df,freq='30s' ,zmax=int(1.0e6)).show()

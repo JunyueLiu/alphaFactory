@@ -317,4 +317,4 @@ if __name__ == '__main__':
     }
     quote = DemoQuote()
     app_ = get_live_dash_app(quote, init_subscribe=sub, holding=holding)
-    app_.run_server(host='localhost', port=8050, debug=True)
+    app_.run_server(host='localhost', port=8055)

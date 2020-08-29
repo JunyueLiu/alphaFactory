@@ -61,7 +61,7 @@ class DemoQuote(QuoteBase):
                     data = ticker.history(period='7d', interval='5m')
                 elif subtype == "K_15M":
                     data = ticker.history(period='7d', interval='15m')
-                elif subtype == "K_5M":
+                elif subtype == "K_30M":
                     data = ticker.history(period='7d', interval='30m')
                 data['sub_type'] = subtype
                 data['code'] = code

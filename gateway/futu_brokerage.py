@@ -7,9 +7,9 @@ class FutuBrokerage(BrokerageBase):
 
     # exchange_name =
 
-    def __init__(self, host, port):
+    def __init__(self, host="127.0.0.1", port=11111, is_encrypt=None):
         super(BrokerageBase, self).__init__()
-        self.context = OpenHKTradeContext(host, port)  # type: OpenHKTradeContext
+        self.context = OpenHKTradeContext(host, port, is_encrypt)  # type: OpenHKTradeContext
 
     def place_order(self, price, qty, code, trd_side, order_type=None, adjust_limit=0, trd_env=TrdEnv.REAL, acc_id=0,
                     acc_index=0, remark=None):

@@ -3,6 +3,25 @@ import pandas as pd
 
 pd.set_option('max_columns', None)
 
+
+def read_orderbook_json(path: str) -> list:
+    records = []
+    with open(path, 'r') as file:
+        for line in file.readlines():
+            dic = json.loads(line)
+            records.append(dic)
+    return records
+
+
+def get_orderbook_df(path: str) -> pd.DataFrame:
+    return pd.DataFrame(read_orderbook_json(path))
+
+def get_order_flow_table():
+    pass
+
+
+
+
 if __name__ == '__main__':
     # df = pd.read_json('2020-07-31.json')
     records = []
