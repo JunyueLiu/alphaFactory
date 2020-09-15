@@ -529,13 +529,28 @@ def component_to_universe(component_df: pd.DataFrame, start=None, end=None, trad
     return universe
 
 
-def combine_market_fundamental(market_data: pd.DataFrame or pd.Series,
-                               fundamental_data: pd.DataFrame or pd.Series,
-                               start=None, end=None,
-                               trading_date: None or list = None,
-                               suspend_data: None or pd.Series = None,
-                               universe: pd.Series or pd.DataFrame = None,
-                               ) -> pd.DataFrame:
+def get_latest_info_by_date(df: pd.DataFrame, start_pd: pd.Timestamp):
+    """
+
+    :param df:
+    :param start_pd:
+    :return:
+    """
+    names = df.index.names
+    df = df.sort_index(level=[1, 0]).reset_index()
+    df[names[0]] = df[names[0]].apply(
+        lambda x: x if x > start_pd else start_pd)
+    df = df.drop_duplicates(subset=names, keep='last')
+    return df.set_index(names).sort_index()
+
+
+def combine_market_with_fundamental(market_data: pd.DataFrame or pd.Series,
+                                    fundamental_data: pd.DataFrame or pd.Series,
+                                    start=None, end=None,
+                                    trading_date: None or list = None,
+                                    suspend_data: None or pd.Series = None,
+                                    universe: pd.Series or pd.DataFrame = None,
+                                    ) -> pd.DataFrame:
     assert isinstance(market_data.index, pd.MultiIndex)
     assert isinstance(fundamental_data.index, pd.MultiIndex)
     if isinstance(fundamental_data, pd.Series):
@@ -551,12 +566,7 @@ def combine_market_fundamental(market_data: pd.DataFrame or pd.Series,
         market_data = market_data.loc[start_pd:]
 
         # transform the fundamental_data that contains data it should have know at the start date
-
-        fundamental_data = fundamental_data.sort_index(level=1).reset_index()
-        fundamental_data[names[0]] = fundamental_data[names[0]].apply(
-            lambda x: x if x > start_pd else start_pd)
-        fundamental_data = fundamental_data.drop_duplicates(subset=names, keep='last')
-        fundamental_data = fundamental_data.set_index(names).sort_index()
+        fundamental_data = get_latest_info_by_date(fundamental_data, start_pd)
         if universe is not None:
             universe = universe.loc[start_pd:]
 
@@ -580,8 +590,6 @@ def combine_market_fundamental(market_data: pd.DataFrame or pd.Series,
     if universe is not None:
         market_data = market_data.loc[universe.index, :]
         fundamental_data = fundamental_data.loc[(slice(None), universe.index.get_level_values(1).unique()), :]
-        # cannot do the join
-        # ret = ret.to_frame().join(universe)
 
     if suspend_data is not None:
         market_data = market_data.loc[suspend_data.index, :]
@@ -604,17 +612,71 @@ def combine_market_fundamental(market_data: pd.DataFrame or pd.Series,
     return merge_df
 
 
+def combine_fundamental_with_fundamental(fundamental_data1: pd.DataFrame or pd.Series,
+                                         fundamental_data2: pd.DataFrame or pd.Series,
+                                         start=None, end=None,
+                                         universe: pd.Series or pd.DataFrame = None,
+                                         ) -> pd.DataFrame:
+    assert isinstance(fundamental_data1.index, pd.MultiIndex)
+    assert isinstance(fundamental_data2.index, pd.MultiIndex)
+    if isinstance(fundamental_data1, pd.Series):
+        fundamental_data1 = fundamental_data1.to_frame()
+
+    if isinstance(fundamental_data2, pd.Series):
+        fundamental_data2 = fundamental_data2.to_frame()
+
+    if start is not None:
+        start_pd = pd.to_datetime(start)
+
+        # transform the fundamental_data that contains data it should have know at the start date
+
+        fundamental_data1 = get_latest_info_by_date(fundamental_data1, start_pd)
+        fundamental_data2 = get_latest_info_by_date(fundamental_data2, start_pd)
+        if universe is not None:
+            universe = universe.loc[start_pd:]
+
+    if end is not None:
+        end_pd = pd.to_datetime(end)
+        fundamental_data1 = fundamental_data1.loc[:end_pd]
+        fundamental_data2 = fundamental_data2.loc[:end_pd]
+        if universe is not None:
+            universe = universe.loc[:end_pd]
+
+    if universe is not None:
+        fundamental_data1 = fundamental_data1.loc[(slice(None), universe.index.get_level_values(1).unique()), :]
+        fundamental_data2 = fundamental_data2.loc[(slice(None), universe.index.get_level_values(1).unique()), :]
+
+    merge_df = fundamental_data1.join(fundamental_data2, how='outer', lsuffix='l_')
+    merge_df = merge_df.groupby(level=1).fillna(method='ffill')
+    return merge_df
+
+
+
+
 def filter_suspend(ret, suspend: dict):
     pass
 
 
 if __name__ == '__main__':
-    td = '/Users/liujunyue/PycharmProjects/alphaFactory/local_data/joinquant/trading_date.csv'
-    df = pd.read_csv(td, index_col=0, header=None)
-    trading_list = pd.to_datetime(df[1].to_list())
+    # td = '/Users/liujunyue/PycharmProjects/alphaFactory/local_data/joinquant/trading_date.csv'
+    # df = pd.read_csv(td, index_col=0, header=None)
+    # trading_list = pd.to_datetime(df[1].to_list())
     # capital_change = load_jointquant_fundamental(
     #     '/Users/liujunyue/PycharmProjects/alphaFactory/local_data/joinquant/capital_change.parquet')
     # next_trading_date_dict(trading_list)
     # print(get_nth_weekday_of_month(2020, 4, 0, 1))
-    component_df = pd.read_parquet(r'../../local_data/CHINA/csi300_component.parquet')
-    u = component_to_universe(component_df, '2010-01-01', trading_date=trading_list)
+    # component_df = pd.read_parquet(r'../../local_data/CHINA/csi300_component.parquet')
+    # u = component_to_universe(component_df, '2010-01-01', trading_date=trading_list)
+
+    universe = pd.read_parquet(r'csi300.parquet')
+    fundamental_data1 = load_jointquant_fundamental(r'../../local_data/joinquant/capital_change.parquet')
+    fundamental_data2 = load_jointquant_fundamental(r'../../local_data/joinquant/balance_sheet.parquet')
+    start = '2019-01-01'
+    end = '2020-01-01'
+    start_pd = pd.to_datetime(start)
+
+    # transform the fundamental_data that contains data it should have know at the start date
+
+    # fundamental_data1 = get_latest_info_by_date(fundamental_data1, start_pd)
+    # fundamental_data2 = get_latest_info_by_date(fundamental_data2, start_pd)
+    merged = combine_fundamental_with_fundamental(fundamental_data1.share_total, fundamental_data2.total_owner_equities,start, end, universe)
