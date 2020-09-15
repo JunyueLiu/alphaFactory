@@ -424,4 +424,4 @@ if __name__ == '__main__':
 
 
     factor_study.calculate_factor(cheating_alpha, **{'time_lag': 5})
-    factor_study.get_evaluation_dash_app().run_server('127.0.0.1', debug=True)
+    factor_study.get_evaluation_dash_app().run_server('127.0.0.1', debug=True, port=8070)
