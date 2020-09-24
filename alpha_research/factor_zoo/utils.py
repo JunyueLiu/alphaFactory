@@ -51,6 +51,9 @@ def adv(prices: pd.Series, volume, d: int) -> pd.Series:
     else:
         return (prices * volume).rolling(d).mean()
 
+def abs(x:pd.Series) -> pd.Series:
+    return x.abs()
+
 
 def rank(x: pd.Series) -> pd.Series:
     """
@@ -86,7 +89,6 @@ def correlation(x: pd.Series, y: pd.Series, d: int) -> pd.Series:
     :param d:
     :return:
     """
-    # todo multiindex
     if isinstance(d, float):
         d = math.floor(d)
     if isinstance(x.index, pd.MultiIndex):
@@ -100,7 +102,7 @@ def correlation(x: pd.Series, y: pd.Series, d: int) -> pd.Series:
             b = g[1][y.name]
             r = a.rolling(window=d).corr(b)
             res.append(r)
-        return pd.concat(res).reorder_levels([1, 0])
+        return pd.concat(res).sort_index()
     else:
         return x.rolling(window=d).corr(y)
 
@@ -122,7 +124,7 @@ def covariance(x: pd.Series, y: pd.Series, d) -> pd.Series:
             b = g[1][y.name]
             r = a.rolling(window=d).cov(b)
             res.append(r)
-        return pd.concat(res).reorder_levels([1, 0])
+        return pd.concat(res).sort_index()
     else:
         return x.rolling(window=d).cov(y)
 
@@ -183,7 +185,7 @@ def decay_linear(x: pd.Series, d: int) -> pd.Series:
         return np.nansum(weights * a)
 
     if isinstance(x.index, pd.MultiIndex):
-        return x.groupby(level=1).rolling(d).apply(func)
+        return x.groupby(level=1).rolling(d).apply(func).droplevel(0).sort_index()
     else:
         return x.rolling(d).apply(func)
 
@@ -232,7 +234,7 @@ def ts_min(x: pd.Series, d: int or float) -> pd.Series:
     if isinstance(d, float):
         d = math.floor(d)
     if isinstance(x.index, pd.MultiIndex):
-        return x.groupby(level=1).rolling(d).min()
+        return x.groupby(level=1).rolling(d).min().droplevel(0).sort_index()
     else:
         return x.rolling(d).min()
 
@@ -247,7 +249,7 @@ def ts_max(x: pd.Series, d: int or float) -> pd.Series:
     if isinstance(d, float):
         d = math.floor(d)
     if isinstance(x.index, pd.MultiIndex):
-        return x.groupby(level=1).rolling(d).max()
+        return x.groupby(level=1).rolling(d).max().droplevel(0).sort_index()
     else:
         return x.rolling(d).max()
 
@@ -294,8 +296,13 @@ def ts_rank(x: pd.Series, d: int or float) -> pd.Series:
 
     def func(a):
         # 这里sort两次是啥意思？
-        return a.argsort().argsort()[-1] + 1
-
+        # https://stackoverflow.com/questions/14440187/rank-data-over-a-rolling-window-in-pandas-dataframe
+        # x = np.array([3, 1, 2])
+        # x.argsort()
+        # Out[5]: array([1, 2, 0])
+        # x.argsort().argsort()
+        # Out[6]: array([2, 0, 1])
+        return a.size - a.argsort().argsort()[-1]
     if isinstance(x.index, pd.MultiIndex):
         return x.groupby(level=1).rolling(d).apply(func).droplevel(0).sort_index()
     else:
@@ -353,7 +360,7 @@ def product(x: pd.Series, d: int or float) -> pd.Series:
         return np.nancumprod(x)[-1]
 
     if isinstance(x.index, pd.MultiIndex):
-        return x.groupby(level=1).rolling(d).apply(func)
+        return x.groupby(level=1).rolling(d).apply(func).droplevel(0).sort_index()
     else:
         return x.rolling(d).apply(func)
 
@@ -369,7 +376,7 @@ def stddev(x: pd.Series, d: int or float) -> pd.Series:
         d = math.floor(d)
 
     if isinstance(x.index, pd.MultiIndex):
-        return x.groupby(level=1).rolling(d).std()
+        return x.groupby(level=1).rolling(d).std().droplevel(0).sort_index()
     else:
         return x.rolling(d).std()
 

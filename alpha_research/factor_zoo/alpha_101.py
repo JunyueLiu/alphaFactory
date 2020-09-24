@@ -85,12 +85,11 @@ def alpha_7(df: pd.DataFrame):
     :param df:
     :return:
     """
-    rank = (-1 * ts_rank(np.abs(delta(df['close'], 7)), 60)).droplevel(0).sort_index()
-    factor = np.where(adv(df['close'], df['volume'], 20) < df['volume'],
-                      rank *
-                      np.sign(delta(df['close'], 7)), -1)
+    # todo problem all -1 why?
+    factor = np.where((adv(df['close'], df['volume'], 20) < df['volume']),
+                      -1 * ts_rank(abs(delta(df['close'], 7)), 60) * np.sign(delta(df['close'], 7)), -1)
 
-    return pd.DataFrame(factor, index=df.index)
+    return pd.Series(factor, index=df.index)
 
 
 def alpha_8(df: pd.DataFrame):
@@ -257,7 +256,7 @@ def alpha_21(df: pd.DataFrame):
     factor = np.where(condition1 < condition2, -1,
                       np.where(condition2 < condition3, 1, np.where(condition4 >= 1, 1, -1)))
     # print(factor)
-    return factor
+    return pd.Series(factor, index=df.index)
 
 
 def alpha_22(df: pd.DataFrame):
@@ -271,16 +270,16 @@ def alpha_22(df: pd.DataFrame):
     return factor
 
 
-def alpha_23(df: pd.DataFrame, time_lag=20):
+def alpha_23(df: pd.DataFrame):
     """
     Alpha#23: (((sum(high, 20) / 20) < high) ? (-1 * delta(high, 2)) : 0)
     :param df:
     :param time_lag:
     :return:
     """
-    tmp = df['high'].rolling(time_lag).mean()
-    factor = np.where(df['high'] > tmp, -1 * (df['high'] - df['high'].shift(2)), 0)
-    return factor
+    tmp = ((sum(df['high'], 20) / 20) < df['high'])
+    factor = np.where(df['high'] > tmp, (-1 * delta(df['high'], 2)), 0)
+    return pd.Series(factor, index=df.index)
 
 
 def alpha_24(df: pd.DataFrame):
@@ -295,7 +294,7 @@ def alpha_24(df: pd.DataFrame):
     tmp1 = delta_sum / delay_close
     ts_min = df['close'].rolling(100).min()
     factor = np.where(tmp1 <= 0.05, df['close'] - ts_min, df['close'] - df['close'].shift(3))
-    return factor
+    return pd.Series(factor, index=df.index)
 
 
 def alpha_25(df: pd.DataFrame):
@@ -350,9 +349,11 @@ def alpha_29(df: pd.DataFrame):
     :param df:
     :return:
     """
+    close = df['close']
+    returns_ = returns(df['close'])
     return (min(
-        product(rank(rank(scale(np.log(sum(ts_min(rank(rank((-1 * rank(delta((df['close'] - 1), 5))))), 2), 1))))), 1),
-        5) + ts_rank(delay((-1 * returns(df['close'])), 6), 5))
+        product(rank(rank(scale(np.log(sum(ts_min(rank(rank((-1 * rank(delta((close - 1), 5))))), 2), 1))))), 1),
+        5) + ts_rank(delay((-1 * returns_), 6), 5))
 
 
 def alpha_30(df: pd.DataFrame):
@@ -662,7 +663,7 @@ def alpha_56(df: pd.DataFrame):
     :param df:
     :return:
     """
-    # todo
+    # todo cap
 
     factor = (0 - (1 * (
             rank((sum(returns(df['close']), 10) / sum(sum(returns(df['close']), 2), 3))) * rank((returns * cap)))))
@@ -869,6 +870,7 @@ def alpha_71(df: pd.DataFrame):
     :param df:
     :return:
     """
+    # todo
     factor = max(ts_rank(decay_linear(
         correlation(ts_rank(df['close'], 3.43976), ts_rank(adv(df['close'], df['volume'], 180), 12.0647), 18.0175),
         4.20501), 15.6948), ts_rank(decay_linear(
@@ -898,6 +900,7 @@ def alpha_73(df: pd.DataFrame):
     :param df:
     :return:
     """
+    # todo
     factor = (max(rank(decay_linear(delta(vwap(df['close'], df['volume']), 4.72775), 2.91864)), ts_rank(decay_linear(((
                                                                                                                               delta(
                                                                                                                                   (
@@ -978,6 +981,7 @@ def alpha_78(df: pd.DataFrame):
     :param df:
     :return:
     """
+    # todo
     factor = (rank(correlation(sum(((df['low'] * 0.352233) + (df['volume'] * (1 - 0.352233))), 19.7428),
                                sum(adv(df['close'], df['volume'], 40), 19.7428), 6.83313)) ^ rank(
         correlation(rank(vwap(df['close'], df['volume'])), rank(df['volume']), 5.77492)))
@@ -1071,7 +1075,7 @@ def alpha_85(df: pd.DataFrame):
     # todo bug
     factor = (rank(
         correlation(((df['high'] * 0.876703) + (df['close'] * (1 - 0.876703))), adv(df['close'], df['volume'], 30),
-                    9.61331)) ^ rank(
+                    9.61331)) ** rank(
         correlation(ts_rank(((df['high'] + df['low']) / 2), 3.70596), ts_rank(df['volume'], 10.1595), 7.11408)))
     return factor
 
@@ -1110,6 +1114,7 @@ def alpha_88(df: pd.DataFrame):
     :param df:
     :return:
     """
+    # todo
     factor = min(
         rank(decay_linear(((rank(df['open']) + rank(df['low'])) - (rank(df['high']) + rank(df['close']))), 8.06882)),
         ts_rank(decay_linear(
@@ -1203,6 +1208,7 @@ def alpha_94(df: pd.DataFrame):
     :param df:
     :return:
     """
+    # todo
     factor = ((rank((vwap(df['close'], df['volume']) - ts_min(vwap(df['close'], df['volume']), 11.5783))) ^ ts_rank(
         correlation(ts_rank(vwap(df['close'], df['volume']), 19.6462),
                     ts_rank(adv(df['close'], df['volume'], 60), 4.02992), 18.0926), 2.70756)) * -1)
@@ -1226,6 +1232,7 @@ def alpha_96(df: pd.DataFrame):
     :param df:
     :return:
     """
+    # todo
     factor = (max(
         ts_rank(decay_linear(correlation(rank(vwap(df['close'], df['volume'])), rank(df['volume']), 3.83878), 4.16783),
                 8.38151), ts_rank(decay_linear(ts_argmax(

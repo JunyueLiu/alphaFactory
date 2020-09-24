@@ -103,6 +103,14 @@ def hml(market_data: pd.DataFrame or pd.Series,
     factor.name = 'HML'
     return factor.to_frame()
 
+def rmw():
+    pass
+
+def cma():
+    pass
+
+
+
 if __name__ == '__main__':
     # raw_factor
     path = r'../../local_data/joinquant/capital_change.parquet'
