@@ -16,7 +16,7 @@ from backtesting.dash_app.app import app as app_
 from backtesting.plotting import aggregate_returns_heatmap, returns_distribution_plot, entry_and_exit_plot, \
     net_value_plot
 
-from technical_analysis import momentum
+from technical_analysis import momentum, statistic_function
 from technical_analysis import pattern
 from technical_analysis import volume
 from technical_analysis import volatility
@@ -29,6 +29,7 @@ from technical_analysis.volume import *
 from technical_analysis.volatility import *
 from technical_analysis.overlap import *
 from technical_analysis.customization import *
+from technical_analysis.statistic_function import *
 from technical_analysis.utils import *
 
 
@@ -357,6 +358,8 @@ def get_backtesting_report_dash_app(backtesting_result: dict, dash_app=None):
             l = volume.__func__
         elif category == 'pattern':
             l = pattern.__func__
+        elif category == 'statistic_function':
+            l = statistic_function.__func__
 
         return [{'label': i, 'value': i} for i in l]
 
