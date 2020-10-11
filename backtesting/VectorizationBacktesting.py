@@ -95,6 +95,7 @@ class VectorizedBacktesting(BacktestingBase):
             partial_bar_manager.low = bar_manager.low[i: i + size]
             partial_bar_manager.close = bar_manager.close[i: i + size]
             for k, v in bar_manager.ta.items():
+                # this slow down the process, could be faster
                 if isinstance(v, list):
                     ll = []
                     for t in v:
@@ -196,3 +197,10 @@ class VectorizedBacktesting(BacktestingBase):
                 pass
                 # print('skip kline for look back')
         self.calculate_result()
+
+class TickBarVectorizedBacktesting(VectorizedBacktesting):
+    def _initial_strategy(self):
+        super()._initial_strategy()
+        self.kline_type_on_bar_match['K_1000count'] = self.strategy.on_count1000_bar
+        self.kline_type_on_bar_match['K_2000count'] = self.strategy.on_count2000_bar
+        self.kline_type_on_bar_match['K_3000count'] = self.strategy.on_count3000_bar

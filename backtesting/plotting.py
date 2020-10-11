@@ -17,6 +17,7 @@ from technical_analysis.pattern import *
 from technical_analysis.volume import *
 from technical_analysis.volatility import *
 from technical_analysis.overlap import *
+from technical_analysis.statistic_function import *
 from technical_analysis.customization import *
 
 pio.renderers.default = "browser"
