@@ -75,13 +75,17 @@ class FxcmBrokerage(BrokerageBase):
         return 1, ''
 
     def modify_order(self, modify_order_op, order_id, qty, price, *args, **kwargs):
+        # This function will change stop and limit orders that are bound to an unexecuted order.
+        self.con.change_order_stop_limit()
+
+        self.con.change_trade_stop_limit()
         pass
 
     def cancel_all_order(self, *args):
         pass
 
-    def change_order(self, order_id, price, qty, *args, **kwargs):
-        pass
+    def change_order(self, order_id, price, qty, rate=None, order_range=0, trailing_step=None, *args, **kwargs):
+        self.con.change_order(order_id, qty, rate, order_range=order_range, trailing_step=trailing_step)
 
     def acctradinginfo_query(self, *args, **kwargs):
         pass

@@ -5,6 +5,12 @@ import datetime
 from datetime import timedelta
 import pytz
 
+import plotly.io as pio
+
+pio.renderers.default = "browser"
+from graph.bar_component import candlestick
+import plotly.graph_objects as go
+
 
 class FxcmQuote(QuoteBase):
     name = 'fxcm'
@@ -57,6 +63,8 @@ class FxcmQuote(QuoteBase):
             for col in self.ohlc_key:
                 data[col] = (data['bid' + col] + data['ask' + col]) / 2
             data = data[self.cols]
+            data['code'] = symbol
+            data['k_type'] = 'K_' + kline_type[-1] + kline_type[0]
             return 1, data
         except ValueError:
             data = 'ValueError'
@@ -119,35 +127,74 @@ class FxcmQuote(QuoteBase):
                 updated = updated[updated.index > cur]
                 updated['tickqty'] = 0
                 data = data.append(updated)
+        data['code'] = symbol
+        data['k_type'] = 'K_' + ktype[-1] + ktype[0]
         return 1, data
 
     def get_this_week_history_kline(self, symbol, kline_type='H1'):
-        start = self._get_this_week_start_utc_time().replace(tzinfo=None)
-        end = self._get_this_week_end_utc_time().replace(tzinfo=None)
+        start = self._get_this_week_start_utc_time_of_week().replace(tzinfo=None)
+        end = self._get_this_week_end_utc_time_of_week().replace(tzinfo=None)
 
         return self.get_history_kline(symbol, start=start, end=end, kline_type=kline_type, num=10000)
 
+    def get_this_week_history_count_bar(self, symbol, count: int):
+
+        agg_dict = {'open': 'first',
+                    'high': 'max',
+                    'low': 'min',
+                    'close': 'last',
+                    'date': ['min', 'max'],
+                    'tickqty': 'sum'
+                    }
+        _, count_bar = self.get_this_week_history_kline(symbol, 'm1')
+
+        count_bar['group'] = len(count_bar)
+        bar_sample = 0
+        cum_tick = 0
+        for index, value in count_bar.iterrows():
+            cum_tick += value['tickqty']
+            count_bar['group'].loc[index] = bar_sample
+            if cum_tick >= count:
+                cum_tick = 0
+                bar_sample += 1
+
+        count_bar = count_bar.reset_index().groupby('group').agg(agg_dict)
+
+        count_bar.columns = ['open',
+                             'high',
+                             'low',
+                             'close',
+                             'date' + '_start',
+                             'date',
+                             'tickqty']
+        count_bar.set_index('date', inplace=True)
+        data['code'] = symbol
+        data['k_type'] = 'K_' + str(count) + 'count'
+        return count_bar
+
     @staticmethod
-    def _get_this_week_start_utc_time():
-        nz = datetime.datetime.now(tz=pytz.timezone('nz'))
+    def _get_this_week_start_utc_time_of_week(nz: datetime.datetime or None = None):
+        if nz is None:
+            nz = datetime.datetime.now(tz=pytz.timezone('nz'))
         start = (nz - timedelta(days=nz.weekday(), hours=nz.hour - 9, minutes=nz.minute, seconds=nz.second,
                                 microseconds=nz.microsecond))
         utc_start = start.astimezone(pytz.utc)
         return utc_start
 
     @staticmethod
-    def _get_this_week_end_utc_time():
-        east = datetime.datetime.now(tz=pytz.timezone('US/Eastern'))
-        end = (east - timedelta(days=east.weekday() - 4, hours=east.hour - 17, minutes=east.minute, seconds=east.second,
-                                microseconds=east.microsecond))
+    def _get_this_week_end_utc_time_of_week(nz: datetime.datetime or None = None):
+        if nz is None:
+            nz = datetime.datetime.now(tz=pytz.timezone('US/Eastern'))
+        end = (nz - timedelta(days=nz.weekday() - 4, hours=nz.hour - 17, minutes=nz.minute, seconds=nz.second,
+                              microseconds=nz.microsecond))
         utc_end = end.astimezone(pytz.utc)
         return utc_end
 
     def is_trading(self):
         # from monday 9 am of New Zealand/Wellington time to Friday 5 pm of US / Eastern time
 
-        utc_start = self._get_this_week_start_utc_time()
-        utc_end = self._get_this_week_end_utc_time()
+        utc_start = self._get_this_week_start_utc_time_of_week()
+        utc_end = self._get_this_week_end_utc_time_of_week()
         now = datetime.datetime.now(tz=pytz.utc)
         if utc_start <= now <= utc_end:
             return True
@@ -155,6 +202,9 @@ class FxcmQuote(QuoteBase):
             return False
 
 
-
 if __name__ == '__main__':
     fxcm_quote = FxcmQuote(config_file='../gateway/fxcm_config/demo_config')
+    _, data = fxcm_quote.get_this_week_history_kline('EUR/USD', 'm1')
+    count_bar = fxcm_quote.get_this_week_history_count_bar('EUR/USD', 3000)
+
+    go.Figure(candlestick(count_bar)).show()
