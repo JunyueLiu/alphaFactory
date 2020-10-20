@@ -1,29 +1,51 @@
+from gateway.constant import KLType
 from gateway.quote_base import QuoteBase
 import fxcmpy
 import pandas as pd
 import datetime
 from datetime import timedelta
 import pytz
+from collections import defaultdict
+import plotly.io as pio
+
+pio.renderers.default = "browser"
+from graph.bar_component import candlestick
+import plotly.graph_objects as go
 
 
 class FxcmQuote(QuoteBase):
     name = 'fxcm'
     ohlc_key = ['open', 'high', 'low', 'close']
     cols = ['open', 'high', 'low', 'close', 'tickqty']
+    ktype_fxcmKtype = {
+        KLType.K_1M: 'm1',
+        KLType.K_5M: 'm5',
+        KLType.K_15M: 'm15',
+        KLType.K_60M: 'H1',
+        KLType.K_2H: 'H2',
+        KLType.K_4H: 'H4',
+        KLType.K_6H: 'H6',
+        KLType.K_8H: 'H8',
+        KLType.K_DAY: 'D1',
+        KLType.K_WEEK: 'W1',
+        KLType.K_MON: 'M1'
+
+    }
+
     fre_dict = {
-        'm1': '1T',
-        'm5': '5T',
-        'm15': '15T',
-        'm30': '30T',
-        'H1': '1H',
-        'H2': '2H',
-        'H3': '3H',
-        'H4': '4H',
-        'H6': '6H',
-        'H8': '8H',
-        'D1': '1D',
-        'W1': '1W',
-        'M1': '1M'
+        KLType.K_1M: '1T',
+        KLType.K_5M: '5T',
+        KLType.K_15M: '15T',
+        # KLType.K_60M: '30T',
+        KLType.K_60M: '1H',
+        KLType.K_2H: '2H',
+        KLType.K_3H: '3H',
+        KLType.K_4H: '4H',
+        KLType.K_6H: '6H',
+        KLType.K_8H: '8H',
+        KLType.K_DAY: '1D',
+        KLType.K_WEEK: '1W',
+        KLType.K_MON: '1M'
 
     }
 
@@ -33,6 +55,8 @@ class FxcmQuote(QuoteBase):
                  log_file=None, log_level='', server='demo',
                  proxy_url=None, proxy_port=None, proxy_type=None):
         super(FxcmQuote, self).__init__()
+        self.subscribe_data = defaultdict()
+        self.last = None
         if fxcm is None:
             self.con = fxcmpy.fxcmpy(access_token=access_token, config_file=config_file,
                                      log_file=log_file, log_level=log_level, server=server,
@@ -51,16 +75,31 @@ class FxcmQuote(QuoteBase):
             offers = 'ValueError'
             return 0, offers
 
-    def get_history_kline(self, symbol, start=None, end=None, kline_type='H1', num=10, *args, **kwargs):
-        try:
-            data = self.con.get_candles(symbol, period=kline_type, number=num, start=start, end=end)
-            for col in self.ohlc_key:
-                data[col] = (data['bid' + col] + data['ask' + col]) / 2
-            data = data[self.cols]
-            return 1, data
-        except ValueError:
-            data = 'ValueError'
-            return 0, data
+    def get_history_kline(self, symbol, start=None, end=None, kline_type=KLType.K_60M, num=10, *args,
+                          **kwargs):
+        if 'count' not in kline_type:
+            try:
+                data = self.con.get_candles(symbol, period=self.ktype_fxcmKtype[kline_type], number=num, start=start,
+                                            end=end)
+                for col in self.ohlc_key:
+                    data[col] = (data['bid' + col] + data['ask' + col]) / 2
+                data = data[self.cols]
+                data['code'] = symbol
+                data['k_type'] = kline_type
+                return 1, data
+            except ValueError:
+                data = 'ValueError'
+                return 0, data
+        else:
+            if start is not None or end is not None:
+                return 0, 'For count bar start and end cannot be specific. '
+            count = int(kline_type.replace('K_', '').replace('count', ''))
+            dt = datetime.datetime.now()
+            count_bar = self.get_history_count_bar(symbol, count, dt)
+            while len(count_bar) < num:
+                cb = self.get_history_count_bar(symbol, count, dt - timedelta(days=7))
+                count_bar = cb.append(count_bar)
+            return 1, count_bar[-num:]
 
     def get_symbol_basic_info(self, market, symbol_type, symbol_list=None, *args, **kwargs):
         pass
@@ -68,9 +107,12 @@ class FxcmQuote(QuoteBase):
     def subscribe(self, code_list, subtype_list=None, add_callbacks=(), *args, **kwargs):
         # {'Updated': 1599441546176, 'Rates': [1.1837600000000001, 1.18387, 1.18499, 1.18309], 'Symbol': 'EUR/USD'}
         # df 2020-09-07 01:18:42.099  1.18376  1.18387  1.18499  1.18309
-        for code in code_list:
-            self.con.subscribe_market_data(code, add_callbacks=add_callbacks)
-        return 1, ''
+        if subtype_list is None:
+            for code in code_list:
+                self.con.subscribe_market_data(code, add_callbacks=add_callbacks)
+            return 1, ''
+        else:
+            raise NotImplementedError
 
     def unsubscribe(self, code_list, subtype_list=None, *args, **kwargs):
         # super().unsubscribe(code_list, subtype_list, *args, **kwargs)
@@ -100,11 +142,11 @@ class FxcmQuote(QuoteBase):
         data['mp'] = (data['Bid'] + data['Ask']) / 2
         return 1, data[['mp', 'Bid', 'Ask']]
 
-    def get_cur_kline(self, symbol, num=10, ktype='H1', *args, **kwargs):
+    def get_cur_kline(self, symbol, num=10, ktype=KLType.K_60M, *args, **kwargs):
         if self.is_subscribed(symbol)[1] is False:
             self.subscribe([symbol])
 
-        _, data = self.get_history_kline(symbol, num=num - 1, kline_type=ktype)
+        _, data = self.get_history_kline(symbol, num=num, kline_type=ktype)
         cur = data.index[-1]
         _, updated = self.get_prices(symbol)
         updated = updated[updated.index > cur]
@@ -119,35 +161,84 @@ class FxcmQuote(QuoteBase):
                 updated = updated[updated.index > cur]
                 updated['tickqty'] = 0
                 data = data.append(updated)
-        return 1, data
+        data['code'] = symbol
+        data['k_type'] = ktype
+        return 1, data[-num:]
 
-    def get_this_week_history_kline(self, symbol, kline_type='H1'):
-        start = self._get_this_week_start_utc_time().replace(tzinfo=None)
-        end = self._get_this_week_end_utc_time().replace(tzinfo=None)
+    def get_this_week_history_kline(self, symbol, kline_type=KLType.K_60M):
+        start = self._get_this_week_start_utc_time_of_week().replace(tzinfo=None)
+        end = self._get_this_week_end_utc_time_of_week().replace(tzinfo=None)
 
-        return self.get_history_kline(symbol, start=start, end=end, kline_type=kline_type, num=10000)
+        return self.get_history_kline(symbol, start=start, end=end, kline_type=kline_type,
+                                      num=10000)
+
+    def get_specific_week_history_kline(self, symbol, kline_type, dt: datetime.datetime):
+        start = self._get_this_week_start_utc_time_of_week(dt)
+        end = self._get_this_week_end_utc_time_of_week(dt)
+
+        return self.get_history_kline(symbol, start, end, kline_type=kline_type, num=10000)
+
+    def get_history_count_bar(self, symbol, count: int, dt: datetime.datetime or None = None):
+
+        agg_dict = {'open': 'first',
+                    'high': 'max',
+                    'low': 'min',
+                    'close': 'last',
+                    'date': ['min', 'max'],
+                    'tickqty': 'sum'
+                    }
+        if dt is not None:
+            _, count_bar = self.get_specific_week_history_kline(symbol, KLType.K_1M, datetime.datetime.now())
+        else:
+            _, count_bar = self.get_specific_week_history_kline(symbol, KLType.K_1M, dt)
+
+        count_bar['group'] = len(count_bar)
+        bar_sample = 0
+        cum_tick = 0
+        for index, value in count_bar.iterrows():
+            cum_tick += value['tickqty']
+            count_bar['group'].loc[index] = bar_sample
+            if cum_tick >= count:
+                cum_tick = 0
+                bar_sample += 1
+
+        count_bar = count_bar.reset_index().groupby('group').agg(agg_dict)
+
+        count_bar.columns = ['open',
+                             'high',
+                             'low',
+                             'close',
+                             'date' + '_start',
+                             'date',
+                             'tickqty']
+        count_bar.set_index('date', inplace=True)
+        count_bar['code'] = symbol
+        count_bar['k_type'] = 'K_' + str(count) + 'count'
+        return count_bar
 
     @staticmethod
-    def _get_this_week_start_utc_time():
-        nz = datetime.datetime.now(tz=pytz.timezone('nz'))
+    def _get_this_week_start_utc_time_of_week(nz: datetime.datetime or None = None):
+        if nz is None:
+            nz = datetime.datetime.now(tz=pytz.timezone('nz'))
         start = (nz - timedelta(days=nz.weekday(), hours=nz.hour - 9, minutes=nz.minute, seconds=nz.second,
                                 microseconds=nz.microsecond))
-        utc_start = start.astimezone(pytz.utc)
+        utc_start = start.astimezone(pytz.utc).replace(tzinfo=None)
         return utc_start
 
     @staticmethod
-    def _get_this_week_end_utc_time():
-        east = datetime.datetime.now(tz=pytz.timezone('US/Eastern'))
-        end = (east - timedelta(days=east.weekday() - 4, hours=east.hour - 17, minutes=east.minute, seconds=east.second,
-                                microseconds=east.microsecond))
-        utc_end = end.astimezone(pytz.utc)
+    def _get_this_week_end_utc_time_of_week(nz: datetime.datetime or None = None):
+        if nz is None:
+            nz = datetime.datetime.now(tz=pytz.timezone('US/Eastern'))
+        end = (nz - timedelta(days=nz.weekday() - 4, hours=nz.hour - 17, minutes=nz.minute, seconds=nz.second,
+                              microseconds=nz.microsecond))
+        utc_end = end.astimezone(pytz.utc).replace(tzinfo=None)
         return utc_end
 
     def is_trading(self):
         # from monday 9 am of New Zealand/Wellington time to Friday 5 pm of US / Eastern time
 
-        utc_start = self._get_this_week_start_utc_time()
-        utc_end = self._get_this_week_end_utc_time()
+        utc_start = self._get_this_week_start_utc_time_of_week()
+        utc_end = self._get_this_week_end_utc_time_of_week()
         now = datetime.datetime.now(tz=pytz.utc)
         if utc_start <= now <= utc_end:
             return True
@@ -155,6 +246,9 @@ class FxcmQuote(QuoteBase):
             return False
 
 
-
 if __name__ == '__main__':
     fxcm_quote = FxcmQuote(config_file='../gateway/fxcm_config/demo_config')
+    # _, data = fxcm_quote.get_this_week_history_kline('EUR/USD', 'm1')
+    # count_bar = fxcm_quote.get_this_week_history_count_bar('EUR/USD', 3000)
+
+    # go.Figure(candlestick(count_bar)).show()
