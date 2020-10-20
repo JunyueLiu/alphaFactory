@@ -97,7 +97,8 @@ class FxcmQuote(QuoteBase):
             dt = datetime.datetime.now()
             count_bar = self.get_history_count_bar(symbol, count, dt)
             while len(count_bar) < num:
-                cb = self.get_history_count_bar(symbol, count, dt - timedelta(days=7))
+                dt = dt - timedelta(days=7)
+                cb = self.get_history_count_bar(symbol, count, dt)
                 count_bar = cb.append(count_bar)
             return 1, count_bar[-num:]
 
@@ -187,7 +188,7 @@ class FxcmQuote(QuoteBase):
                     'date': ['min', 'max'],
                     'tickqty': 'sum'
                     }
-        if dt is not None:
+        if dt is None:
             _, count_bar = self.get_specific_week_history_kline(symbol, KLType.K_1M, datetime.datetime.now())
         else:
             _, count_bar = self.get_specific_week_history_kline(symbol, KLType.K_1M, dt)
