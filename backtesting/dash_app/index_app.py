@@ -337,7 +337,6 @@ def get_backtesting_report_dash_app(backtesting_result: dict, dash_app=None):
             e = False
         else:
             e = True
-
         ta = json.loads(ta_dict)
         return entry_and_exit_plot(data, trade_graph, symbol, ohlc_graph, entrust=e, ta_dict=ta), \
                trade.to_dict('records'), selected_cond
@@ -419,14 +418,15 @@ def get_backtesting_report_dash_app(backtesting_result: dict, dash_app=None):
                         continue
                     indicator_str += p['props']['id']
 
-
-                    try:
-                        value = str(int(p['props']['value']))
-                    except ValueError:
-                        try:
-                            value = str(float(p['props']['value']))
-                        except ValueError:
-                            value = "'" + p['props']['value'] + "'"
+                    if type(p['props']['value']) == float:
+                        value = str(p['props']['value'])
+                    elif type(p['props']['value']) == int:
+                        value = str(p['props']['value'])
+                    elif type(p['props']['value']) == str:
+                        if p['props']['value'][0].isdigit():
+                            value = p['props']['value']
+                    else:
+                        value = "'" + p['props']['value'] + "'"
                     indicator_str += "=" + value + ','
                 elif p['type'] == 'Dropdown':
                     indicator_str += p['props']['id'] + '=MA_Type.' + p['props']['value'] + ','

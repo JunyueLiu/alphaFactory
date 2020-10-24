@@ -3,6 +3,7 @@ from gateway.quote_base import QuoteBase
 import fxcmpy
 import pandas as pd
 import datetime
+import time
 from datetime import timedelta
 import pytz
 from collections import defaultdict
@@ -102,6 +103,53 @@ class FxcmQuote(QuoteBase):
                 count_bar = cb.append(count_bar)
             return 1, count_bar[-num:]
 
+    def update_count_bar(self, count_bar: pd.DataFrame) -> pd.DataFrame:
+        # todo new bar logic should apply to trader part (use date_start to tell, date == date_start)
+        symbol = count_bar['code'][0]
+        count_now = count_bar['tickqty'][-1]
+        start = count_bar['date_start'][-1]
+        count = int(count_bar['k_type'][-1].replace('K_', '').replace('count', ''))
+
+        _, m1_bar = self.get_cur_kline(symbol, num=500, kline_type=KLType.K_1M)
+        m1_bar = m1_bar[m1_bar.index >= start]
+
+        if count_now < count:
+            count_bar = count_bar[:-1]
+
+        m1_bar.index.name = 'date'
+        m1_bar.reset_index(inplace=True)
+
+        agg_dict = {'open': 'first',
+                    'high': 'max',
+                    'low': 'min',
+                    'close': 'last',
+                    'date': ['min', 'max'],
+                    'tickqty': 'sum'
+                    }
+        m1_bar['group'] = len(count_bar)
+        bar_sample = 0
+        cum_tick = 0
+        for index, value in m1_bar.iterrows():
+            cum_tick += value['tickqty']
+            m1_bar['group'].loc[index] = bar_sample
+            if cum_tick >= count:
+                cum_tick = 0
+                bar_sample += 1
+
+        new_count_bar = m1_bar.reset_index().groupby('group').agg(agg_dict)
+        new_count_bar.columns = ['open',
+                                 'high',
+                                 'low',
+                                 'close',
+                                 'date' + '_start',
+                                 'date',
+                                 'tickqty']
+        new_count_bar.set_index('date', inplace=True)
+        new_count_bar['code'] = symbol
+        new_count_bar['k_type'] = 'K_' + str(count) + 'count'
+        count_bar = count_bar.append(new_count_bar)
+        return count_bar
+
     def get_symbol_basic_info(self, market, symbol_type, symbol_list=None, *args, **kwargs):
         pass
 
@@ -143,18 +191,18 @@ class FxcmQuote(QuoteBase):
         data['mp'] = (data['Bid'] + data['Ask']) / 2
         return 1, data[['mp', 'Bid', 'Ask']]
 
-    def get_cur_kline(self, symbol, num=10, ktype=KLType.K_60M, *args, **kwargs):
+    def get_cur_kline(self, symbol, num=10, kline_type=KLType.K_60M, *args, **kwargs):
         if self.is_subscribed(symbol)[1] is False:
             self.subscribe([symbol])
 
-        _, data = self.get_history_kline(symbol, num=num, kline_type=ktype)
+        _, data = self.get_history_kline(symbol, num=num, kline_type=kline_type)
         cur = data.index[-1]
         _, updated = self.get_prices(symbol)
         updated = updated[updated.index > cur]
 
         if len(updated) > 0:
             updated = updated[['mp']]
-            updated = updated.groupby(pd.Grouper(freq=self.fre_dict[ktype])).agg('ohlc')
+            updated = updated.groupby(pd.Grouper(freq=self.fre_dict[kline_type])).agg('ohlc')
             updated.columns = updated.columns.get_level_values(1)
             if updated.index[-1] == cur:
                 data.update(updated)
@@ -163,7 +211,7 @@ class FxcmQuote(QuoteBase):
                 updated['tickqty'] = 0
                 data = data.append(updated)
         data['code'] = symbol
-        data['k_type'] = ktype
+        data['k_type'] = kline_type
         return 1, data[-num:]
 
     def get_this_week_history_kline(self, symbol, kline_type=KLType.K_60M):
@@ -180,7 +228,6 @@ class FxcmQuote(QuoteBase):
         return self.get_history_kline(symbol, start, end, kline_type=kline_type, num=10000)
 
     def get_history_count_bar(self, symbol, count: int, dt: datetime.datetime or None = None):
-
         agg_dict = {'open': 'first',
                     'high': 'max',
                     'low': 'min',
@@ -249,7 +296,14 @@ class FxcmQuote(QuoteBase):
 
 if __name__ == '__main__':
     fxcm_quote = FxcmQuote(config_file='../gateway/fxcm_config/demo_config')
-    # _, data = fxcm_quote.get_this_week_history_kline('EUR/USD', 'm1')
+    _, data = fxcm_quote.get_history_kline('EUR/USD', kline_type=KLType.K_2000count)
     # count_bar = fxcm_quote.get_this_week_history_count_bar('EUR/USD', 3000)
+    last_row = data.iloc[-1:]
+    pd.set_option('max_columns', None)
+
+    while True:
+        data = fxcm_quote.update_count_bar('EUR/USD', data)
+        print(data[-1:])
+        time.sleep(5)
 
     # go.Figure(candlestick(count_bar)).show()

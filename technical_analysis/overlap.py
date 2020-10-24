@@ -294,7 +294,7 @@ def SAR(inputs, acceleration: float = 0.02, period: int = 14, prices=None):
     return indicator(inputs, acceleration=acceleration, timeperiod=period, prices=prices)
 
 
-def SAREXT(inputs, offsetonreverse: int = 0,
+def SAREXT(inputs, offsetonreverse: float = 0.0,
            accelerationinitlong=0.02,
            accelerationlong=0.02,
            accelerationmaxlong=0.2,
