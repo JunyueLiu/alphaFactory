@@ -7,6 +7,8 @@ import numpy as np
 
 import calendar
 
+from graph.indicator_component import macd_graph, sar_graph
+
 calendar.setfirstweekday(calendar.SUNDAY)
 import pandas as pd
 import plotly.io as pio
@@ -97,10 +99,14 @@ def entry_and_exit_plot(ohlc_df, traded: pd.DataFrame, symbol: str, ohlc_graph=T
         for ta, overlap in ta_dict.items():
             call_str = ta.replace('inputs', 'ohlc_df')
             ta_indicator = eval(call_str)
+            ta_name = call_str.split('(')[0]
             if isinstance(ta_indicator, pd.Series):
                 index = ta_indicator.index.strftime('%Y/%m/%d %H:%M:%S')
                 if overlap is True:
-                    fig.add_trace(go.Scatter(x=index, y=ta_indicator, mode='lines', name=call_str), 1, 1)
+                    if ta_name == 'SAR':
+                        fig.add_trace(sar_graph(ta_indicator, ohlc_df['close']), 1, 1)
+                    else:
+                        fig.add_trace(go.Scatter(x=index, y=ta_indicator, mode='lines', name=call_str), 1, 1)
                 else:
                     fig.add_trace(go.Scatter(x=index, y=ta_indicator, mode='lines', name=call_str), subplot_i, 1)
                     subplot_i += 1
@@ -111,8 +117,11 @@ def entry_and_exit_plot(ohlc_df, traded: pd.DataFrame, symbol: str, ohlc_graph=T
                     for col in ta_indicator.columns:
                         fig.add_trace(go.Scatter(x=index, y=ta_indicator[col], mode='lines', name=col), 1, 1)
                 else:
-                    for col in ta_indicator.columns:
-                        fig.add_trace(go.Scatter(x=index, y=ta_indicator[col], mode='lines', name=col), subplot_i, 1)
+                    if ta_name == 'MACD' or ta_name == 'MACDEXT' or ta_name == 'MACDFIX':
+                        fig.add_traces(macd_graph(ta_indicator), [subplot_i]*3, [1]* 3)
+                    else:
+                        for col in ta_indicator.columns:
+                            fig.add_trace(go.Scatter(x=index, y=ta_indicator[col], mode='lines', name=col), subplot_i, 1)
                     subplot_i += 1
 
     x_axis = fig.data[0].x
@@ -120,7 +129,7 @@ def entry_and_exit_plot(ohlc_df, traded: pd.DataFrame, symbol: str, ohlc_graph=T
     tick_text = [x_axis[i][0:10] for i in range(0, len(x_axis), len(x_axis) // 5)]
     fig.update_xaxes(ticktext=tick_text, tickvals=tick_value)
     # fig.update_layout(showlegend=True, xaxis_rangeslider_visible=False)
-    fig.update_layout(showlegend=True, yaxis1=dict(
+    fig.update_layout(showlegend=True, height=175 * len(fig.data),yaxis1=dict(
         autorange=True,
         fixedrange=False), yaxis2=dict(
         autorange=True,
@@ -430,5 +439,3 @@ def aggregate_returns_heatmap(agg_ret: pd.Series, period):
         return quarter_heatmap(agg_ret)
     elif period == 'year':
         return year_heatmap(agg_ret)
-
-

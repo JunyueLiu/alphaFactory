@@ -31,7 +31,7 @@ def _set_xlabel(index):
         day = start_datetime
         texts.append(index[0].split(' ')[0])
         i = 1
-        interval = interval / (60 * 24)
+        interval = int(interval / (60 * 24))
         while day < end_datetime:
             values.append(index[i * interval])
             texts.append(index[i * interval])
