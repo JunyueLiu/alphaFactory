@@ -1,5 +1,11 @@
 import yfinance as yf
 import os
+import threading
+import pandas as pd
+import time
+
+from data_downloader.multi_asset_data_merger import merge_single_asset
+from data_downloader.utils import joinquant_to_yfinance_ticker
 
 
 def download_kline_and_save(code, save_folder=''):
@@ -12,6 +18,27 @@ def download_kline_and_save(code, save_folder=''):
     file_name = '{}_{}_{}.csv'.format(code, start, end)
     data.to_csv(os.path.join(save_folder, file_name))
     print('save:', file_name)
+
+
+def multi_thread_download(code_list: list, save_folder=''):
+    threads = []
+    for code in code_list:
+        threads.append(threading.Thread(target=download_kline_and_save, args=(code, save_folder)))
+        try:
+            threads[-1].start()
+            time.sleep(0.2)
+        except:
+            pass
+
+    for i in range(len(threads)):
+        threads[i].join()
+
+    print("Done.")
+
+def merge_data_save_parquet(paths, save_path,time_key='Date', code_key = 'code'):
+    df = merge_single_asset(paths, time_key=time_key, code_key=code_key) # type:pd.DataFrame
+    print('Save...')
+    df.to_parquet(save_path)
 
 
 if __name__ == '__main__':
@@ -27,4 +54,10 @@ if __name__ == '__main__':
     #                  '2382.HK', '2388.HK', '2628.HK', '3328.HK', '3988.HK']
     # for c in hsi_component:
     #     download_kline_and_save(c, '/Users/liujunyue/PycharmProjects/alphaFactory/local_data')
-    download_kline_and_save('^HSI', 'r../local_data')
+    # download_kline_and_save('^HSI', 'r../local_data')
+    # df = pd.read_csv('../local_data/joinquant/stock.csv', index_col=0)
+    # code_list = joinquant_to_yfinance_ticker(df.index.to_list())
+    # multi_thread_download(code_list, r'../local_data/CHINA')
+    files = os.listdir(r'../local_data/CHINA')
+    paths = [os.path.join(r'../local_data/CHINA', f) for f in files]
+    merge_data_save_parquet(paths, r'../local_data/A_Shares.parquet')
