@@ -95,7 +95,7 @@ class VectorizedBacktesting(BacktestingBase):
             partial_bar_manager.low = bar_manager.low[i: i + size]
             partial_bar_manager.close = bar_manager.close[i: i + size]
             for k, v in bar_manager.ta.items():
-                # this slow down the process, could be faster
+                # todo this slow down the process, could be faster
                 if isinstance(v, list):
                     ll = []
                     for t in v:
@@ -138,11 +138,12 @@ class VectorizedBacktesting(BacktestingBase):
                         self.min_timestamp = bar_t
                     self.state[kline_type][symbol] = bar
                     self.bar_timestamp[kline_type][symbol] = bar_t
-                return True
+            return True
         else:
             # if current dt is less than first dt that bar occupies, skip it
             if dt < self.min_timestamp:
                 return False
+            min_t = None
             for kline_type, symbol_generator in self.state_generators.items():
                 for symbol, generator in symbol_generator.items():
                     # this condition is to make sure the unaligned kline input
@@ -154,10 +155,13 @@ class VectorizedBacktesting(BacktestingBase):
                         bar_t, bar = next(generator)
                     except StopIteration:
                         return None
-                    if bar_t > self.min_timestamp:
-                        self.min_timestamp = bar_t
+                    # if bar_t > self.min_timestamp:
+                    #     self.min_timestamp = bar_t
+                    min_t = bar_t if min_t is None else min(min_t, bar_t)
                     self.state[kline_type][symbol] = bar
                     self.bar_timestamp[kline_type][symbol] = bar_t
+            if min_t > self.min_timestamp:
+                self.min_timestamp = min_t
             return True
 
     def run(self):
@@ -181,6 +185,8 @@ class VectorizedBacktesting(BacktestingBase):
                 for k, on_bar in self.kline_type_on_bar_match.items():
                     if k in self.bar_timestamp.keys():
                         keys = [k for k, v in self.bar_timestamp[k].items() if v == t]
+                        if len(keys) == 0:
+                            continue
                         bar_state = {k: v for k, v in self.state[k].items() if k in keys}
                         if matching_order is True:
                             dealt_list = self.brokerage_ctx.match_working_order(bar_state)
