@@ -35,7 +35,7 @@ def high_minus_low_groupby_function(df: pd.DataFrame, col: str, q: float, long: 
 
 def smb(market_data: pd.DataFrame or pd.Series,
         total_shares: pd.Series,
-        start=None, end=None,
+        start=None, end=None, rebalance_time: int or list = 6,
         trading_date: None or list = None,
         suspend_data: None or pd.Series = None,
         universe: pd.Series or pd.DataFrame = None,
@@ -60,6 +60,8 @@ def smb(market_data: pd.DataFrame or pd.Series,
         elif weight == 'equal':
             merge_df['weight'] = 1
     merge_df.dropna(inplace=True)
+    # todo double sort should be applied in specific date
+
     factor = merge_df.groupby(level=0).apply(
         lambda x: small_minus_big_groupby_function(x, 'total_capital', quantile, long, short))
     factor.name = 'SMB'
@@ -103,12 +105,13 @@ def hml(market_data: pd.DataFrame or pd.Series,
     factor.name = 'HML'
     return factor.to_frame()
 
+
 def rmw():
     pass
 
+
 def cma():
     pass
-
 
 
 if __name__ == '__main__':

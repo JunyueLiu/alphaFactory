@@ -110,6 +110,15 @@ def sar_graph(series: pd.Series, close: pd.Series or None = None, timestamp=None
         marker_color = np.where(series < close, color[1], color[0])
     return go.Scatter(x=timestamp, y=series, name='SAR', mode='markers', marker_color=marker_color)
 
+def pattern_graph(series: pd.Series, timestamp=None, direction=None, annotation=None):
+
+    pass
+
+
+
+
+
+
 
 if __name__ == '__main__':
     df = pd.read_csv('../local_data/EURUSD/count5000.csv')

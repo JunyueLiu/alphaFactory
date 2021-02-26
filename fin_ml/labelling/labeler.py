@@ -1,6 +1,8 @@
 # TRIPLE - BARRIER LABELING METHOD
 import pandas as pd
 import numpy as np
+import tqdm
+from collections import Counter
 
 
 def getDailyVol(df, span0=100):
@@ -50,3 +52,78 @@ def get_bins(result, df):
     out['ret'] = touchprice / barprice - 1
     out['bin'] = np.sign(out['ret'])
     return out
+
+
+def triple_barrier_label(candles: pd.DataFrame,
+                         upper: float or list or np.array,
+                         lower: float or list or np.array,
+                         right: int or list or np.array,
+                         event: list or np.array or None = None) -> pd.Series:
+    if event is None:
+        event = candles.index.values
+    # check if legal
+    if isinstance(upper, float) is False:
+        if len(upper) != len(event):
+            raise ValueError(
+                'upper list must have same length with event, but upper has lenght of {}, event has length of {}'.format(
+                    len(upper), len(event)))
+    else:
+        upper = candles.loc[event]['close'] * (1 + upper)
+
+    if isinstance(lower, float) is False:
+        if len(lower) != len(event):
+            raise ValueError(
+                'lower list must have same length with event, but lower has lenght of {}, event has length of {}'.format(
+                    len(lower), len(event)))
+    else:
+        lower = candles.loc[event]['close'] * (1 - lower)
+
+    if isinstance(right, int) is False:
+        if len(right) != len(event):
+            raise ValueError(
+                'right list must have same length with event, but right has lenght of {}, event has length of {}'.format(
+                    len(lower), len(event)))
+        if isinstance(right[0], (int, np.int64, np.int, np.int32, np.int16)):
+            r = []
+            for i in range(len(event)):
+                future = candles.loc[event[i]:]
+                try:
+                    future = future.iloc[right[i]].name
+                    r.append(future)
+                except:
+                    pass
+            right = np.array(r)
+        elif isinstance(right[0], pd.Timestamp):
+            right_is_future = np.all(right > event)
+            if right_is_future is False:
+                raise ValueError('right larger than event date')
+    else:
+        right = pd.Series(candles.index, index=candles.index).shift(-right)[event].dropna().values
+    label = []
+    for i in tqdm.tqdm(range(0, len(right))):
+        label_data = candles.loc[event[i]: right[i]]
+        counter = 0
+        for idx, row in label_data.iterrows():
+            upper_barrier = upper[i]
+            lower_barrier = lower[i]
+
+            if row['high'] >= upper_barrier:
+                if row['low'] <= lower_barrier:
+                    # touch both and same time, label 3
+                    # print(row, upper_barrier, lower_barrier)
+                    label.append(3)
+                else:
+                    # touch up, label 2
+                    label.append(2)
+                break
+            elif row['low'] <= lower_barrier:
+                # touch low, label0
+                label.append(0)
+                break
+            elif counter == len(label_data) - 1:
+                # no touch the whole period
+                label.append(1)
+            counter += 1
+
+    print('\nfinish labelling, result: ', Counter(label))
+    return pd.Series(label, index=event[:len(right)], name='label')

@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
-
+from scipy.stats.mstats import winsorize
+from sklearn import preprocessing
+from sklearn.decomposition import PCA
 
 def normalize_factor(factor: pd.DataFrame, mean=None, std=None) -> pd.DataFrame:
     if mean is None:

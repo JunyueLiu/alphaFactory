@@ -28,25 +28,25 @@ class TripleScreen(Strategy):
         if bar.ta['MA1'][-1] >= bar.ta['MA2'][-1] \
                 and bar.ta['MA1'][-2] < bar.ta['MA2'][-2]:
             if self.position < 0:
-                self.cover(self.traded_code, 1.01 * price, 200, None)
+                self.cover(self.traded_code, 1.01 * price, abs(self.position), None)
                 # self.buy(self.traded_code, 1.01 * price, 1, None)
             elif self.position == 0:
                 if self.long_term_trend is True and self.short_term_reversal is True:
-                    self.buy(self.traded_code, 1.01 * price, 200, None)
+                    self.buy(self.traded_code, 1.01 * price, 100, None)
         elif bar.ta['MA1'][-1] <= bar.ta['MA2'][-1] \
                 and bar.ta['MA1'][-2] > bar.ta['MA2'][-2]:
             if self.position > 0:
-                self.sell(self.traded_code, 0.99 * price, 200, None)
+                self.sell(self.traded_code, 0.99 * price, abs(self.position), None)
                 # self.short(self.traded_code, 0.99 * price, 1, None)
             elif self.position == 0:
                 if self.long_term_trend is False and self.short_term_reversal is False:
-                    self.short(self.traded_code, 0.99 * price, 200, None)
+                    self.short(self.traded_code, 0.99 * price, 100, None)
 
     def on_60min_bar(self, bar: dict):
         bm = bar[self.traded_code] # type: BarManager
-        if bm.ta['MACD'][2][-1] > 0 and bm.ta['HT_TRENDLINE'][-1] < bm.close[-1]:
+        if bm.ta['HT_TRENDLINE'][-1] <= bm.close[-1]:
             self.long_term_trend = True
-        elif bm.ta['MACD'][2][-1] < 0 and bm.ta['HT_TRENDLINE'][-1] > bm.close[-1]:
+        elif bm.ta['HT_TRENDLINE'][-1] >= bm.close[-1]:
             self.long_term_trend = False
         else:
             self.long_term_trend = None
@@ -54,9 +54,9 @@ class TripleScreen(Strategy):
 
     def on_15min_bar(self, bar: dict):
         bm = bar[self.traded_code]  # type: BarManager
-        if bm.ta['RSI'][-1] <= 20:
+        if bm.ta['RSI'][-1] <= 30:
             self.short_term_reversal = True
-        elif bm.ta['RSI'][-1] >= 80:
+        elif bm.ta['RSI'][-1] >= 70:
             self.short_term_reversal = False
         else:
             self.short_term_reversal = None
@@ -70,9 +70,9 @@ class TripleScreen(Strategy):
         if len(dealt_list) > 0:
             for order in dealt_list:
                 if order.order_direction == "LONG":
-                    self.position += 1
+                    self.position += order.deal_qty
                 else:
-                    self.position -= 1
+                    self.position -= order.deal_qty
 
 
 if __name__ == '__main__':
@@ -84,10 +84,15 @@ if __name__ == '__main__':
         'data_source': 'csv',
 
         'data': {
-            'HK.01810': {
-                'K_1M': r'../local_data/HK.01810_2019-12-09 09:30:00_2020-12-08 16:00:00_K_1M_qfq.csv',
-                'K_15M': r'../local_data/HK.01810_2019-12-09 09:45:00_2020-12-08 16:00:00_K_15M_qfq.csv',
-                'K_60M': r'../local_data/HK.01810_2019-12-09 10:30:00_2020-12-08 16:00:00_K_60M_qfq.csv',
+            # 'HK.01810': {
+            #     'K_1M': r'../local_data/HK.01810_2019-12-09 09:30:00_2020-12-08 16:00:00_K_1M_qfq.csv',
+            #     'K_15M': r'../local_data/HK.01810_2019-12-09 09:45:00_2020-12-08 16:00:00_K_15M_qfq.csv',
+            #     'K_60M': r'../local_data/HK.01810_2019-12-09 10:30:00_2020-12-08 16:00:00_K_60M_qfq.csv',
+            # },
+            'HK.03690': {
+                'K_1M': r'../local_data/HK.03690_2019-12-09 09:30:00_2020-12-08 16:00:00_K_1M_qfq.csv',
+                'K_15M': r'../local_data/HK.03690_2019-12-09 09:45:00_2020-12-08 16:00:00_K_15M_qfq.csv',
+                'K_60M': r'../local_data/HK.03690_2019-12-09 10:30:00_2020-12-08 16:00:00_K_60M_qfq.csv',
             }
         },
         # 'benchmark': r'../HK.999010_2019-06-01 00:00:00_2020-05-30 03:00:00_K_1M_qfq.csv',
@@ -100,37 +105,78 @@ if __name__ == '__main__':
 
     strategy_parameter = {
         "lookback_period": {
-            "HK.01810": {
+            # "HK.01810": {
+            #     "K_1M": 20,
+            #     "K_15M": 14,
+            #     "K_60M": 26
+            # },
+            "HK.03690": {
                 "K_1M": 20,
                 "K_15M": 14,
                 "K_60M": 26
             }
         },
         "subscribe": {
-            "HK.01810": [
+            # "HK.01810": [
+            #     "K_1M", "K_15M", "K_60M"
+            # ],
+            "HK.03690": [
                 "K_1M", "K_15M", "K_60M"
             ]
+
         },
         "ta_parameters": {
-            "HK.01810": {
+            # "HK.01810": {
+            #     "K_1M": {
+            #         "MA1": {
+            #             "indicator": "MA",
+            #             "period": 10
+            #         },
+            #         "MA2": {
+            #             "indicator": "MA",
+            #             "period": 20,
+            #             "matype": "MA_Type.SMA",
+            #             "price_type": "'close'"
+            #         },
+            #     },
+            #     "K_15M": {
+            #         "RSI":{
+            #             "indicator": "RSI",
+            #             "period": 14,
+            #         }
+            #
+            #     },
+            #     "K_60M": {
+            #         "MACD": {
+            #             "indicator": "MACD",
+            #
+            #         },
+            #         "HT_TRENDLINE": {
+            #             "indicator": "HT_TRENDLINE",
+            #             # "overlap": True
+            #
+            #         },
+            #
+            #     }
+            #
+            # },
+            "HK.03690": {
                 "K_1M": {
                     "MA1": {
                         "indicator": "MA",
-                        "period": 10
+                        "period": 5
                     },
                     "MA2": {
                         "indicator": "MA",
-                        "period": 20,
+                        "period": 10,
                         "matype": "MA_Type.SMA",
                         "price_type": "'close'"
                     },
                 },
                 "K_15M": {
-                    "RSI":{
+                    "RSI": {
                         "indicator": "RSI",
-                        "period": 10,
-
-
+                        "period": 14,
                     }
 
                 },
@@ -149,7 +195,8 @@ if __name__ == '__main__':
 
             }
         },
-        "traded_code": "HK.01810"
+        # "traded_code": "HK.01810",
+        "traded_code": "HK.03690",
     }
 
     backtesting = VectorizedBacktesting(quote, broker, strategy, strategy_parameter,

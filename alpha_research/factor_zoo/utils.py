@@ -550,6 +550,12 @@ def get_latest_info_by_date(df: pd.DataFrame, start_pd: pd.Timestamp):
     df = df.drop_duplicates(subset=names, keep='last')
     return df.set_index(names).sort_index()
 
+def get_first_trading_date_by_month(trading_date, month):
+    pass
+
+
+
+
 
 def combine_market_with_fundamental(market_data: pd.DataFrame or pd.Series,
                                     fundamental_data: pd.DataFrame or pd.Series,

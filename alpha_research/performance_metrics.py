@@ -228,3 +228,25 @@ def get_monthly_ic(returns: pd.DataFrame, factor: pd.Series, periods: list) -> p
 
 def in_out_sample_factor_t_test(insample_factor: pd.Series, out_of_sample_factor: pd.Series):
     return stats.ttest_ind(insample_factor.values, out_of_sample_factor.values, nan_policy='omit')
+
+# ----------------------------------------------
+# multi factor summary methodology method
+# ----------------------------------------------
+
+# ----------------------------------------------
+# multi factor correlation methodology method
+# ----------------------------------------------
+
+
+# ----------------------------------------------
+# multi factor persistence methodology method
+# ----------------------------------------------
+
+
+# ----------------------------------------------
+# portfolio analysis methodology method
+# ----------------------------------------------
+
+# ----------------------------------------------
+# Fama–MacBeth Regression Analysis
+# ----------------------------------------------

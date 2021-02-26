@@ -66,13 +66,14 @@ class TickBarMaker(BarMaker):
 
     def make_time_bar(self, interval: str):
         bar_data = self.tick_data.copy()
-        resampler = bar_data.resample(interval)
+        resampler = bar_data.resample(interval, closed='left', label='right')
         agg_dict = {self.price_key: ['ohlc', 'count']
                     }
 
         bar_data = resampler.agg(agg_dict)  # type: pd.DataFrame
         bar_data.columns = bar_data.columns.get_level_values(2)
-        bar_data.rename(columns={'mp': 'count'}, inplace=True)
+        bar_data.rename(columns={'mp': 'tickqty'}, inplace=True)
+        bar_data.index.name = 'date'
         bar_data.fillna(method='ffill', inplace=True)
         if self.volume_key is not None:
             bar_data[self.volume_key] = resampler.agg({self.volume_key: 'sum'})
@@ -91,7 +92,8 @@ class TickBarMaker(BarMaker):
         count_bar = count_bar.reset_index().groupby('c').agg(agg_dict)
         count_bar.columns = count_bar.columns.get_level_values(1)
         count_bar.set_index(self.time_key, inplace=True)
-        count_bar['count'] = count
+        count_bar['tickqty'] = count
+        count_bar.index.name = 'date'
         return count_bar
 
     def make_imbalanced_bar(self, alpha: float, default_T: int = 10):
@@ -169,7 +171,7 @@ class BarBarMaker(BarMaker):
                  time_key_format='%m/%d/%Y %H:%M:%S.%f',
                  bid_prefix='Bid',
                  ask_prefix='Ask',
-                 tickqty = None
+                 tickqty='tickqty'
                  ):
         super(BarBarMaker, self).__init__(tick_df)
         self.time_key = time_key
@@ -182,16 +184,18 @@ class BarBarMaker(BarMaker):
             self.ohlc_key = ['Open', 'High', 'Low', 'Close']
         else:
             self.ohlc_key = ohlc_key
-        for col in self.ohlc_key:
-            self.tick[col] = (self.tick[self.bid_prefix + col] + self.tick[self.ask_prefix + col]) / 2
+        if bid_prefix is not None and ask_prefix is not None:
+            for col in self.ohlc_key:
+                self.tick[col] = (self.tick[self.bid_prefix + col] + self.tick[self.ask_prefix + col]) / 2
         cols = [self.time_key]
         cols.extend(self.ohlc_key)
         if self.volume_key is not None:
             cols.append(self.volume_key)
+        if tickqty is not None:
+            cols.append(tickqty)
         self.bar_data = self.tick[cols]
         self.bar_data[self.time_key] = pd.to_datetime(self.bar_data[self.time_key], format=time_key_format)
         self.bar_data.set_index(self.time_key, inplace=True)
-
 
     def make_time_bar(self, time_interval: str):
         bar_data = self.bar_data.copy()
@@ -201,7 +205,9 @@ class BarBarMaker(BarMaker):
                     self.ohlc_key[2]: 'min',
                     self.ohlc_key[3]: 'last',
                     }
-        bar_data = resampler.agg(agg_dict)  # type: pd.DataFrame
+        if self.tickqty is not None:
+            agg_dict[self.tickqty] = 'sum'
+        bar_data = resampler.agg(agg_dict, )  # type: pd.DataFrame
 
         if self.volume_key is not None:
             bar_data[self.volume_key] = resampler.agg({self.volume_key: 'sum'})
@@ -210,17 +216,55 @@ class BarBarMaker(BarMaker):
     def make_count_bar(self, count: int):
         if self.tickqty is None:
             raise KeyError()
+        count_bar = self.bar_data.copy()
+
+        agg_dict = {self.ohlc_key[0]: 'first',
+                    self.ohlc_key[1]: 'max',
+                    self.ohlc_key[2]: 'min',
+                    self.ohlc_key[3]: 'last',
+                    self.time_key: ['min', 'max'],
+                    self.tickqty: 'sum'
+                    }
+        if self.volume_key is not None:
+            agg_dict[self.volume_key] = 'sum'
+        count_bar['group'] = len(self.bar_data)
+        bar_sample = 0
+        cum_tick = 0
+        for index, value in count_bar.iterrows():
+            cum_tick += value[self.tickqty]
+            count_bar['group'].loc[index] = bar_sample
+            if cum_tick >= count:
+                cum_tick = 0
+                bar_sample += 1
+
+        count_bar = count_bar.reset_index().groupby('group').agg(agg_dict)
+
+
+        count_bar.columns = [self.ohlc_key[0],
+                             self.ohlc_key[1],
+                             self.ohlc_key[2],
+                             self.ohlc_key[3],
+                             self.time_key + '_start',
+                             self.time_key,
+                             self.tickqty]
+        count_bar.set_index(self.time_key, inplace=True)
+        return count_bar
+
+    def make_range_bar(self, range: float):
         pass
 
 
 if __name__ == '__main__':
-    # tick_df = pd.read_csv(r'../../local_data/EURUSD/tick/EURUSD_2016_1.csv')
+    tick_df = pd.read_csv(r'../../local_data/EURUSD/tick/EURUSD_2016_1.csv')
 
-    # bm = TickBarMaker(tick_df)
+    bm = TickBarMaker(tick_df)
 
-    # time_bar = bm.make_time_bar('1H')
+    time_bar = bm.make_time_bar('1T')
+    time_bar.reset_index(inplace=True)
     # count_bar = bm.make_count_bar(100)
     # imbalance = bm.make_imbalanced_bar(0.5)
 
-    min_bar_df = pd.read_csv(r'../../local_data/EURUSD/m1/EURUSD_m1_2019_2.csv')
-    bm = BarBarMaker(min_bar_df)
+    # min_bar_df = pd.read_csv(r'../../local_data/EURUSD/m1/EURUSD_m1_2019_2.csv')
+    bm2 = BarBarMaker(time_bar, time_key='date', ohlc_key=['open', 'high', 'low', 'close'],
+                      time_key_format='%Y-%m-%d %H:%M:%S', bid_prefix=None, ask_prefix=None)
+    count_bar = bm2.make_count_bar(1000)

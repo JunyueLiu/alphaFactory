@@ -147,4 +147,4 @@ if __name__ == '__main__':
     portfolio = normalized_net_value(portfolio)
     # print(portfolio)
     app_ = get_pm_report_dash_app(portfolio)
-    app.run_server(host='127.0.0.1', debug=True, port=8065)
+    app.run_server(host='127.0.0.1', port=8065)

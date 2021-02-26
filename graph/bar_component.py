@@ -4,6 +4,7 @@ import pandas as pd
 
 def candlestick(df: pd.DataFrame, timestamp=None, ohlc_key=None, symbol=None,
                 increasing_line_color=None, decreasing_line_color=None,
+                increasing_fillcolor=None, decreasing_fillcolor=None,
                 text=None, textposition=None):
     if ohlc_key is None:
         ohlc_key = ['open', 'high', 'low', 'close']
@@ -19,7 +20,9 @@ def candlestick(df: pd.DataFrame, timestamp=None, ohlc_key=None, symbol=None,
                           low=df[ohlc_key[2]],
                           close=df[ohlc_key[3]], name=symbol,
                           increasing_line_color=increasing_line_color,
-                          decreasing_line_color=decreasing_line_color)
+                          decreasing_line_color=decreasing_line_color,
+                          increasing_fillcolor=increasing_fillcolor, decreasing_fillcolor=increasing_fillcolor,
+                          )
 
 
 def ohlc(df: pd.DataFrame, timestamp=None, ohlc_key=None, symbol=None,

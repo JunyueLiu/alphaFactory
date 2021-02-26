@@ -7,7 +7,7 @@ import dash_html_components as html
 from dash.dependencies import Input, Output, State
 import pandas as pd
 from backtesting.backtesting_metric import aggregate_returns, sharpe_ratio, sortino
-from backtesting.dash_app import entry_exit_analysis
+from backtesting.dash_app import entry_exit_analysis, filter_out_study
 from backtesting.dash_app import monthly_analysis
 from backtesting.dash_app import trading_history
 from backtesting.dash_app import dash_report
@@ -54,6 +54,8 @@ def get_backtesting_report_dash_app(backtesting_result: dict, dash_app=None):
         html.Br(),
         dcc.Link('Trading history', href='/history'),
         html.Br(),
+        dcc.Link('filter study', href='/filter'),
+        html.Br(),
         # dcc.Tabs(id='tabs', value='tab', children=[
         #     dcc.Tab(label='General Performance', value='tab-1'),
         #     dcc.Tab(label='Monthly Analysis', value='tab-2'),
@@ -92,6 +94,8 @@ def get_backtesting_report_dash_app(backtesting_result: dict, dash_app=None):
             return entry_exit_analysis.get_layout(backtesting_result)
         elif pathname == '/history':
             return trading_history.get_layout(backtesting_result)
+        elif pathname == '/filter':
+            return filter_out_study.get_layout(backtesting_result)
         else:
             return index_page
 
@@ -425,12 +429,13 @@ def get_backtesting_report_dash_app(backtesting_result: dict, dash_app=None):
                     elif type(p['props']['value']) == str:
                         if p['props']['value'][0].isdigit():
                             value = p['props']['value']
-                    else:
-                        value = "'" + p['props']['value'] + "'"
+                        else:
+                            value = "'" + p['props']['value'] + "'"
                     indicator_str += "=" + value + ','
                 elif p['type'] == 'Dropdown':
                     indicator_str += p['props']['id'] + '=MA_Type.' + p['props']['value'] + ','
             indicator_str += ')'
+            print(indicator_str)
             ta_dict[indicator_str] = True if 'overlap' in overlap else False
             if remove is not None:
                 try:
