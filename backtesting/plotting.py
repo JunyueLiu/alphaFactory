@@ -67,10 +67,14 @@ def entry_and_exit_plot(ohlc_df, traded: pd.DataFrame, symbol: str, ohlc_graph=T
     subplot_num = 1
     if ta_dict is not None:
         subplot_num += len([i for i in ta_dict.values() if i is False])
+
+    row_heights = [1] * subplot_num
+    row_heights[0] = 2
+
     fig = make_subplots(
         rows=subplot_num, cols=1,
         shared_xaxes=True,
-        vertical_spacing=0.03,
+        vertical_spacing=0.03, row_heights=row_heights
     )
     # filter out unrelated trade
     traded = traded[traded['code'] == symbol]
@@ -118,10 +122,11 @@ def entry_and_exit_plot(ohlc_df, traded: pd.DataFrame, symbol: str, ohlc_graph=T
                         fig.add_trace(go.Scatter(x=index, y=ta_indicator[col], mode='lines', name=col), 1, 1)
                 else:
                     if ta_name == 'MACD' or ta_name == 'MACDEXT' or ta_name == 'MACDFIX':
-                        fig.add_traces(macd_graph(ta_indicator), [subplot_i]*3, [1]* 3)
+                        fig.add_traces(macd_graph(ta_indicator), [subplot_i] * 3, [1] * 3)
                     else:
                         for col in ta_indicator.columns:
-                            fig.add_trace(go.Scatter(x=index, y=ta_indicator[col], mode='lines', name=col), subplot_i, 1)
+                            fig.add_trace(go.Scatter(x=index, y=ta_indicator[col], mode='lines', name=col), subplot_i,
+                                          1)
                     subplot_i += 1
 
     x_axis = fig.data[0].x
@@ -129,11 +134,10 @@ def entry_and_exit_plot(ohlc_df, traded: pd.DataFrame, symbol: str, ohlc_graph=T
     tick_text = [x_axis[i][0:10] for i in range(0, len(x_axis), len(x_axis) // 5)]
     fig.update_xaxes(ticktext=tick_text, tickvals=tick_value)
     # fig.update_layout(showlegend=True, xaxis_rangeslider_visible=False)
-    fig.update_layout(showlegend=True, height=175 * len(fig.data),yaxis1=dict(
-        autorange=True,
-        fixedrange=False), yaxis2=dict(
-        autorange=True,
-        fixedrange=False), xaxis_rangeslider_visible=False
+    fig.update_layout(showlegend=True, height=175 * len(fig.data),
+                      yaxis1=dict(autorange=True, fixedrange=False),
+                      yaxis2=dict(autorange=True, fixedrange=False),
+                      xaxis_rangeslider_visible=False, hovermode='x unified'
                       )
     return fig
 
@@ -172,11 +176,15 @@ def daily_heatmap(agg_ret: pd.Series) -> go.Figure:
         z = []
         z_text = []
         i = 0
+        # print(g)
         for week in cal:
             wl = []
             wl_text = []
             for wd in week:
-                if wd == 0:
+                if i == len(g[1]):
+                    wl.append(np.NAN)
+                    wl_text.append('')
+                elif wd == 0:
                     wl.append(np.NAN)
                     wl_text.append('')
                 elif g[1].index[i].day == wd:

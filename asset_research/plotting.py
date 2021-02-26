@@ -4,7 +4,18 @@ import plotly.io as pio
 import numpy as np
 import pandas as pd
 import json
+import os
 from plotly.subplots import make_subplots
+
+from graph.bar_component import candlestick
+from graph.indicator_component import sar_graph, macd_graph
+from technical_analysis.momentum import *
+from technical_analysis.pattern import *
+from technical_analysis.volume import *
+from technical_analysis.volatility import *
+from technical_analysis.overlap import *
+from technical_analysis.statistic_function import *
+from technical_analysis.customization import *
 
 pio.renderers.default = "browser"
 
@@ -63,7 +74,7 @@ def orderbook_plot(orderbook):
     return fig
 
 
-def orderbook_heatmap(orderbook_df, code=None, freq='1T', zmax = 10):
+def orderbook_heatmap(orderbook_df, code=None, freq='1T', zmax=10):
     if code is not None:
         orderbook_df = orderbook_df[orderbook_df['code'] == code]
     orderbook_df['svr_recv_time_ask'] = pd.to_datetime(orderbook_df['svr_recv_time_ask'])
@@ -174,7 +185,7 @@ def cumulative_volume(rt_df):
     return fig
 
 
-def order_flow_plot(tick_df, freq='1T', zmax = 10):
+def order_flow_plot(tick_df, freq='1T', zmax=10):
     # template = 'plotly_dark'
 
     # fig.add_trace(go.Violin(x=df['day'][df['smoker'] == 'Yes'],
@@ -286,8 +297,98 @@ def bid_ask_plot():
     pass
 
 
+def main_candles(ohlc_df: pd.DataFrame, ta_dict: None or dict = None, time_freq: None or str = None, ohlc_key=None,
+                 symbol=None):
+    subplot_num = 1
+    if ta_dict is not None:
+        subplot_num += len([para for para in ta_dict.values() if para['overlap'] is False])
+
+    row_heights = [1] * subplot_num
+    row_heights[0] = 2
+
+    fig = make_subplots(
+        rows=subplot_num, cols=1,
+        shared_xaxes=True,
+        vertical_spacing=0.03,
+        row_heights=row_heights
+    )
+
+    if symbol is None:
+        try:
+            symbol = ohlc_df['code'][0]
+        except:
+            symbol = None
+
+    candles = candlestick(ohlc_df, ohlc_key=ohlc_key, symbol=symbol)
+    fig.add_trace(candles, 1, 1)
+
+    if ta_dict is not None:
+        subplot_i = 2
+
+        for key, value in ta_dict.items():
+
+            overlap = value['overlap']
+            call_string = ''
+            for para, v in value.items():
+                if para == 'indicator':
+                    call_string += v
+                    call_string += '(ohlc_df'
+                elif para == 'overlap':
+                    continue
+                else:
+                    str_v = str(v)
+                    call_string = call_string + ',' + para + '=' + str_v
+            call_string += ')'
+            ta_indicator = eval(call_string)
+            ta_name = call_string.split('(')[0]
+            out_name = call_string.replace('ohlc_df,', '').replace('ohlc_df', '')
+            if isinstance(ta_indicator, pd.Series):
+                index = ta_indicator.index.strftime('%Y/%m/%d %H:%M:%S')
+                if overlap is True:
+                    if ta_name == 'SAR':
+                        fig.add_trace(sar_graph(ta_indicator, ohlc_df['close']), 1, 1)
+                    else:
+                        fig.add_trace(go.Scatter(x=index, y=ta_indicator, mode='lines', name=out_name), 1, 1)
+                else:
+                    fig.add_trace(go.Scatter(x=index, y=ta_indicator, mode='lines', name=out_name), subplot_i, 1)
+                    subplot_i += 1
+            elif isinstance(ta_indicator, pd.DataFrame):
+                index = ta_indicator.index.strftime('%Y/%m/%d %H:%M:%S')
+                if overlap is True:
+                    for col in ta_indicator.columns:
+                        fig.add_trace(go.Scatter(x=index, y=ta_indicator[col], mode='lines', name=col), 1, 1)
+                else:
+                    if ta_name == 'MACD' or ta_name == 'MACDEXT' or ta_name == 'MACDFIX':
+                        fig.add_traces(macd_graph(ta_indicator), [subplot_i] * 3, [1] * 3)
+                    else:
+                        for col in ta_indicator.columns:
+                            fig.add_trace(
+                                go.Scatter(x=index, y=ta_indicator[col], mode='lines', name=col), subplot_i, 1)
+                    subplot_i += 1
+
+    x_axis = fig.data[0].x
+    tick_value = [x_axis[i] for i in range(0, len(x_axis), len(x_axis) // 5)]
+    tick_text = [x_axis[i][0:10] for i in range(0, len(x_axis), len(x_axis) // 5)]
+    fig.update_xaxes(ticktext=tick_text, tickvals=tick_value)
+    # fig.update_layout(showlegend=True, xaxis_rangeslider_visible=False)
+    fig.update_layout(showlegend=True,
+                      yaxis1=dict(autorange=True, fixedrange=False),
+                      yaxis2=dict(autorange=True, fixedrange=False),
+                      xaxis_rangeslider_visible=False, hovermode='x unified',
+                      template='plotly_white'
+                      )
+    return fig
+
+
 def triple_screen_plot():
     pass
+
+
+def save_image(figure: go.Figure, image_path: str, fig_name: str, format: str = 'jpeg'):
+    if not os.path.exists(image_path):
+        os.mkdir(image_path)
+
+    figure.write_image(os.path.join(image_path, fig_name), format=format, scale=2, width=4096, height=2048)
 
 
 if __name__ == '__main__':
@@ -316,22 +417,55 @@ if __name__ == '__main__':
     #                   [24485.0, 7, 5],
     #                   [24486.0, 3, 3]]}
     # # orderbook_plot(sample).show()
-    rt_df = pd.read_csv('2020-08-19_tick.csv')
-    rt_df = rt_df[rt_df['code'] == 'HK.01810']
-    rt_df['time'] = pd.to_datetime(rt_df['time'])
+    # rt_df = pd.read_csv('2020-07-30.csv')
+    # rt_df = rt_df[rt_df['code'] == 'HK.999010']
+    # rt_df['time'] = pd.to_datetime(rt_df['time'])
     # rt_df['hours'] = rt_df['time'].apply(lambda x: x.hour)
-    #
+    # #
     # rt_df = rt_df[(rt_df['hours'] >= 9) & (rt_df['hours'] <= 12)]
-    # tick_plot(rt_df)
-    # cumulative_volume(rt_df)
-    # order_flow_plot(rt_df)
-    records = []
-    with open('2020-08-19.json', 'r') as file:
-        for line in file.readlines():
-            dic = json.loads(line)
-            records.append(dic)
-    orderbook_df = pd.DataFrame(records)
-    orderbook_df = orderbook_df[orderbook_df['code'] == 'HK.01810']
-    # orderbook_df = orderbook_df[:10000]
-    # orderbook_heatmap(orderbook_df,code='HK.01810',freq=None,zmax=int(1.0e6)).show()
-    order_flow_plot(rt_df,freq='30s' ,zmax=int(1.0e6)).show()
+    # # tick_plot(rt_df)
+    # # cumulative_volume(rt_df)
+    # # order_flow_plot(rt_df)
+    # records = []
+    # with open('2020-09-28.json', 'r') as file:
+    #     for line in file.readlines():
+    #         dic = json.loads(line)
+    #         records.append(dic)
+    # orderbook_df = pd.DataFrame(records)
+    # # orderbook_df = orderbook_df[orderbook_df['code'] == 'HK.999010']
+    #
+    # orderbook_heatmap(orderbook_df, code='HK.999010', freq=None).show()
+    # order_flow_plot(rt_df, freq='30s').show()
+
+    ohlc_df = pd.read_csv('../local_data/EURUSD/count5000.csv')
+    ohlc_df['date'] = pd.to_datetime(ohlc_df['date'])
+    ohlc_df.set_index('date', inplace=True)
+    ohlc_df = ohlc_df.loc[pd.to_datetime('2020/01/01'):]
+
+    ta_paras = {
+        "MA3": {
+            "indicator": "DEMA",
+            "period": 120,
+            "overlap": True
+        },
+        "MACD": {
+            "indicator": "MACD",
+            "overlap": False
+
+        },
+        "supertrend": {
+            "indicator": "SUPERTREND",
+            "multipler": 0.75,
+            "eatr_period": 30,
+            "overlap": True
+
+        },
+
+    }
+
+    # ohlc_df = pd.read_csv()
+    for g1, df in ohlc_df.groupby(pd.Grouper(freq='M')):
+        fig = main_candles(df, ta_dict=ta_paras)
+        fig.show()
+        break
+        # save_image(fig, 'eurusd/', str(g1) + '_2.pdf', format='pdf')

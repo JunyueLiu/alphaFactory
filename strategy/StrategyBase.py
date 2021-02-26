@@ -5,6 +5,7 @@ import json
 
 from bar_manager.BarManager import BarManager
 from gateway.brokerage_base import BrokerageBase
+from gateway.fxcm_quote import FxcmQuote
 from gateway.quote_base import QuoteBase
 
 
@@ -118,52 +119,57 @@ class Strategy:
                     _, data = self._quote_ctx.get_history_kline(symbol, kline_type=sub, num=num)
                     self.__dict__[sub.lower()][symbol].init_with_pandas(data)
             else:
-                self.write_log_info('load history data: {}:{}:{}:{}')
+                # self.write_log_info('load history data: {}:{}:{}:{}')
+                for sub in sub_types:
+                    num = self.lookback_period[symbol][sub]
+                    self.write_log_info('load data: {}:{} number:{}'.format(symbol, sub, num))
+                    _, data = self._quote_ctx.get_history_kline(symbol, kline_type=sub, num=num)
+                    self.__dict__[sub.lower()][symbol].init_with_pandas(data)
 
     def process_kline(self, data):
         for ix, row in data.iterrows():
             code = row['code']
             if row['k_type'] == 'K_1M':
                 if self.last_bar['K_1M'] < ix:  # new bar comes in
-                    self.on_1min_bar(self.k_1m)
                     self.last_bar['K_1M'] = ix
                     self.k_1m[code].update_with_pandas(row, time_key='time_key')
+                    self.on_1min_bar(self.k_1m)
                 else:
                     self.k_1m[code].update_with_pandas(row, time_key='time_key')
                     self.on_1min_bar(self.k_1m)
             elif row['k_type'] == 'K_5M':
                 if self.last_bar['K_5M'] < ix:  # new bar comes in
                     # self.same_bar_traded = False
-                    self.on_5min_bar(self.k_5m)
                     self.last_bar['K_5M'] = ix
                     self.k_5m[code].update_with_pandas(row, time_key='time_key')
+                    self.on_5min_bar(self.k_5m)
                 else:
                     self.k_5m[code].update_with_pandas(row, time_key='time_key')
                     self.on_5min_bar(self.k_5m)
             elif row['k_type'] == 'K_15M':
                 if self.last_bar['K_15M'] < ix:  # new bar comes in
                     # self.same_bar_traded = False
-                    self.on_15min_bar(self.k_15m)
                     self.last_bar['K_15M'] = ix
                     self.k_15m[code].update_with_pandas(row, time_key='time_key')
+                    self.on_15min_bar(self.k_15m)
                 else:
                     self.k_15m[code].update_with_pandas(row, time_key='time_key')
                     self.on_15min_bar(self.k_15m)
             elif row['k_type'] == 'K_30M':
                 if self.last_bar['K_30M'] < ix:  # new bar comes in
                     # self.same_bar_traded = False
-                    self.on_30min_bar(self.k_30m)
                     self.last_bar['K_30M'] = ix
                     self.k_30m[code].update_with_pandas(row, time_key='time_key')
+                    self.on_30min_bar(self.k_30m)
                 else:
                     self.k_30m[code].update_with_pandas(row, time_key='time_key')
                     self.on_30min_bar(self.k_30m)
             elif row['k_type'] == 'K_60M':
                 if self.last_bar['K_60M'] < ix:  # new bar comes in
                     # self.same_bar_traded = False
-                    self.on_60min_bar(self.k_60m)
                     self.last_bar['K_60M'] = ix
                     self.k_60m[code].update_with_pandas(row, time_key='time_key')
+                    self.on_60min_bar(self.k_60m)
                 else:
                     self.k_60m[code].update_with_pandas(row, time_key='time_key')
                     self.on_60min_bar(self.k_60m)
@@ -257,6 +263,81 @@ class Strategy:
 
     def write_log_debug(self, content):
         self.logger.debug(content)
+
+class TickBarStrategy(Strategy):
+    def __init__(self):
+        super(TickBarStrategy, self).__init__()
+        self.k_1000count = None
+        self.k_2000count = None
+        self.k_3000count = None
+        self.count_num = None
+
+    def set_quote_context(self, quote_context: FxcmQuote):
+        self._quote_ctx = quote_context  # type: FxcmQuote
+
+    def set_brokerage_context(self, brokerage_context: BrokerageBase):
+        self._brokerage_ctx = brokerage_context  # type: BrokerageBase
+
+    def init_kline_object(self):
+        super().init_kline_object()
+
+    def load_history_data(self):
+        self.write_log_info('load history data')
+        for symbol, sub_types in self.subscribe.items():
+            if self.backtesting:
+                for sub in sub_types:
+                    num = self.lookback_period[symbol][sub]
+                    self.write_log_info('load data: {}:{} number:{}'.format(symbol, sub, num))
+                    _, data = self._quote_ctx.get_history_kline(symbol, kline_type=sub, num=num)
+                    self.__dict__[sub.lower()][symbol].init_with_pandas(data)
+            else:
+                for sub in sub_types:
+                    num = self.count_num[symbol][sub]
+                    self.write_log_info('load data: {}:{} number:{}'.format(symbol, sub, num))
+                    _, data = self._quote_ctx.get_history_count_bar(symbol, num)
+                    self.__dict__[sub.lower()][symbol].init_with_pandas(data)
+
+    def on_count1000_bar(self, data):
+        pass
+
+    def on_count2000_bar(self, data):
+        pass
+
+    def on_count3000_bar(self, data):
+        pass
+
+
+    def process_kline(self, data):
+        # todo real time generate data
+        for ix, row in data.iterrows():
+            code = row['code']
+            if row['k_type'] == 'K_1000count':
+                if self.last_bar['K_1000count'] < ix:  # new bar comes in
+                    self.last_bar['K_1000count'] = ix
+                    self.k_1000count[code].update_with_pandas(row, time_key='date')
+                    self.on_count1000_bar(self.k_1000count)
+                else:
+                    self.k_1000count[code].update_with_pandas(row, time_key='date')
+                    self.on_count1000_bar(self.k_1000count)
+            elif row['k_type'] == 'K_2000count':
+                if self.last_bar['K_3000count'] < ix:  # new bar comes in
+                    self.last_bar['K_2000count'] = ix
+                    self.k_2000count[code].update_with_pandas(row, time_key='date')
+                    self.on_count2000_bar(self.k_2000count)
+                else:
+                    self.k_2000count[code].update_with_pandas(row, time_key='date')
+                    self.on_count2000_bar(self.on_count2000_bar)
+            elif row['k_type'] == 'K_3000count':
+                if self.last_bar['K_3000count'] < ix:  # new bar comes in
+                    self.last_bar['K_3000count'] = ix
+                    self.k_3000count[code].update_with_pandas(row, time_key='date')
+                    self.on_count3000_bar(self.k_1m)
+                else:
+                    self.k_3000count[code].update_with_pandas(row, time_key='date')
+                    self.on_count3000_bar(self.k_1m)
+
+            self.logger.info('process_kline for {} {}'.format(ix, code))
+
 
 
 class DayTradeStrategy(Strategy):

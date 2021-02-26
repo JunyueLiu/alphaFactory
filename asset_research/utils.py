@@ -1,5 +1,9 @@
 import json
 import pandas as pd
+from scipy.stats import norm
+from plotly import graph_objects as go
+import numpy as np
+from graph.factor_component import histogram
 
 pd.set_option('max_columns', None)
 
@@ -18,6 +22,28 @@ def get_orderbook_df(path: str) -> pd.DataFrame:
 
 def get_order_flow_table():
     pass
+
+def display_ret_dist_and_interval_dist(count_bar, ret_list=None):
+    if ret_list is None:
+        ret_list = [1, 5 ,10, 20]
+    for r in ret_list:
+        ret = count_bar['close'].pct_change(r)
+        summary = ret.describe()
+        summary['skewness'] = ret.skew()
+        summary['kurtosis'] = ret.kurtosis()
+        print('*'*10, 'ret', '=', r, '*'*10,)
+        print(summary)
+        fig = go.Figure(histogram(ret))
+        x = np.linspace(ret.min(), ret.max(), 100)
+        p = norm.pdf(x, ret.mean(), ret.std()) / ret.count()
+        fig.add_trace(go.Scatter(x=x, y=p, mode='lines' ))
+        fig.show()
+    print('*'*100)
+    interval = count_bar.index - count_bar['date_start']
+    print(interval.describe())
+    fig = go.Figure(histogram(interval))
+    fig.show()
+
 
 
 

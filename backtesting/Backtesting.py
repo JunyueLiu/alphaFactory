@@ -179,6 +179,8 @@ class BacktestingBase:
 
         self.dealt_list = self.get_dealt_history()
         traded = pd.DataFrame([order.order_dict() for order in self.dealt_list])
+        if len(traded) == 0:
+            raise ValueError('Not trade')
         # make the dealt_qty with +- sign
         traded['dealt_qty'] = np.where(traded['order_direction'] == 'LONG', traded['dealt_qty'], -traded['dealt_qty'])
         # calculate cash inflow from dealt qty and dealt price
@@ -186,11 +188,11 @@ class BacktestingBase:
         traded['cash_inflow'] = - traded['dealt_price'] * traded['dealt_qty']
         # todo commission deduction
         # aggregate the cash inflow and dealt among with same code and same datetime
-        traded_grouped = traded.groupby(['code', 'update_time']).agg(
+        traded_grouped = traded.groupby(['update_time', 'code']).agg(
             {'cash_inflow': 'sum', 'dealt_qty': 'sum'})
-        traded_grouped.index = traded_grouped.index.set_names(['code', self.backtesting_setting['time_key']])
+        traded_grouped.index = traded_grouped.index.set_names([self.backtesting_setting['time_key'], 'code'])
         # transform into time series of cumulative cash inflow and cumulative asset holding
-        traded_grouped = traded_grouped.groupby(level=[0]).cumsum()
+        traded_grouped = traded_grouped.groupby(level=[1]).cumsum()
         traded_grouped.rename(columns={'cash_inflow': 'cumulative_cash_inflow',
                                        'dealt_qty': 'holding'}, inplace=True)
         first_traded, last_traded = first_last_trade_time(traded, 'update_time')
@@ -200,7 +202,8 @@ class BacktestingBase:
         # need to use groupby fillna
         joint = joint.groupby(level=1).ffill()
         joint.fillna(value=0, inplace=True)
-        joint['equity'] = joint['close'] * joint['holding'] + joint['cumulative_cash_inflow']
+        joint['equity'] = joint['close'] * joint['holding'] + joint['cumulative_cash_inflow'] # type:pd.DataFrame
+        joint = joint[~joint.index.duplicated(keep='first')]
         # aggregate different assets class returns with same timestamp.
         net_value = joint['equity'].groupby(level=0).sum() + self.initial_capital  # type:pd.Series
         # todo calculate every the metric from the net value index
