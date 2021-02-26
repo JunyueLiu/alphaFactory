@@ -1,1 +1,7 @@
 mongoimport --type csv -d quant -c hsi_futures_1_min --headerline --drop -u root --password  --authenticationDatabase admin  HK.999010_2019-06-01\ 00\:00\:00_2020-05-30\ 03\:00\:00_K_1M_qfq.csv
+# for export data
+mongoexport --type json -h 127.0.0.1 --port 27017 -u root -p AlphaFactory2020  --authenticationDatabase admin -d orderbook --out 2020-08-19.json -c 2020-08-19
+mongoexport --type csv -h 127.0.0.1 --port 27017 -u root -p AlphaFactory2020  --authenticationDatabase admin -d ticker --fields "code,time,price,volume,turnover,ticker_direction,sequence,type,push_data_type" --out 2020-08-19_tick.csv -c 2020-08-19
+# for download data to local
+scp root@120.55.45.12:/root/data/2020-09-28.json /Users/liujunyue/Downloads
+scp root@120.55.45.12:/root/data/2020-08-19_tick.json /Users/liujunyue/Downloads
