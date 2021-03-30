@@ -70,7 +70,7 @@ psutil==5.7.0
 ptyprocess==0.6.0
 pycparser==2.20
 pycryptodome==3.9.7
-Pygments==2.6.1
+Pygments==2.7.4
 pymongo==3.9.0
 pyOpenSSL==19.1.0
 pyparsing==2.4.7
