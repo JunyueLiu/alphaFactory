@@ -1,3 +1,6 @@
+from arctic import Arctic
+from arctic.date import DateRange
+from arctic.store.version_store import VersionStore
 from pymongo import MongoClient, database, CursorType
 from pymongo.results import UpdateResult
 import pandas as pd
@@ -5,11 +8,11 @@ import os
 from data_downloader.multi_asset_data_merger import merge_single_asset
 
 
-
 class MongoConnection:
 
-    def __init__(self, host, port, user, password):
+    def __init__(self, host, port=27017, user=None, password=None):
         self.client = MongoClient(host, port, username=user, password=password)
+        self.arctic_store = Arctic(mongo_host=host, port=port, username=user, password=password)
 
     def read_mongo_df(self, db: str, collection: str, query=None, projection=None, no_id=True):
         """ Read from Mongo and Store into DataFrame """
@@ -18,7 +21,7 @@ class MongoConnection:
         cursor = self.client[db][collection].find(query, projection, cursor_type=CursorType.EXHAUST)
 
         df = pd.DataFrame.from_records(cursor)
-        #df = pd.DataFrame(list(cursor))  # todo This is problematic because of efficiency.
+        # df = pd.DataFrame(list(cursor))  # todo This is problematic because of efficiency.
         # todo See https://stackoverflow.com/questions/16249736/how-to-import-data-from-mongodb-to-pandas
         # Delete the _id
         if no_id:
@@ -29,15 +32,13 @@ class MongoConnection:
 
         return df
 
-
-
     def insert_from_dataframe(self, db: str, collection_name: str, df: pd.DataFrame) -> UpdateResult:
         records = df.to_dict('records')
 
         result = self.client[db][collection_name].insert_many(records)
         return result
 
-    def insert_from_dict(self, db: str, collection_name: str, data:dict):
+    def insert_from_dict(self, db: str, collection_name: str, data: dict):
         result = self.client[db][collection_name].insert_one(data)
         return result
 
@@ -53,3 +54,19 @@ class MongoConnection:
         self.client[db][collection_name].insert_many(records)
         self.client[db][collection_name].create_index(time_key, unique=True)
 
+    def get_ohlc_arctic(self, lib_name, symbol, start=None, end=None):
+        lib = self.arctic_store.get_library(lib_name) # type: VersionStore
+        df = lib.read(symbol, date_range=DateRange(start, end)).data # type: pd.DataFrame
+        df = df[~df.index.duplicated()]
+        df = df.sort_index()
+        return df
+
+
+
+
+
+
+
+
+if __name__ == '__main__':
+    con = MongoConnection('localhost')
