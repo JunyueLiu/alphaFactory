@@ -57,12 +57,15 @@ class TickBarMaker(BarMaker):
         else:
             self.tick['mp'] = (self.tick[bid_key] + self.tick[ask_key]) / 2
             self.price_key = 'mp'
-        cols = [self.time_key, self.price_key]
+
+        cols = [self.price_key]
         if self.volume_key is not None:
             cols.append(self.volume_key)
         self.tick_data = self.tick[cols]
-        self.tick_data[self.time_key] = pd.to_datetime(self.tick_data[self.time_key], format=time_key_format)
-        self.tick_data.set_index(self.time_key, inplace=True)
+        if time_key != 'index':
+            cols.append(self.time_key)
+            self.tick_data[self.time_key] = pd.to_datetime(self.tick_data[self.time_key], format=time_key_format)
+            self.tick_data.set_index(self.time_key, inplace=True)
 
     def make_time_bar(self, interval: str):
         bar_data = self.tick_data.copy()
