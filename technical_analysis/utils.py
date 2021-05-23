@@ -1,5 +1,5 @@
 import pandas as pd
-import numpy
+import numpy as np
 from talib import abstract
 from enum import Enum
 
@@ -34,6 +34,8 @@ def check(inputs, input_names: list) -> bool:
     elif isinstance(inputs, dict):
         keys = inputs.keys()
     elif len(input_names) == 1 and isinstance(inputs, pd.Series):
+        return True
+    elif len(input_names) == 1 and isinstance(inputs, np.ndarray):
         return True
 
     return set(input_names).issubset(keys)

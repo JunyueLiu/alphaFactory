@@ -195,6 +195,7 @@ def BOP(inputs, prices: list or None = None):
 
 def CCI(inputs, period: int = 14, prices: list or None = None):
     """
+    https://www.investopedia.com/articles/active-trading/031914/how-traders-can-utilize-cci-commodity-channel-index-trade-stock-trends.asp
     {'name': 'CCI',
      'group': 'Momentum Indicators',
      'display_name': 'Commodity Channel Index',
