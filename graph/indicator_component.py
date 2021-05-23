@@ -1,16 +1,26 @@
 import numpy as np
-import plotly.graph_objects as go
 import pandas as pd
+import plotly.graph_objects as go
+from arctic import Arctic
+import plotly.io as pio
+from plotly.validators.scatter.marker import SymbolValidator
 
 from graph import green, red, blue
+from technical_analysis.channel import Bollinger_bands, Bollinger_Donchian
 from technical_analysis.momentum import *
 from technical_analysis.overlap import *
-import plotly.io as pio
 
 pio.renderers.default = "browser"
 
 
 def volume(df: pd.DataFrame, timestamp=None, volume_key='volume'):
+    """
+
+    :param df:
+    :param timestamp:
+    :param volume_key:
+    :return:
+    """
     if timestamp is None:
         timestamp = df.index
         timestamp = timestamp.strftime('%Y/%m/%d %H:%M:%S')
@@ -20,6 +30,15 @@ def volume(df: pd.DataFrame, timestamp=None, volume_key='volume'):
 
 
 def band2(df: pd.DataFrame, timestamp=None, band_key=None, color=None, mode='lines'):
+    """
+
+    :param df:
+    :param timestamp:
+    :param band_key:
+    :param color:
+    :param mode:
+    :return:
+    """
     if band_key is None:
         band_key = ['up', 'down']
 
@@ -37,6 +56,15 @@ def band2(df: pd.DataFrame, timestamp=None, band_key=None, color=None, mode='lin
 
 
 def band3(df: pd.DataFrame, timestamp=None, band_key=None, color=None, mode='lines'):
+    """
+
+    :param df:
+    :param timestamp:
+    :param band_key:
+    :param color:
+    :param mode:
+    :return:
+    """
     if band_key is None:
         band_key = ['up', 'mid', 'down']
 
@@ -49,12 +77,23 @@ def band3(df: pd.DataFrame, timestamp=None, band_key=None, color=None, mode='lin
         timestamp = timestamp.apply(lambda x: pd.Timestamp.strftime(x, '%Y/%m/%d %H:%M:%S'))
 
     up = go.Scatter(x=timestamp, y=df[band_key[0]], mode=mode, line_color=color[0], name=band_key[0])
-    mid = go.Scatter(x=timestamp, y=df[band_key[1]], mode=mode, line_color=color[1], name=band_key[1])
-    down = go.Scatter(x=timestamp, y=df[band_key[2]], mode=mode, line_color=color[2], name=band_key[2])
+    down = go.Scatter(x=timestamp, y=df[band_key[2]], mode=mode, line_color=color[2], name=band_key[2], fill='tonexty',
+                      fillcolor='rgba(0,153,0,0.1)')
+    mid = go.Scatter(x=timestamp, y=df[band_key[1]], mode=mode, line_color=color[1], name=band_key[1], fill='tonexty',
+                     fillcolor='rgba(0,153,0,0.1)')
     return up, mid, down
 
 
 def no_overlap(df: pd.DataFrame, timestamp=None, band_key=None, color=None, mode='lines'):
+    """
+
+    :param df:
+    :param timestamp:
+    :param band_key:
+    :param color:
+    :param mode:
+    :return:
+    """
     lines = []
     if timestamp is None:
         timestamp = df.index
@@ -72,6 +111,15 @@ def no_overlap(df: pd.DataFrame, timestamp=None, band_key=None, color=None, mode
 
 
 def macd_graph(df: pd.DataFrame, timestamp=None, macd_keys=None, color=None):
+    """
+
+    :param df:
+    :param timestamp:
+    :param macd_keys:
+    :param color:
+    :return:
+    """
+
     if color is None:
         color = ['#FF8000', '#2894FF', '#FF2D2D', '#02C874']
     if macd_keys is None:
@@ -94,6 +142,14 @@ def macd_graph(df: pd.DataFrame, timestamp=None, macd_keys=None, color=None):
 
 
 def sar_graph(series: pd.Series, close: pd.Series or None = None, timestamp=None, color=None):
+    """
+
+    :param series:
+    :param close:
+    :param timestamp:
+    :param color:
+    :return:
+    """
     if color is None:
         color = [red, green, blue]
 
@@ -105,25 +161,49 @@ def sar_graph(series: pd.Series, close: pd.Series or None = None, timestamp=None
     else:
         raise NotImplementedError
     if close is None:
-       marker_color = [blue] * len(series)
+        marker_color = [blue] * len(series)
     else:
         marker_color = np.where(series < close, color[1], color[0])
     return go.Scatter(x=timestamp, y=series, name='SAR', mode='markers', marker_color=marker_color)
 
-def pattern_graph(series: pd.Series, timestamp=None, direction=None, annotation=None):
 
+def pattern_graph(series: pd.Series, timestamp=None, direction=None, annotation=None):
     pass
 
 
+def channel_graph(df: pd.DataFrame, timestamp=None):
+    band_key = ['upperband', 'middleband', 'lowerband']
+    colors = [green, red, green]
+    return band3(df, timestamp, band_key, colors)
 
 
+def event_marker_graph(events: pd.Series, timestamp=None, direction: int =1):
+    if timestamp is None:
+        timestamp = events.index
+        timestamp = timestamp.strftime('%Y/%m/%d %H:%M:%S')
+    elif isinstance(timestamp, pd.Series):
+        timestamp = timestamp.apply(lambda x: pd.Timestamp.strftime(x, '%Y/%m/%d %H:%M:%S'))
+    else:
+        raise NotImplementedError
 
+    if direction == 1:
+        return go.Scatter(x=timestamp, y=events,
+                          name=events.name, mode='markers', marker_symbol="triangle-up", marker_color=green,
+                          marker_size=15)
+    else:
+        return go.Scatter(x=timestamp, y=events,
+                          name=events.name, mode='markers', marker_symbol="triangle-down", marker_color=red,
+                          marker_size=15)
 
 
 if __name__ == '__main__':
-    df = pd.read_csv('../local_data/EURUSD/count5000.csv')
-    df['date'] = pd.to_datetime(df['date'])
-    df.set_index('date', inplace=True)
-    df = df[:100]
-    go.Figure(macd_graph(MACDFIX(df))).show()
-    go.Figure(sar_graph(SAREXT(df),df['close'])).show()
+    store = Arctic('localhost')
+    df = store['3000count'].read('EUR/USD').data
+    df = df[-300:]
+    # go.Figure(macd_graph(MACDFIX(df))).show()
+    # go.Figure(sar_graph(SAREXT(df), df['close'])).show()
+    events =df.sample(10)['close']
+    band = Bollinger_Donchian(df)
+    u, m, d = channel_graph(band)
+    e =event_marker_graph(events, direction=-1)
+    go.Figure([u, m, d, e]).show()
