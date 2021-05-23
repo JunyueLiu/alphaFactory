@@ -21,7 +21,8 @@ def candlestick(df: pd.DataFrame, timestamp=None, ohlc_key=None, symbol=None,
                           close=df[ohlc_key[3]], name=symbol,
                           increasing_line_color=increasing_line_color,
                           decreasing_line_color=decreasing_line_color,
-                          increasing_fillcolor=increasing_fillcolor, decreasing_fillcolor=increasing_fillcolor,
+                          increasing_fillcolor=increasing_fillcolor,
+                          decreasing_fillcolor=decreasing_fillcolor,
                           )
 
 

@@ -1,14 +1,16 @@
+import datetime
+import os
+import json
+
+import numpy as np
+import pandas as pd
 import plotly.graph_objects as go
 import plotly.figure_factory as ff
 import plotly.io as pio
-import numpy as np
-import pandas as pd
-import json
-import os
 from plotly.subplots import make_subplots
 
 from graph.bar_component import candlestick
-from graph.indicator_component import sar_graph, macd_graph
+from graph.indicator_component import sar_graph, macd_graph, channel_graph, rsi_graph
 from technical_analysis.momentum import *
 from technical_analysis.pattern import *
 from technical_analysis.volume import *
@@ -16,6 +18,8 @@ from technical_analysis.volatility import *
 from technical_analysis.overlap import *
 from technical_analysis.statistic_function import *
 from technical_analysis.customization import *
+from technical_analysis.channel import *
+from technical_analysis import channel
 
 pio.renderers.default = "browser"
 
@@ -297,8 +301,12 @@ def bid_ask_plot():
     pass
 
 
-def main_candles(ohlc_df: pd.DataFrame, ta_dict: None or dict = None, time_freq: None or str = None, ohlc_key=None,
-                 symbol=None):
+def main_candles(ohlc_df: pd.DataFrame,
+                 ta_dict: None or dict = None,
+                 ohlc_key=None,
+                 symbol=None,
+                 start: None or pd.Timestamp or datetime.datetime or str = None,
+                 end: None or pd.Timestamp or datetime.datetime or str = None):
     subplot_num = 1
     if ta_dict is not None:
         subplot_num += len([para for para in ta_dict.values() if para['overlap'] is False])
@@ -319,14 +327,22 @@ def main_candles(ohlc_df: pd.DataFrame, ta_dict: None or dict = None, time_freq:
         except:
             symbol = None
 
-    candles = candlestick(ohlc_df, ohlc_key=ohlc_key, symbol=symbol)
+    data = ohlc_df.copy()
+    if start is not None:
+        start = pd.to_datetime(start)
+        data = data.loc[start:]
+
+    if end is not None:
+        end = pd.to_datetime(end)
+        data = data.loc[:end]
+
+    candles = candlestick(data, ohlc_key=ohlc_key, symbol=symbol)
     fig.add_trace(candles, 1, 1)
 
     if ta_dict is not None:
         subplot_i = 2
 
         for key, value in ta_dict.items():
-
             overlap = value['overlap']
             call_string = ''
             for para, v in value.items():
@@ -340,6 +356,11 @@ def main_candles(ohlc_df: pd.DataFrame, ta_dict: None or dict = None, time_freq:
                     call_string = call_string + ',' + para + '=' + str_v
             call_string += ')'
             ta_indicator = eval(call_string)
+            if start is not None:
+                ta_indicator = ta_indicator.loc[start:]
+            if end is not None:
+                ta_indicator = ta_indicator.loc[:end]
+
             ta_name = call_string.split('(')[0]
             out_name = call_string.replace('ohlc_df,', '').replace('ohlc_df', '')
             if isinstance(ta_indicator, pd.Series):
@@ -350,7 +371,10 @@ def main_candles(ohlc_df: pd.DataFrame, ta_dict: None or dict = None, time_freq:
                     else:
                         fig.add_trace(go.Scatter(x=index, y=ta_indicator, mode='lines', name=out_name), 1, 1)
                 else:
-                    fig.add_trace(go.Scatter(x=index, y=ta_indicator, mode='lines', name=out_name), subplot_i, 1)
+                    if ta_name == 'RSI':
+                        fig.add_traces(rsi_graph(ta_indicator))
+                    else:
+                        fig.add_trace(go.Scatter(x=index, y=ta_indicator, mode='lines', name=out_name), subplot_i, 1)
                     subplot_i += 1
             elif isinstance(ta_indicator, pd.DataFrame):
                 index = ta_indicator.index.strftime('%Y/%m/%d %H:%M:%S')
@@ -358,8 +382,10 @@ def main_candles(ohlc_df: pd.DataFrame, ta_dict: None or dict = None, time_freq:
                     for col in ta_indicator.columns:
                         fig.add_trace(go.Scatter(x=index, y=ta_indicator[col], mode='lines', name=col), 1, 1)
                 else:
-                    if ta_name == 'MACD' or ta_name == 'MACDEXT' or ta_name == 'MACDFIX':
+                    if ta_name in ['MACD', 'MACDEXT', 'MACDFIX']:
                         fig.add_traces(macd_graph(ta_indicator), [subplot_i] * 3, [1] * 3)
+                    elif ta_name in channel.__func__:
+                        fig.add_traces([channel_graph(ta_indicator)], subplot_i, 1)
                     else:
                         for col in ta_indicator.columns:
                             fig.add_trace(
@@ -392,50 +418,50 @@ def save_image(figure: go.Figure, image_path: str, fig_name: str, format: str = 
 
 
 if __name__ == '__main__':
-    # sample = {'_id': {'$oid': '5f22eac623de44d2b46056ce'},
-    #           'code': 'HK.999010',
-    #           'svr_recv_time_bid': '2020-07-30 23:44:06.596',
-    #           'svr_recv_time_ask': '2020-07-30 23:44:06.596',
-    #           'Bid': [[24476.0, 1, 1],
-    #                   [24475.0, 4, 3],
-    #                   [24474.0, 2, 2],
-    #                   [24473.0, 4, 4],
-    #                   [24472.0, 3, 3],
-    #                   [24471.0, 2, 2],
-    #                   [24470.0, 8, 3],
-    #                   [24469.0, 3, 3],
-    #                   [24468.0, 2, 2],
-    #                   [24467.0, 3, 3]],
-    #           'Ask': [[24477.0, 1, 1],
-    #                   [24478.0, 2, 2],
-    #                   [24479.0, 4, 4],
-    #                   [24480.0, 2, 2],
-    #                   [24481.0, 4, 4],
-    #                   [24482.0, 3, 3],
-    #                   [24483.0, 5, 5],
-    #                   [24484.0, 4, 4],
-    #                   [24485.0, 7, 5],
-    #                   [24486.0, 3, 3]]}
-    # # orderbook_plot(sample).show()
-    # rt_df = pd.read_csv('2020-07-30.csv')
-    # rt_df = rt_df[rt_df['code'] == 'HK.999010']
-    # rt_df['time'] = pd.to_datetime(rt_df['time'])
-    # rt_df['hours'] = rt_df['time'].apply(lambda x: x.hour)
-    # #
-    # rt_df = rt_df[(rt_df['hours'] >= 9) & (rt_df['hours'] <= 12)]
-    # # tick_plot(rt_df)
-    # # cumulative_volume(rt_df)
-    # # order_flow_plot(rt_df)
-    # records = []
-    # with open('2020-09-28.json', 'r') as file:
-    #     for line in file.readlines():
-    #         dic = json.loads(line)
-    #         records.append(dic)
-    # orderbook_df = pd.DataFrame(records)
-    # # orderbook_df = orderbook_df[orderbook_df['code'] == 'HK.999010']
+    sample = {'_id': {'$oid': '5f22eac623de44d2b46056ce'},
+              'code': 'HK.999010',
+              'svr_recv_time_bid': '2020-07-30 23:44:06.596',
+              'svr_recv_time_ask': '2020-07-30 23:44:06.596',
+              'Bid': [[24476.0, 1, 1],
+                      [24475.0, 4, 3],
+                      [24474.0, 2, 2],
+                      [24473.0, 4, 4],
+                      [24472.0, 3, 3],
+                      [24471.0, 2, 2],
+                      [24470.0, 8, 3],
+                      [24469.0, 3, 3],
+                      [24468.0, 2, 2],
+                      [24467.0, 3, 3]],
+              'Ask': [[24477.0, 1, 1],
+                      [24478.0, 2, 2],
+                      [24479.0, 4, 4],
+                      [24480.0, 2, 2],
+                      [24481.0, 4, 4],
+                      [24482.0, 3, 3],
+                      [24483.0, 5, 5],
+                      [24484.0, 4, 4],
+                      [24485.0, 7, 5],
+                      [24486.0, 3, 3]]}
+    # orderbook_plot(sample).show()
+    rt_df = pd.read_csv('2020-07-30.csv')
+    rt_df = rt_df[rt_df['code'] == 'HK.999010']
+    rt_df['time'] = pd.to_datetime(rt_df['time'])
+    rt_df['hours'] = rt_df['time'].apply(lambda x: x.hour)
     #
-    # orderbook_heatmap(orderbook_df, code='HK.999010', freq=None).show()
-    # order_flow_plot(rt_df, freq='30s').show()
+    rt_df = rt_df[(rt_df['hours'] >= 9) & (rt_df['hours'] <= 12)]
+    # tick_plot(rt_df)
+    # cumulative_volume(rt_df)
+    # order_flow_plot(rt_df)
+    records = []
+    with open('2020-09-28.json', 'r') as file:
+        for line in file.readlines():
+            dic = json.loads(line)
+            records.append(dic)
+    orderbook_df = pd.DataFrame(records)
+    # orderbook_df = orderbook_df[orderbook_df['code'] == 'HK.999010']
+
+    orderbook_heatmap(orderbook_df, code='HK.999010', freq=None).show()
+    order_flow_plot(rt_df, freq='30s').show()
 
     ohlc_df = pd.read_csv('../local_data/EURUSD/count5000.csv')
     ohlc_df['date'] = pd.to_datetime(ohlc_df['date'])

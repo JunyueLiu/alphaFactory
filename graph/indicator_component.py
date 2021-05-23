@@ -5,7 +5,8 @@ from arctic import Arctic
 import plotly.io as pio
 from plotly.validators.scatter.marker import SymbolValidator
 
-from graph import green, red, blue
+from graph import green, red, blue, purple
+from graph.utils import timestamp_parser
 from technical_analysis.channel import Bollinger_bands, Bollinger_Donchian
 from technical_analysis.momentum import *
 from technical_analysis.overlap import *
@@ -167,6 +168,24 @@ def sar_graph(series: pd.Series, close: pd.Series or None = None, timestamp=None
     return go.Scatter(x=timestamp, y=series, name='SAR', mode='markers', marker_color=marker_color)
 
 
+def rsi_graph(series: pd.Series, timestamp=None, overbuy=80, oversell=20):
+    """
+
+    :param series:
+    :param timestamp:
+    :param overbuy:
+    :param oversell:
+    :return:
+    """
+    fig = go.Figure()
+    x = timestamp_parser(series, timestamp)
+    fig.add_scatter(x=x, y=series, name=series.name, mode='line', line_color=purple)
+    fig.add_hline(y=50, line_width=3, line_dash='dash', fillcolor=purple)
+    fig.add_hrect(y0=oversell, y1=overbuy, line_width=1, line_dash='dash', fillcolor=purple, opacity=0.2)
+    return fig.data
+
+
+
 def pattern_graph(series: pd.Series, timestamp=None, direction=None, annotation=None):
     pass
 
@@ -177,15 +196,8 @@ def channel_graph(df: pd.DataFrame, timestamp=None):
     return band3(df, timestamp, band_key, colors)
 
 
-def event_marker_graph(events: pd.Series, timestamp=None, direction: int =1):
-    if timestamp is None:
-        timestamp = events.index
-        timestamp = timestamp.strftime('%Y/%m/%d %H:%M:%S')
-    elif isinstance(timestamp, pd.Series):
-        timestamp = timestamp.apply(lambda x: pd.Timestamp.strftime(x, '%Y/%m/%d %H:%M:%S'))
-    else:
-        raise NotImplementedError
-
+def event_marker_graph(events: pd.Series, timestamp=None, direction: int = 1):
+    timestamp = timestamp_parser(events, timestamp)
     if direction == 1:
         return go.Scatter(x=timestamp, y=events,
                           name=events.name, mode='markers', marker_symbol="triangle-up", marker_color=green,
@@ -202,8 +214,8 @@ if __name__ == '__main__':
     df = df[-300:]
     # go.Figure(macd_graph(MACDFIX(df))).show()
     # go.Figure(sar_graph(SAREXT(df), df['close'])).show()
-    events =df.sample(10)['close']
+    events = df.sample(10)['close']
     band = Bollinger_Donchian(df)
     u, m, d = channel_graph(band)
-    e =event_marker_graph(events, direction=-1)
+    e = event_marker_graph(events, direction=-1)
     go.Figure([u, m, d, e]).show()
