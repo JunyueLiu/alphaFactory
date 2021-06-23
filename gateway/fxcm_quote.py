@@ -1,3 +1,6 @@
+from threading import Thread
+from typing import Optional, Dict, List, Type
+
 from gateway.constant import KLType
 from gateway.quote_base import QuoteBase
 import fxcmpy
@@ -12,6 +15,16 @@ import plotly.io as pio
 pio.renderers.default = "browser"
 from graph.bar_component import candlestick
 import plotly.graph_objects as go
+import warnings
+
+warnings.filterwarnings('ignore')
+
+
+class FXCMHandlerBase(object):
+
+    @staticmethod
+    def on_recv_rsp(self, data: pd.DataFrame):
+        pass
 
 
 class FxcmQuote(QuoteBase):
@@ -58,6 +71,10 @@ class FxcmQuote(QuoteBase):
         super(FxcmQuote, self).__init__()
         self.subscribe_data = defaultdict()
         self.last = None
+        self.bar_data: Optional[Dict[str, Dict[str, pd.DataFrame]]] = defaultdict(dict)
+        self.handlers: List[Type[FXCMHandlerBase]] = []
+        self.threads: List[Thread] = []
+        self._last_1min_bar_request = None
         if fxcm is None:
             self.con = fxcmpy.fxcmpy(access_token=access_token, config_file=config_file,
                                      log_file=log_file, log_level=log_level, server=server,
@@ -79,18 +96,32 @@ class FxcmQuote(QuoteBase):
     def get_history_kline(self, symbol, start=None, end=None, kline_type=KLType.K_60M, num=10, *args,
                           **kwargs):
         if 'count' not in kline_type:
-            try:
-                data = self.con.get_candles(symbol, period=self.ktype_fxcmKtype[kline_type], number=num, start=start,
-                                            end=end)
-                for col in self.ohlc_key:
-                    data[col] = (data['bid' + col] + data['ask' + col]) / 2
-                data = data[self.cols]
-                data['code'] = symbol
-                data['k_type'] = kline_type
-                return 1, data
-            except ValueError:
-                data = 'ValueError'
-                return 0, data
+            while True:
+                try:
+                    data = self.con.get_candles(symbol, period=self.ktype_fxcmKtype[kline_type], number=num,
+                                                start=start,
+                                                end=end)
+                    for col in self.ohlc_key:
+                        data[col] = (data['bid' + col] + data['ask' + col]) / 2
+                    data = data[self.cols]
+                    data['code'] = symbol
+                    data['k_type'] = kline_type
+                    if len(data) == 0:
+                        # self.con.__reconnect__(10)
+                        print('no data')
+                        time.sleep(1)
+                        continue
+                    return 1, data
+                except ValueError:
+                    data = 'ValueError'
+                    print(data)
+                    return 0, data
+                except IOError:
+                    self.con.__reconnect__(10)
+                except Exception as e:
+                    # data = 'Unknown Error'
+                    print(e)
+                    # return 0, data
         else:
             if start is not None or end is not None:
                 return 0, 'For count bar start and end cannot be specific. '
@@ -105,13 +136,17 @@ class FxcmQuote(QuoteBase):
 
     def update_count_bar(self, count_bar: pd.DataFrame) -> pd.DataFrame:
         # todo new bar logic should apply to trader part (use date_start to tell, date == date_start)
+        # print('update_count_bar')
         symbol = count_bar['code'][0]
         count_now = count_bar['tickqty'][-1]
         start = count_bar['date_start'][-1]
         count = int(count_bar['k_type'][-1].replace('K_', '').replace('count', ''))
 
         _, m1_bar = self.get_cur_kline(symbol, num=500, kline_type=KLType.K_1M)
-        m1_bar = m1_bar[m1_bar.index >= start]
+        if _ == 0 or len(m1_bar) == 0:
+            return count_bar
+        # print(m1_bar)
+        # m1_bar = m1_bar[m1_bar.index >= start]
 
         if count_now < count:
             count_bar = count_bar[:-1]
@@ -141,13 +176,16 @@ class FxcmQuote(QuoteBase):
                                  'high',
                                  'low',
                                  'close',
-                                 'date' + '_start',
+                                 'date_start',
                                  'date',
                                  'tickqty']
         new_count_bar.set_index('date', inplace=True)
         new_count_bar['code'] = symbol
         new_count_bar['k_type'] = 'K_' + str(count) + 'count'
         count_bar = count_bar.append(new_count_bar)
+        count_bar = count_bar[count_bar['tickqty'] > 0]
+        count_bar = count_bar[~count_bar.index.duplicated(keep='first')]
+        # print('updated', count_bar)
         return count_bar
 
     def get_symbol_basic_info(self, market, symbol_type, symbol_list=None, *args, **kwargs):
@@ -161,10 +199,32 @@ class FxcmQuote(QuoteBase):
                 self.con.subscribe_market_data(code, add_callbacks=add_callbacks)
             return 1, ''
         else:
-            raise NotImplementedError
+            for code in code_list:
+                for sub in subtype_list:
+                    if 'count' not in sub:
+                        pass
+                    else:
+                        if len(add_callbacks) > 0:
+                            for func in add_callbacks:
+                                t = Thread(target=self.__subscribe_count_bar, args=(code, sub, func),
+                                           name='{}_{}_{}'.format(code, sub, func.__name__))
+                                self.threads.append(t)
+
+                        else:
+                            t = Thread(target=self.__subscribe_count_bar, args=(code, sub),
+                                       name='{}_{}'.format(code, sub))
+                            self.threads.append(t)
+            for t in self.threads:
+                if not t.is_alive():
+                    t.start()
+
+            return 1, ''
 
     def unsubscribe(self, code_list, subtype_list=None, *args, **kwargs):
         # super().unsubscribe(code_list, subtype_list, *args, **kwargs)
+        for t in self.threads:
+            t.join()
+
         for code in code_list:
             self.con.unsubscribe_market_data(code)
         return 1, ''
@@ -194,25 +254,47 @@ class FxcmQuote(QuoteBase):
     def get_cur_kline(self, symbol, num=10, kline_type=KLType.K_60M, *args, **kwargs):
         if self.is_subscribed(symbol)[1] is False:
             self.subscribe([symbol])
+        if 'count' not in kline_type:
+            while True:
+                try:
+                    start = kwargs['start'] if 'start' in kwargs else None
+                    # end = kwargs['end'] if 'end' in kwargs else None
+                    _, data = self.get_history_kline(symbol, num=num, kline_type=kline_type, start=start)
+                    # print(data)
+                    if _ == 0:
+                        return 0, data
+                    break
+                except Exception as e:
+                    print(e)
+                    return 0, e
+            cur = data.index[-1]
+            _, updated = self.get_prices(symbol)
+            updated = updated[updated.index > cur]
 
-        _, data = self.get_history_kline(symbol, num=num, kline_type=kline_type)
-        cur = data.index[-1]
-        _, updated = self.get_prices(symbol)
-        updated = updated[updated.index > cur]
-
-        if len(updated) > 0:
-            updated = updated[['mp']]
-            updated = updated.groupby(pd.Grouper(freq=self.fre_dict[kline_type])).agg('ohlc')
-            updated.columns = updated.columns.get_level_values(1)
-            if updated.index[-1] == cur:
-                data.update(updated)
+            if len(updated) > 0:
+                updated = updated[['mp']]
+                updated = updated.groupby(pd.Grouper(freq=self.fre_dict[kline_type])).agg('ohlc')
+                updated.columns = updated.columns.get_level_values(1)
+                if updated.index[-1] == cur:
+                    data.update(updated)
+                else:
+                    updated = updated[updated.index > cur]
+                    updated['tickqty'] = 0
+                    data = data.append(updated)
+            data['code'] = symbol
+            data['k_type'] = kline_type
+            return 1, data[-num:]
+        else:
+            if symbol not in self.count_bar_data or kline_type not in self.count_bar_data[symbol]:
+                _, data = self.get_history_kline(symbol, kline_type=kline_type, num=num)
+            elif len(self.count_bar_data[symbol][kline_type]) < num:
+                _, data = self.get_history_kline(symbol, kline_type=kline_type, num=num)
             else:
-                updated = updated[updated.index > cur]
-                updated['tickqty'] = 0
-                data = data.append(updated)
-        data['code'] = symbol
-        data['k_type'] = kline_type
-        return 1, data[-num:]
+                data = self.count_bar_data[symbol][kline_type].iloc[-num:]
+            data = self.update_count_bar(data)
+            data = data[-num:]
+            self.count_bar_data[symbol][kline_type] = data
+            return 1, data
 
     def get_this_week_history_kline(self, symbol, kline_type=KLType.K_60M):
         start = self._get_this_week_start_utc_time_of_week().replace(tzinfo=None)
@@ -256,7 +338,7 @@ class FxcmQuote(QuoteBase):
                              'high',
                              'low',
                              'close',
-                             'date' + '_start',
+                             'date_start',
                              'date',
                              'tickqty']
         count_bar.set_index('date', inplace=True)
@@ -266,44 +348,245 @@ class FxcmQuote(QuoteBase):
 
     @staticmethod
     def _get_this_week_start_utc_time_of_week(nz: datetime.datetime or None = None):
+        """
+        FXCM is open for trade continuously during all of the above listed periods on a 24-hour per day, 5-day per week
+        basis. Trading operations may be conducted via FXCM brokerage anytime between open and close:
+        Open: Sundays, between 5:00 and 5:15 pm EST
+        :param nz:
+        :return:
+        """
         if nz is None:
-            nz = datetime.datetime.now(tz=pytz.timezone('nz'))
-        start = (nz - timedelta(days=nz.weekday(), hours=nz.hour - 9, minutes=nz.minute, seconds=nz.second,
-                                microseconds=nz.microsecond))
+            nz = datetime.datetime.now(tz=pytz.timezone('US/Eastern'))
+        if nz.weekday() == 6:
+            start = (nz - timedelta(hours=nz.hour - 17, minutes=nz.minute, seconds=nz.second,
+                                    microseconds=nz.microsecond
+                                    ))
+        else:
+            start = (nz - timedelta(days=nz.weekday() + 1, hours=nz.hour - 17, minutes=nz.minute, seconds=nz.second,
+                                    microseconds=nz.microsecond))
         utc_start = start.astimezone(pytz.utc).replace(tzinfo=None)
         return utc_start
 
     @staticmethod
     def _get_this_week_end_utc_time_of_week(nz: datetime.datetime or None = None):
+        """
+        Close: Fridays, around 4:55 pm EST
+        :param nz:
+        :return:
+        """
         if nz is None:
             nz = datetime.datetime.now(tz=pytz.timezone('US/Eastern'))
-        end = (nz - timedelta(days=nz.weekday() - 4, hours=nz.hour - 17, minutes=nz.minute, seconds=nz.second,
-                              microseconds=nz.microsecond))
+        if nz.weekday() == 6:
+            end = nz - timedelta(hours=nz.hour - 17, minutes=nz.minute, seconds=nz.second,
+                                 microseconds=nz.microsecond) + timedelta(days=5)
+        else:
+            end = (nz - timedelta(days=nz.weekday() - 4, hours=nz.hour - 17, minutes=nz.minute, seconds=nz.second,
+                                  microseconds=nz.microsecond))
         utc_end = end.astimezone(pytz.utc).replace(tzinfo=None)
         return utc_end
 
     def is_trading(self):
-        # from monday 9 am of New Zealand/Wellington time to Friday 5 pm of US / Eastern time
-
+        # Open: Sundays, between 5:00 and 5:15 pm EST
+        # Close: Fridays, around 4:55 pm EST
         utc_start = self._get_this_week_start_utc_time_of_week()
         utc_end = self._get_this_week_end_utc_time_of_week()
-        now = datetime.datetime.now(tz=pytz.utc)
+        now = datetime.datetime.now(tz=pytz.utc).replace(tzinfo=None)
         if utc_start <= now <= utc_end:
             return True
         else:
             return False
 
+    def set_handler(self, handler: Type[FXCMHandlerBase]):
+        self.handlers.append(handler)
+
+    def make_count_bar(self, m1_bar: pd.DataFrame, count):
+        symbol = m1_bar['code'].iloc[0]
+        count_bar = m1_bar.copy()
+
+        agg_dict = {'open': 'first',
+                    'high': 'max',
+                    'low': 'min',
+                    'close': 'last',
+                    'date': ['min', 'max'],
+                    'tickqty': 'sum'
+                    }
+        count_bar['group'] = len(count_bar)
+        bar_sample = 0
+        cum_tick = 0
+        for index, value in count_bar.iterrows():
+            cum_tick += value['tickqty']
+            count_bar['group'].loc[index] = bar_sample
+            if cum_tick >= count:
+                cum_tick = 0
+                bar_sample += 1
+        count_bar = count_bar.reset_index().groupby('group').agg(agg_dict)
+        count_bar.columns = ['open',
+                             'high',
+                             'low',
+                             'close',
+                             'date_start',
+                             'date',
+                             'tickqty']
+        count_bar = count_bar.set_index('date')
+        count_bar['code'] = symbol
+        count_bar['k_type'] = 'K_' + str(count) + 'count'
+        return count_bar
+
+    def __subscribe_count_bar(self, symbol, kline_type, func=None):
+        # last_dt = None  # type: Optional[pd.Timestamp]
+        # if not self.is_trading():
+        #     print('not trading time. exit')
+        #     return
+        count = int(kline_type.replace('K_', '').replace('count', ''))
+        if symbol not in self.bar_data or KLType.K_1M not in self.bar_data[symbol]:
+            _, m1_data = self.get_this_week_history_kline(symbol, KLType.K_1M)
+            self.bar_data[symbol][KLType.K_1M] = m1_data
+            count_bar = self.make_count_bar(m1_data, count)
+        else:
+            count_bar = self.make_count_bar(self.bar_data[symbol][KLType.K_1M], count)
+        self.bar_data[symbol][kline_type] = count_bar
+        sleep = False
+        while True:
+            # count_bar_start = None
+            count_bar = self.bar_data[symbol][kline_type]
+            if count_bar.iloc[-1]['tickqty'] >= count:
+                push_bar = count_bar[-1:]
+                for handler in self.handlers:
+                    handler.on_recv_rsp(self, push_bar)
+                if func is not None:
+                    func(push_bar)
+                new_count_bar = pd.DataFrame()
+                count_bar_start = push_bar.index[0] + pd.Timedelta(minutes=1)
+            else:
+                new_count_bar = count_bar.iloc[[-1]]
+                count_bar_start = new_count_bar['date_start'].iloc[0]
+
+            if sleep:
+                second = datetime.datetime.now(tz=pytz.utc).replace(tzinfo=None).second
+                if second < 30:
+                    time.sleep(30 - second)
+                    # print('Sleep 30 after push')
+                sleep = False
+
+            while True:
+                m1_data = self.bar_data[symbol][KLType.K_1M]
+                _, new_data = self.get_history_kline(symbol, kline_type=KLType.K_1M, num=10)
+                if new_data.index[-1] > m1_data.index[-1]:
+                    # print('new_bar {}'.format(datetime.datetime.now(tz=pytz.utc).replace(tzinfo=None)))
+                    appended_data = new_data.loc[new_data.index.difference(m1_data.index)]
+                    m1_data = m1_data.append(appended_data)
+                    m1_data.update(new_data)
+                    self.bar_data[symbol][KLType.K_1M] = m1_data
+                    second = datetime.datetime.now(tz=pytz.utc).replace(tzinfo=None).second
+                    if second >= 30:
+                        time.sleep(60 - second)
+                    else:
+                        time.sleep(30 - second)
+                else:
+                    start_utc = datetime.datetime.now(tz=pytz.utc).replace(tzinfo=None)
+                    second = start_utc.second
+                    delta = (start_utc - new_data.index[-1]).seconds
+                    # when this minute has gone... break
+                    # the last bar has finished, consider it as correct
+                    if delta >= 90:
+                        print('no data for update...wait and continue')
+                        time.sleep(2)
+                        continue
+                    elif delta >= 60:
+                        print('push m1_bar {}'.format(datetime.datetime.now(tz=pytz.utc).replace(tzinfo=None)))
+                        m1_data.update(new_data)
+                        self.bar_data[symbol][KLType.K_1M] = m1_data
+                        break
+                    elif second < 30:
+                        time.sleep(30 - start_utc.second)
+                    else:
+                        time.sleep(1)
+
+            # update count bar
+
+            new_m1_data = m1_data.loc[count_bar_start:]
+            if len(new_m1_data) > 0:
+                temp_new_count_bar = self.make_count_bar(new_m1_data, count)
+                if len(new_count_bar) > 0:
+                    count_bar = count_bar.iloc[:-1]
+                count_bar = count_bar.append(temp_new_count_bar)
+                self.bar_data[symbol][kline_type] = count_bar
+            sleep = True
+
+        # if last_request is None:
+        #     last_request = start_utc
+        # elif last_dt > m1_data.index[-1]:
+        #     if (start_utc - last_dt).seconds >= 63:
+        #         last_request = start_utc
+        #         req_count += 1
+        #     else:
+        #         req_count = 0
+        #         continue
+        #     if req_count < 3:
+        #         time.sleep(5)
+        #     elif req_count >= 3:
+        #         time.sleep(20)
+        # else:
+        #     continue
+        # _, data = self.get_cur_kline(symbol, 1, kline_type)
+        # if _ == 1 and (last_dt is None or data.index[-1] > last_dt):
+        #     # last_count = data['tickqty'].iloc[-1]
+        #     for handler in self.handlers:
+        #         handler.on_recv_rsp(self, data[-1:])
+        #     if func is not None:
+        #         func(data[-1:])
+        #     # print(data[-1:])
+        #     # print('*' * 20)
+        #     s = datetime.datetime.now().second
+        #     time.sleep(63 - s)
+        # else:
+        #     print('no update {} {}'.format(_, start_utc))
+
 
 if __name__ == '__main__':
     fxcm_quote = FxcmQuote(config_file='../gateway/fxcm_config/demo_config')
-    _, data = fxcm_quote.get_history_kline('EUR/USD', kline_type=KLType.K_2000count)
-    # count_bar = fxcm_quote.get_this_week_history_count_bar('EUR/USD', 3000)
-    last_row = data.iloc[-1:]
+    # _, data = fxcm_quote.get_history_kline('EUR/USD', kline_type=KLType.K_2000count, num=100)
     pd.set_option('max_columns', None)
 
-    while True:
-        data = fxcm_quote.update_count_bar('EUR/USD', data)
-        print(data[-1:])
-        time.sleep(5)
+
+    # def to_dict(df: pd.DataFrame):
+    #     records = df.to_dict('index')
+    #     print(records)
+    #
+    class PrinterHandler(FXCMHandlerBase):
+        def on_recv_rsp(self, data: pd.DataFrame):
+            for idx, row in data.iterrows():
+                print('{} {} {} {} {}'.format(idx, row['date_start'], row['tickqty'], row['code'], row['k_type']))
+            # records = data.to_dict('index')
+            # print(records)
+
+
+    #
+    fxcm_quote.set_handler(PrinterHandler)
+    fxcm_quote.subscribe(['EUR/USD', 'USD/JPY'], [KLType.K_1000count, KLType.K_3000count])
+    # last_dt = None  # type: Optional[pd.Timestamp]
+    # last_count = 0
+    # while True:
+    #     start = datetime.datetime.now()
+    #     start_utc = datetime.datetime.now(tz=pytz.utc).replace(second=0, microsecond=0, tzinfo=None)
+    #     # if last_dt is not None and start_utc == last_dt.to_pydatetime():
+    #     #     time.sleep(1)
+    #     #     continue
+    #     _, data = fxcm_quote.get_cur_kline('EUR/USD', 10, KLType.K_1000count)
+    #     end = datetime.datetime.now()
+    #     if _ == 1 and last_count != data['tickqty'].iloc[-1]:
+    #         last_dt = data.index[-1]
+    #         last_count = data['tickqty'].iloc[-1]
+    #         print(data[-1:])
+    #         print('*' * 20)
+    #     time.sleep(2)
+    # last_row = data.iloc[-1:]
+    # pd.set_option('max_columns', None)
+    # while True:
+    #     data = fxcm_quote.update_count_bar(data)
+    #     if len(data) > 0:
+    #         data = data.iloc[-100:]
+    #     print(data[-1:])
+    #     time.sleep(5)
 
     # go.Figure(candlestick(count_bar)).show()

@@ -40,6 +40,5 @@ class KLType(object):
     K_DAY = "K_DAY"
     K_WEEK = "K_WEEK"
     K_MON = "K_MON"
-    K_1M = "K_1M"
     K_QUARTER = "K_QUARTER"
     K_YEAR = "K_YEAR"

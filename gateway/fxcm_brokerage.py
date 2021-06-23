@@ -1,3 +1,4 @@
+import pandas as pd
 import fxcmpy
 
 from gateway.brokerage_base import BrokerageBase
@@ -98,3 +99,8 @@ class FxcmBrokerage(BrokerageBase):
 
     def history_deal_list_query(self, *args, **kwargs):
         pass
+
+if __name__ == '__main__':
+    fxcm_broker = FxcmBrokerage(config_file='../gateway/fxcm_config/demo_config')
+    # _, data = fxcm_quote.get_history_kline('EUR/USD', kline_type=KLType.K_2000count, num=100)
+    pd.set_option('max_columns', None)
