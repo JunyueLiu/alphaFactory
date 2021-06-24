@@ -202,8 +202,20 @@ class FxcmQuote(QuoteBase):
             for code in code_list:
                 for sub in subtype_list:
                     if 'count' not in sub:
-                        pass
+                        if len(add_callbacks) > 0:
+                            for func in add_callbacks:
+                                t = Thread(target=self.__subscribe_time_bar, args=(code, sub, func),
+                                           name='{}_{}_{}'.format(code, sub, func.__name__))
+                                self.threads.append(t)
+                        else:
+                            t = Thread(target=self.__subscribe_time_bar, args=(code, sub),
+                                       name='{}_{}'.format(code, sub))
+                            self.threads.append(t)
                     else:
+                        t = Thread(target=self.__subscribe_time_bar, args=(code, KLType.K_1M),
+                                   name='{}_{}'.format(code, KLType.K_1M))
+                        self.threads.append(t)
+
                         if len(add_callbacks) > 0:
                             for func in add_callbacks:
                                 t = Thread(target=self.__subscribe_count_bar, args=(code, sub, func),
@@ -285,15 +297,11 @@ class FxcmQuote(QuoteBase):
             data['k_type'] = kline_type
             return 1, data[-num:]
         else:
-            if symbol not in self.count_bar_data or kline_type not in self.count_bar_data[symbol]:
-                _, data = self.get_history_kline(symbol, kline_type=kline_type, num=num)
-            elif len(self.count_bar_data[symbol][kline_type]) < num:
-                _, data = self.get_history_kline(symbol, kline_type=kline_type, num=num)
-            else:
-                data = self.count_bar_data[symbol][kline_type].iloc[-num:]
-            data = self.update_count_bar(data)
-            data = data[-num:]
-            self.count_bar_data[symbol][kline_type] = data
+            if symbol not in self.bar_data or kline_type not in self.bar_data[symbol]:
+                # _, data = self.get_history_kline(symbol, kline_type=kline_type, num=num)
+                self.__subscribe_count_bar(symbol, kline_type)
+
+            data = self.bar_data[symbol][kline_type].iloc[-num:]
             return 1, data
 
     def get_this_week_history_kline(self, symbol, kline_type=KLType.K_60M):
@@ -432,24 +440,57 @@ class FxcmQuote(QuoteBase):
         count_bar['k_type'] = 'K_' + str(count) + 'count'
         return count_bar
 
+    def __subscribe_time_bar(self, symbol, kline_type, func=None):
+        if symbol not in self.bar_data or kline_type not in self.bar_data[symbol]:
+            _, data = self.get_this_week_history_kline(symbol, kline_type)
+            self.bar_data[symbol][kline_type] = data
+            push = True
+            while True:
+                data = self.bar_data[symbol][kline_type]
+                now = datetime.datetime.now(tz=pytz.utc).replace(tzinfo=None)
+                if now > data.index[-1] and push:
+                    _, new_data = self.get_history_kline(symbol, kline_type=kline_type, num=10)
+                    data.update(new_data)
+                    self.bar_data[symbol][kline_type] = data
+                    push_bar = data[-1:]
+                    for handler in self.handlers:
+                        handler.on_recv_rsp(self, push_bar)
+                    if func is not None:
+                        func(push_bar)
+                    push = False
+                    second = datetime.datetime.now(tz=pytz.utc).replace(tzinfo=None).second
+                    if second < 30:
+                        time.sleep(30 - second)
+                elif not push and (now - data.index[-1]).seconds >= 90:
+                    _, new_data = self.get_history_kline(symbol, kline_type=kline_type, num=10)
+                    if new_data.index[-1] > data.index[-1]:
+                        appended_data = new_data.loc[new_data.index.difference(data.index)]
+                        data = data.append(appended_data)
+                        data.update(new_data)
+                        self.bar_data[symbol][kline_type] = data
+                    push = True
+                    second = datetime.datetime.now(tz=pytz.utc).replace(tzinfo=None).second
+                    time.sleep(60 - second)
+                else:
+                    time.sleep(1)
+        else:
+            print('already subscribe..')
+            return
+
     def __subscribe_count_bar(self, symbol, kline_type, func=None):
         # last_dt = None  # type: Optional[pd.Timestamp]
         # if not self.is_trading():
         #     print('not trading time. exit')
         #     return
         count = int(kline_type.replace('K_', '').replace('count', ''))
-        if symbol not in self.bar_data or KLType.K_1M not in self.bar_data[symbol]:
-            _, m1_data = self.get_this_week_history_kline(symbol, KLType.K_1M)
-            self.bar_data[symbol][KLType.K_1M] = m1_data
-            count_bar = self.make_count_bar(m1_data, count)
-        else:
-            count_bar = self.make_count_bar(self.bar_data[symbol][KLType.K_1M], count)
+        while KLType.K_1M not in self.bar_data[symbol]:
+            time.sleep(1)
+        count_bar = self.make_count_bar(self.bar_data[symbol][KLType.K_1M], count)
         self.bar_data[symbol][kline_type] = count_bar
-        sleep = False
+        push = True
         while True:
-            # count_bar_start = None
             count_bar = self.bar_data[symbol][kline_type]
-            if count_bar.iloc[-1]['tickqty'] >= count:
+            if push and count_bar.iloc[-1]['tickqty'] >= count:
                 push_bar = count_bar[-1:]
                 for handler in self.handlers:
                     handler.on_recv_rsp(self, push_bar)
@@ -457,53 +498,16 @@ class FxcmQuote(QuoteBase):
                     func(push_bar)
                 new_count_bar = pd.DataFrame()
                 count_bar_start = push_bar.index[0] + pd.Timedelta(minutes=1)
+                push = False
             else:
                 new_count_bar = count_bar.iloc[[-1]]
                 count_bar_start = new_count_bar['date_start'].iloc[0]
 
-            if sleep:
-                second = datetime.datetime.now(tz=pytz.utc).replace(tzinfo=None).second
-                if second < 30:
-                    time.sleep(30 - second)
-                    # print('Sleep 30 after push')
-                sleep = False
-
-            while True:
-                m1_data = self.bar_data[symbol][KLType.K_1M]
-                _, new_data = self.get_history_kline(symbol, kline_type=KLType.K_1M, num=10)
-                if new_data.index[-1] > m1_data.index[-1]:
-                    # print('new_bar {}'.format(datetime.datetime.now(tz=pytz.utc).replace(tzinfo=None)))
-                    appended_data = new_data.loc[new_data.index.difference(m1_data.index)]
-                    m1_data = m1_data.append(appended_data)
-                    m1_data.update(new_data)
-                    self.bar_data[symbol][KLType.K_1M] = m1_data
-                    second = datetime.datetime.now(tz=pytz.utc).replace(tzinfo=None).second
-                    if second >= 30:
-                        time.sleep(60 - second)
-                    else:
-                        time.sleep(30 - second)
-                else:
-                    start_utc = datetime.datetime.now(tz=pytz.utc).replace(tzinfo=None)
-                    second = start_utc.second
-                    delta = (start_utc - new_data.index[-1]).seconds
-                    # when this minute has gone... break
-                    # the last bar has finished, consider it as correct
-                    if delta >= 90:
-                        print('no data for update...wait and continue')
-                        time.sleep(2)
-                        continue
-                    elif delta >= 60:
-                        print('push m1_bar {}'.format(datetime.datetime.now(tz=pytz.utc).replace(tzinfo=None)))
-                        m1_data.update(new_data)
-                        self.bar_data[symbol][KLType.K_1M] = m1_data
-                        break
-                    elif second < 30:
-                        time.sleep(30 - start_utc.second)
-                    else:
-                        time.sleep(1)
-
             # update count bar
-
+            # control time
+            second = datetime.datetime.now(tz=pytz.utc).replace(tzinfo=None).second
+            time.sleep(61 - second)
+            m1_data = self.bar_data[symbol][KLType.K_1M]
             new_m1_data = m1_data.loc[count_bar_start:]
             if len(new_m1_data) > 0:
                 temp_new_count_bar = self.make_count_bar(new_m1_data, count)
@@ -511,36 +515,9 @@ class FxcmQuote(QuoteBase):
                     count_bar = count_bar.iloc[:-1]
                 count_bar = count_bar.append(temp_new_count_bar)
                 self.bar_data[symbol][kline_type] = count_bar
-            sleep = True
-
-        # if last_request is None:
-        #     last_request = start_utc
-        # elif last_dt > m1_data.index[-1]:
-        #     if (start_utc - last_dt).seconds >= 63:
-        #         last_request = start_utc
-        #         req_count += 1
-        #     else:
-        #         req_count = 0
-        #         continue
-        #     if req_count < 3:
-        #         time.sleep(5)
-        #     elif req_count >= 3:
-        #         time.sleep(20)
-        # else:
-        #     continue
-        # _, data = self.get_cur_kline(symbol, 1, kline_type)
-        # if _ == 1 and (last_dt is None or data.index[-1] > last_dt):
-        #     # last_count = data['tickqty'].iloc[-1]
-        #     for handler in self.handlers:
-        #         handler.on_recv_rsp(self, data[-1:])
-        #     if func is not None:
-        #         func(data[-1:])
-        #     # print(data[-1:])
-        #     # print('*' * 20)
-        #     s = datetime.datetime.now().second
-        #     time.sleep(63 - s)
-        # else:
-        #     print('no update {} {}'.format(_, start_utc))
+                push = True
+            else:
+                push = False
 
 
 if __name__ == '__main__':
@@ -556,14 +533,17 @@ if __name__ == '__main__':
     class PrinterHandler(FXCMHandlerBase):
         def on_recv_rsp(self, data: pd.DataFrame):
             for idx, row in data.iterrows():
-                print('{} {} {} {} {}'.format(idx, row['date_start'], row['tickqty'], row['code'], row['k_type']))
+                if 'count' in row['k_type']:
+                    print('{} {} {} {} {}'.format(idx, row['date_start'], row['tickqty'], row['code'], row['k_type']))
+                else:
+                    print('{} {} {} {}'.format(idx, row['tickqty'], row['code'], row['k_type']))
             # records = data.to_dict('index')
             # print(records)
 
 
     #
     fxcm_quote.set_handler(PrinterHandler)
-    fxcm_quote.subscribe(['EUR/USD', 'USD/JPY'], [KLType.K_1000count, KLType.K_3000count])
+    fxcm_quote.subscribe(['EUR/USD', 'USD/JPY'], [KLType.K_1000count])
     # last_dt = None  # type: Optional[pd.Timestamp]
     # last_count = 0
     # while True:
